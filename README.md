@@ -1,0 +1,48 @@
+# Strenaysis
+
+`strenaysis` is a lightweight Python package that serves a browser-based, agentic workflow for structuring data analysis and data scientist interview answers.
+
+## What this first version does
+
+- Landing page with `Problem to Solve`
+- `Start to Build the Structure` button
+- OpenAI-powered roadmap generation with editable nodes
+- `Confirm This Is the Roadmap` step
+- Guided detail capture across:
+  - metric
+  - drivers
+  - data
+  - model
+  - decision
+  - result
+  - takeaway
+
+If `OPENAI_API_KEY` is not set, the app falls back to your interview roadmap template so the flow still works.
+
+## Run
+
+1. Install the package:
+
+```bash
+pip install -e .
+```
+
+2. Optionally set your API key:
+
+```bash
+set OPENAI_API_KEY=your_key_here
+```
+
+3. Start the app:
+
+```bash
+strenaysis
+```
+
+4. Open the printed local URL in your browser.
+
+## Notes
+
+- This version focuses on the product skeleton and workflow.
+- The detailed bucket-specific prompts can be added next.
+- The server uses only the Python standard library, so it does not require Flask or FastAPI.

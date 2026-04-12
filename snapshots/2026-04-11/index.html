@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Strenaysis</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Agentic Data Analysis Builder</p>
+        <h1>Turn a vague business problem into a structured data science roadmap.</h1>
+        <p class="hero-copy">
+          Start with the problem, let AI draft the structure, refine the roadmap,
+          then walk through each bucket until you reach a clear takeaway.
+        </p>
+      </header>
+
+      <main class="app-card">
+        <section id="step-problem" class="step-panel active">
+          <div class="step-label">Step 1</div>
+          <h2>Problem to Solve</h2>
+          <div class="problem-layout">
+            <div class="editor-card">
+              <label class="field-label" for="problem-input">Core Question</label>
+              <textarea
+                id="problem-input"
+                rows="5"
+                placeholder="Example: How should we evaluate whether launching a premium recommendation feature will improve subscription revenue?"
+              ></textarea>
+            </div>
+            <div class="editor-card">
+              <div class="detail-card-header">
+                <label class="field-label" for="problem-details-input">Detailed Bucket</label>
+                <button id="open-problem-details" class="secondary-button" type="button">Insert Details</button>
+              </div>
+              <div id="problem-details-preview" class="detail-preview empty">
+                No detailed bucket added yet.
+              </div>
+              <textarea
+                id="problem-details-input"
+                class="visually-hidden"
+                rows="4"
+                placeholder="Add supporting context such as user segment, business goal, constraints, time horizon, available data, or decision setting."
+              ></textarea>
+            </div>
+          </div>
+          <div class="action-row">
+            <button id="start-roadmap" class="primary-button">Start to Build the Structure</button>
+          </div>
+        </section>
+
+        <section id="step-roadmap" class="step-panel">
+          <div class="step-label">Step 2</div>
+          <div class="glossary-problem-card">
+            <div class="section-heading">
+              <div>
+                <h2>Question Glossary</h2>
+                <p class="section-copy">
+                  Keep the question editable here and shape the roadmap so a reader can understand the breakthrough path quickly.
+                </p>
+              </div>
+              <div class="glossary-heading-actions">
+                <span id="roadmap-source" class="status-chip"></span>
+                <button id="refresh-question" class="secondary-button">Refresh Question</button>
+              </div>
+            </div>
+            <div class="problem-layout">
+              <div class="editor-card">
+                <label class="field-label" for="roadmap-problem-input">Core Question</label>
+                <textarea
+                  id="roadmap-problem-input"
+                  rows="4"
+                  placeholder="Refine the question here before confirming the roadmap."
+                ></textarea>
+              </div>
+              <div class="editor-card">
+                <div class="detail-card-header">
+                  <label class="field-label" for="roadmap-problem-details-input">Detailed Bucket</label>
+                  <button id="open-roadmap-problem-details" class="secondary-button" type="button">Insert Details</button>
+                </div>
+                <div id="roadmap-problem-details-preview" class="detail-preview empty">
+                  No detailed bucket added yet.
+                </div>
+                <textarea
+                  id="roadmap-problem-details-input"
+                  class="visually-hidden"
+                  rows="4"
+                  placeholder="Add more context for this problem so the roadmap can be more precise."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="section-heading">
+            <div>
+              <h2>Problem Assessment</h2>
+              <p class="section-copy">
+                Identify what kind of data problem this is, then recap the case like a strong interview setup.
+              </p>
+            </div>
+          </div>
+          <div class="assessment-card">
+            <div class="assessment-type-wrap">
+              <div class="assessment-label">Problem Type</div>
+              <select id="assessment-type" class="assessment-type-select">
+                <option value="descriptive_analysis">Descriptive Analysis</option>
+                <option value="predictive_modeling">Predictive Modeling</option>
+                <option value="experiment_causal_question">Experiment / Causal Question</option>
+                <option value="operational_optimization">Operational Optimization</option>
+              </select>
+              <button id="update-roadbuild" class="secondary-button" type="button">Update Roadbuild</button>
+            </div>
+            <div class="assessment-copy">
+              <label class="field-label" for="assessment-title">Explanation</label>
+              <textarea id="assessment-title" rows="2" readonly></textarea>
+              <label class="field-label" for="assessment-recap">Interview Recap</label>
+              <textarea id="assessment-recap" rows="5" readonly></textarea>
+            </div>
+          </div>
+          <div class="section-heading">
+            <div>
+              <h2>Roadmap Builder</h2>
+              <p class="section-copy">
+                Edit the AI-generated glossary before locking in the workflow.
+              </p>
+            </div>
+            <div class="roadmap-confirm-wrap">
+              <button id="confirm-roadmap" class="primary-button roadmap-confirm-button">Confirm This Is the Roadmap</button>
+            </div>
+          </div>
+          <div class="roadmap-toolbar">
+            <button id="edit-sequence" class="secondary-button" type="button">Edit the Sequence</button>
+            <button id="save-sequence" class="primary-button" type="button" hidden>Save Sequence</button>
+            <div id="delete-sequence-zone" class="delete-sequence-zone" hidden>Drop Here to Remove</div>
+          </div>
+          <div id="roadmap-list" class="roadmap-list"></div>
+          <div class="add-node-card">
+            <div class="add-node-copy">
+              <h3>Add a Custom Node</h3>
+              <p class="section-copy">
+                Describe what you want to add, polish it into a clean roadmap step, then confirm.
+              </p>
+            </div>
+            <label class="field-label" for="new-node-draft">What should this new step cover?</label>
+            <textarea
+              id="new-node-draft"
+              rows="3"
+              placeholder="Example: add a step to evaluate constraints, risks, and experiment guardrails before making the final recommendation"
+            ></textarea>
+            <div id="new-node-preview" class="new-node-preview" hidden>
+              <div class="preview-label">Polished Suggestion</div>
+              <label class="field-label" for="new-node-title-input">Title</label>
+              <input id="new-node-title-input" class="node-input" type="text" maxlength="40" />
+              <label class="field-label" for="new-node-why-input">Why It Matters</label>
+              <textarea id="new-node-why-input" rows="2"></textarea>
+              <label class="field-label" for="new-node-breakdown-input">Breakdown</label>
+              <textarea id="new-node-breakdown-input" rows="5"></textarea>
+              <label class="field-label" for="new-node-context-input">Suggested Additional Context</label>
+              <textarea id="new-node-context-input" rows="3"></textarea>
+            </div>
+            <div class="roadmap-actions">
+              <button id="polish-node" class="secondary-button">Polish</button>
+              <button id="confirm-add-node" class="primary-button" disabled>Confirm Add Node</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="step-details" class="step-panel">
+          <div class="step-label">Step 3</div>
+          <div class="section-heading">
+            <div>
+              <h2 id="detail-title">Detail Builder</h2>
+              <p class="section-copy" id="detail-subtitle"></p>
+            </div>
+            <span id="detail-progress" class="status-chip"></span>
+          </div>
+          <label class="field-label" for="detail-notes">Notes for this bucket</label>
+          <textarea id="detail-notes" rows="8" placeholder=""></textarea>
+          <div class="detail-actions">
+            <button id="prev-node" class="secondary-button">Back</button>
+            <button id="next-node" class="primary-button">Save and Continue</button>
+          </div>
+        </section>
+
+        <section id="step-summary" class="step-panel">
+          <div class="step-label">Complete</div>
+          <h2>Workflow Summary</h2>
+          <p class="section-copy">
+            You now have the full structure from problem framing through takeaway.
+          </p>
+          <div id="summary-content" class="summary-grid"></div>
+          <button id="restart-flow" class="secondary-button">Start Over</button>
+        </section>
+      </main>
+    </div>
+
+    <template id="roadmap-node-template">
+      <article class="roadmap-node">
+        <div class="roadmap-node-shell">
+          <div class="roadmap-node-topline">
+            <div class="node-order"></div>
+            <div class="node-summary">
+              <div class="node-title-row">
+                <h3 class="node-title-text"></h3>
+                <span class="node-state-chip"></span>
+              </div>
+            </div>
+            <div class="node-header-actions">
+              <button class="ghost-button open-node" type="button">Details</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <div id="details-modal" class="modal-shell" hidden>
+      <div id="details-modal-backdrop" class="modal-backdrop"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Focused Editor</p>
+            <h2 id="details-modal-title">Detailed Bucket</h2>
+            <p class="section-copy">Add the supporting context that makes the roadmap more precise.</p>
+          </div>
+          <button id="close-details-modal" class="ghost-button" type="button">Close</button>
+        </div>
+        <div class="modal-body">
+          <label class="field-label" for="details-modal-input">Detailed Bucket</label>
+          <textarea
+            id="details-modal-input"
+            rows="12"
+            placeholder="Add supporting context such as user segment, business goal, constraints, time horizon, available data, or decision setting."
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="save-details-modal" class="primary-button" type="button">Save Details</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="node-modal" class="modal-shell" hidden>
+      <div id="node-modal-backdrop" class="modal-backdrop"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="node-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Roadmap Book</p>
+            <h2 id="node-modal-title">Node Editor</h2>
+            <p class="section-copy">Edit this roadmap node while keeping the shelf visible in the background.</p>
+          </div>
+          <button id="close-node-modal" class="ghost-button" type="button">Close</button>
+        </div>
+        <div class="modal-body">
+          <label class="field-label" for="node-modal-name">Node Name</label>
+          <input id="node-modal-name" class="node-input" type="text" maxlength="40" />
+          <label class="field-label" for="node-modal-why">Node Description</label>
+          <textarea id="node-modal-why" rows="3" maxlength="220"></textarea>
+          <label class="field-label" for="node-modal-breakdown">Node Breakdown</label>
+          <textarea id="node-modal-breakdown" rows="6" maxlength="360"></textarea>
+          <label class="field-label" for="node-modal-context">Follow-Up Prompt</label>
+          <textarea id="node-modal-context" rows="4" maxlength="240"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="save-node-modal" class="primary-button" type="button">Save Node</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,2 @@
+[console_scripts]
+strenaysis = strenaysis.cli:main
