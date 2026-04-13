@@ -8,7 +8,8 @@ from http.server import SimpleHTTPRequestHandler
 from importlib import resources
 from pathlib import Path
 
-from .openai_client import DEFAULT_ROADMAP, generate_roadmap, polish_node
+from .exporter import build_export_bundle
+from .openai_client import DEFAULT_ROADMAP, generate_node_build, generate_roadmap, polish_node, synthesize_node_output
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -23,6 +24,15 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if self.path == "/api/polish-node":
             self._handle_polish_node()
+            return
+        if self.path == "/api/node-build":
+            self._handle_node_build()
+            return
+        if self.path == "/api/node-output":
+            self._handle_node_output()
+            return
+        if self.path == "/api/export":
+            self._handle_export()
             return
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
@@ -72,6 +82,89 @@ class AppHandler(SimpleHTTPRequestHandler):
 
         polished = polish_node(problem, problem_details, draft)
         self._send_json(polished)
+
+    def _handle_node_build(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            body = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        problem = str(body.get("problem", "")).strip()
+        problem_details = str(body.get("problem_details", "")).strip()
+        problem_type = str(body.get("problem_type", "")).strip()
+        node_title = str(body.get("node_title", "")).strip()
+        node_why = str(body.get("node_why", "")).strip()
+        node_breakdown = str(body.get("node_breakdown", "")).strip()
+        if not problem or not node_title:
+            self._send_json({"error": "Problem and node title are required."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        scaffold = generate_node_build(
+            problem=problem,
+            problem_details=problem_details,
+            problem_type=problem_type,
+            node_title=node_title,
+            node_why=node_why,
+            node_breakdown=node_breakdown,
+        )
+        self._send_json(scaffold)
+
+    def _handle_node_output(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            body = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        problem = str(body.get("problem", "")).strip()
+        node_title = str(body.get("node_title", "")).strip()
+        if not problem or not node_title:
+            self._send_json({"error": "Problem and node title are required."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        result = synthesize_node_output(
+            problem=problem,
+            problem_details=str(body.get("problem_details", "")).strip(),
+            node_title=node_title,
+            node_description=str(body.get("node_description", "")).strip(),
+            node_breakdown=str(body.get("node_breakdown", "")).strip(),
+            key_question=str(body.get("key_question", "")).strip(),
+            extracted_context=str(body.get("extracted_context", "")).strip(),
+            execution_items=body.get("execution_items", []) if isinstance(body.get("execution_items", []), list) else [],
+        )
+        self._send_json(result)
+
+    def _handle_export(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            body = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        export_format = str(body.get("format", "")).strip().lower()
+        if export_format not in {"docx", "pptx"}:
+            self._send_json({"error": "Export format must be docx or pptx."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        try:
+            payload, filename, content_type = build_export_bundle(body, export_format)
+        except Exception:
+            self._send_json({"error": "Unable to generate the export file."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         encoded = json.dumps(payload).encode("utf-8")

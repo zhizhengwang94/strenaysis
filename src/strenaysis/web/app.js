@@ -7,7 +7,7 @@ const state = {
   assessmentTitle: "",
   assessmentRecap: "",
   roadmap: [],
-  notes: {},
+  nodeBuilds: {},
   currentIndex: 0,
   nextNodeId: 1,
   polishedDraft: null,
@@ -55,14 +55,43 @@ const newNodeWhyInput = document.getElementById("new-node-why-input");
 const newNodeBreakdownInput = document.getElementById("new-node-breakdown-input");
 const newNodeContextInput = document.getElementById("new-node-context-input");
 const detailTitle = document.getElementById("detail-title");
+const detailStepTitle = document.getElementById("detail-step-title");
 const detailSubtitle = document.getElementById("detail-subtitle");
 const detailProgress = document.getElementById("detail-progress");
-const detailNotes = document.getElementById("detail-notes");
+const detailNodeName = document.getElementById("detail-node-name");
+const detailNodeDescriptionPreview = document.getElementById("detail-node-description-preview");
+const detailNodeBreakdownPreview = document.getElementById("detail-node-breakdown-preview");
+const detailNodeDescription = document.getElementById("detail-node-description");
+const detailNodeBreakdown = document.getElementById("detail-node-breakdown");
+const refreshNodeBuildButton = document.getElementById("refresh-node-build");
+const openDetailBriefModalButton = document.getElementById("open-detail-brief-modal");
+const detailExecutionSummary = document.getElementById("detail-execution-summary");
+const detailExecutionSummaryPreview = document.getElementById("detail-execution-summary-preview");
+const detailKeyQuestion = document.getElementById("detail-key-question");
+const detailKeyQuestionPreview = document.getElementById("detail-key-question-preview");
+const detailWorkstreams = document.getElementById("detail-workstreams");
+const detailWorkstreamsPreview = document.getElementById("detail-workstreams-preview");
+const detailExtractedContext = document.getElementById("detail-extracted-context");
+const detailExtractedContextPreview = document.getElementById("detail-extracted-context-preview");
+const detailOpenQuestions = document.getElementById("detail-open-questions");
+const detailOpenQuestionsPreview = document.getElementById("detail-open-questions-preview");
+const addWorkItemButton = document.getElementById("add-work-item");
+const detailWorkItems = document.getElementById("detail-work-items");
+const executionItemsPreview = document.getElementById("execution-items-preview");
+const synthesizeOutputButton = document.getElementById("synthesize-output");
+const detailOutputFocus = document.getElementById("detail-output-focus");
+const detailOutputWork = document.getElementById("detail-output-work");
+const detailOutputOwners = document.getElementById("detail-output-owners");
+const detailOutputRisks = document.getElementById("detail-output-risks");
+const detailOutput = document.getElementById("detail-output");
 const prevNodeButton = document.getElementById("prev-node");
 const nextNodeButton = document.getElementById("next-node");
 const summaryContent = document.getElementById("summary-content");
 const restartFlowButton = document.getElementById("restart-flow");
+const exportDocxButton = document.getElementById("export-docx");
+const exportPptxButton = document.getElementById("export-pptx");
 const nodeTemplate = document.getElementById("roadmap-node-template");
+const workItemTemplate = document.getElementById("work-item-template");
 const detailsModal = document.getElementById("details-modal");
 const detailsModalBackdrop = document.getElementById("details-modal-backdrop");
 const closeDetailsModalButton = document.getElementById("close-details-modal");
@@ -76,10 +105,137 @@ const nodeModalName = document.getElementById("node-modal-name");
 const nodeModalWhy = document.getElementById("node-modal-why");
 const nodeModalBreakdown = document.getElementById("node-modal-breakdown");
 const nodeModalContext = document.getElementById("node-modal-context");
+const detailBriefModal = document.getElementById("detail-brief-modal");
+const detailBriefModalBackdrop = document.getElementById("detail-brief-modal-backdrop");
+const closeDetailBriefModalButton = document.getElementById("close-detail-brief-modal");
+const saveDetailBriefModalButton = document.getElementById("save-detail-brief-modal");
+const detailBriefModalName = document.getElementById("detail-brief-modal-name");
+const detailBriefModalDescription = document.getElementById("detail-brief-modal-description");
+const detailBriefModalBreakdown = document.getElementById("detail-brief-modal-breakdown");
+const executionModal = document.getElementById("execution-modal");
+const executionModalBackdrop = document.getElementById("execution-modal-backdrop");
+const openExecutionModalButton = document.getElementById("open-execution-modal");
+const closeExecutionModalButton = document.getElementById("close-execution-modal");
+const agentNoteModal = document.getElementById("agent-note-modal");
+const agentNoteModalBackdrop = document.getElementById("agent-note-modal-backdrop");
+const closeAgentNoteModalButton = document.getElementById("close-agent-note-modal");
+const agentNoteModalTitle = document.getElementById("agent-note-modal-title");
+const agentNoteModalCopy = document.getElementById("agent-note-modal-copy");
+const agentNoteModalContent = document.getElementById("agent-note-modal-content");
+const summaryNodeModal = document.getElementById("summary-node-modal");
+const summaryNodeModalBackdrop = document.getElementById("summary-node-modal-backdrop");
+const closeSummaryNodeModalButton = document.getElementById("close-summary-node-modal");
+const summaryNodeModalTitle = document.getElementById("summary-node-modal-title");
+const summaryNodeModalCopy = document.getElementById("summary-node-modal-copy");
+const summaryNodeModalBody = document.getElementById("summary-node-modal-body");
+const summaryProblemModal = document.getElementById("summary-problem-modal");
+const summaryProblemModalBackdrop = document.getElementById("summary-problem-modal-backdrop");
+const closeSummaryProblemModalButton = document.getElementById("close-summary-problem-modal");
+const summaryProblemModalBody = document.getElementById("summary-problem-modal-body");
 const sidebarNavItems = Array.from(document.querySelectorAll(".nav-item"));
+const sectionToggles = Array.from(document.querySelectorAll(".section-toggle"));
+const contextHelpButtons = Array.from(document.querySelectorAll(".context-help-button"));
 const NO_ADDITIONAL_SUGGESTED_ITEM = "No Additional Suggested Item";
 
 let detailsModalTarget = "problem";
+
+refreshNodeBuildButton.addEventListener("click", async () => {
+  await loadNodeBuild(state.roadmap[state.currentIndex], true);
+});
+
+openDetailBriefModalButton.addEventListener("click", openDetailBriefModal);
+closeDetailBriefModalButton.addEventListener("click", closeDetailBriefModal);
+detailBriefModalBackdrop.addEventListener("click", closeDetailBriefModal);
+saveDetailBriefModalButton.addEventListener("click", saveDetailBriefModal);
+openExecutionModalButton.addEventListener("click", openExecutionModal);
+closeExecutionModalButton.addEventListener("click", closeExecutionModal);
+executionModalBackdrop.addEventListener("click", closeExecutionModal);
+closeAgentNoteModalButton.addEventListener("click", closeAgentNoteModal);
+agentNoteModalBackdrop.addEventListener("click", closeAgentNoteModal);
+closeSummaryNodeModalButton.addEventListener("click", closeSummaryNodeModal);
+summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
+closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
+summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
+sectionToggles.forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = button.dataset.target;
+    const section = document.querySelector(`.collapsible-section[data-section="${target}"]`);
+    if (!section) {
+      return;
+    }
+    section.classList.toggle("is-open");
+    button.textContent = section.classList.contains("is-open") ? "Collapse" : "Expand";
+  });
+});
+contextHelpButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = button.dataset.helpTarget;
+    if (target === "guiding-question") {
+      openAgentNoteModal(
+        "Guiding Question",
+        "This is the agent's distilled question behind the node.",
+        [detailKeyQuestion.value.trim() || "No guiding question yet."],
+      );
+      return;
+    }
+    if (target === "open-questions") {
+      openAgentNoteModal(
+        "Open Questions",
+        "These are the unresolved questions the agent still sees around this node.",
+        parseList(detailOpenQuestions.value),
+      );
+    }
+  });
+});
+
+synthesizeOutputButton.addEventListener("click", async () => {
+  const currentNode = state.roadmap[state.currentIndex];
+  if (!currentNode) {
+    return;
+  }
+  synthesizeOutputButton.disabled = true;
+  synthesizeOutputButton.textContent = "Synthesizing...";
+  try {
+    const response = await fetch("/api/node-output", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problem: state.problem,
+        problem_details: state.problemDetails,
+        node_title: detailNodeName.textContent.trim() || currentNode.title,
+        node_description: detailNodeDescription.value.trim(),
+        node_breakdown: detailNodeBreakdown.value.trim(),
+        key_question: detailKeyQuestion.value.trim(),
+        extracted_context: detailExtractedContext.value.trim(),
+        execution_items: collectWorkItems(),
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to synthesize this node output.");
+    }
+    applyStructuredOutput(payload.output || "", payload.output_sections || {});
+    autoResizeAll();
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    synthesizeOutputButton.disabled = false;
+    synthesizeOutputButton.textContent = "Synthesize Output";
+  }
+});
+
+addWorkItemButton.addEventListener("click", () => {
+  renderWorkItemCard({
+    action: "",
+    owner: "",
+    collaborator: "",
+    source: "",
+    artifact: "",
+    approval: "No approval needed",
+    blockers: "No blocker identified yet.",
+  });
+  autoResizeAll();
+});
 
 startRoadmapButton.addEventListener("click", async () => {
   const problem = problemInput.value.trim();
@@ -193,6 +349,21 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !nodeModal.hidden) {
     closeNodeModal();
   }
+  if (event.key === "Escape" && !detailBriefModal.hidden) {
+    closeDetailBriefModal();
+  }
+  if (event.key === "Escape" && !executionModal.hidden) {
+    closeExecutionModal();
+  }
+  if (event.key === "Escape" && !agentNoteModal.hidden) {
+    closeAgentNoteModal();
+  }
+  if (event.key === "Escape" && !summaryNodeModal.hidden) {
+    closeSummaryNodeModal();
+  }
+  if (event.key === "Escape" && !summaryProblemModal.hidden) {
+    closeSummaryProblemModal();
+  }
 });
 closeNodeModalButton.addEventListener("click", closeNodeModal);
 nodeModalBackdrop.addEventListener("click", closeNodeModal);
@@ -228,13 +399,13 @@ confirmRoadmapButton.addEventListener("click", () => {
   updateProblemDetailsPreviews();
   state.roadmap = cleaned;
   state.currentIndex = 0;
-  for (const key of Object.keys(state.notes)) {
+  for (const key of Object.keys(state.nodeBuilds)) {
     if (!state.roadmap.some((node) => node.id === key)) {
-      delete state.notes[key];
+      delete state.nodeBuilds[key];
     }
   }
-  loadDetailStep();
   showPanel("details");
+  loadDetailStep();
 });
 
 polishNodeButton.addEventListener("click", async () => {
@@ -305,6 +476,16 @@ prevNodeButton.addEventListener("click", () => {
 });
 
 nextNodeButton.addEventListener("click", () => {
+  if (
+    !detailOutputFocus.value.trim() ||
+    !detailOutputWork.value.trim() ||
+    !detailOutputOwners.value.trim() ||
+    !detailOutputRisks.value.trim()
+  ) {
+    window.alert("Please complete all structured output boxes before continuing.");
+    detailOutputFocus.focus();
+    return;
+  }
   saveCurrentNote();
   if (state.currentIndex < state.roadmap.length - 1) {
     state.currentIndex += 1;
@@ -324,7 +505,7 @@ restartFlowButton.addEventListener("click", () => {
   state.assessmentTitle = "";
   state.assessmentRecap = "";
   state.roadmap = [];
-  state.notes = {};
+  state.nodeBuilds = {};
   state.currentIndex = 0;
   state.nextNodeId = 1;
   state.sequenceEditMode = false;
@@ -335,6 +516,7 @@ restartFlowButton.addEventListener("click", () => {
   roadmapProblemInput.value = "";
   roadmapProblemDetailsInput.value = "";
   roadmapList.innerHTML = "";
+  detailWorkItems.innerHTML = "";
   summaryContent.innerHTML = "";
   updateAssessmentFields();
   updateProblemDetailsPreviews();
@@ -343,6 +525,9 @@ restartFlowButton.addEventListener("click", () => {
   updateAssessmentPrioritySummary();
   showPanel("problem");
 });
+
+exportDocxButton.addEventListener("click", () => exportWorkflow("docx", exportDocxButton, "Download Word"));
+exportPptxButton.addEventListener("click", () => exportWorkflow("pptx", exportPptxButton, "Download PowerPoint"));
 
 function renderRoadmapEditor() {
   roadmapList.innerHTML = "";
@@ -472,13 +657,154 @@ function reorderNodeById(fromId, toId) {
 
 function loadDetailStep() {
   const currentNode = state.roadmap[state.currentIndex];
-  detailTitle.textContent = currentNode.title;
-  detailSubtitle.textContent = `${currentNode.why} ${currentNode.breakdown} Capture the details you want the agentic workflow to build for the ${currentNode.title.toLowerCase()} stage.`;
+  resetDetailSections();
+  detailTitle.textContent = "Roadmap Buildup";
+  if (detailStepTitle) {
+    detailStepTitle.textContent = currentNode.title;
+  }
+  detailNodeName.textContent = currentNode.title;
+  detailNodeDescription.value = currentNode.why;
+  detailNodeBreakdown.value = currentNode.breakdown;
+  syncBriefPreviews();
+  detailSubtitle.textContent = `Build out the ${currentNode.title.toLowerCase()} node in detail before moving to the next part of the roadmap. ${currentNode.why}`;
   detailProgress.textContent = `${state.currentIndex + 1} of ${state.roadmap.length}`;
-  detailNotes.placeholder = `Add the guiding questions, expectations, or notes for ${currentNode.title}.`;
-  detailNotes.value = state.notes[currentNode.id] || "";
   nextNodeButton.textContent =
     state.currentIndex === state.roadmap.length - 1 ? "Finish Workflow" : "Save and Continue";
+  loadNodeBuild(currentNode, false);
+}
+
+async function loadNodeBuild(node, forceRefresh) {
+  if (!node) {
+    return;
+  }
+  const existing = state.nodeBuilds[node.id];
+  if (existing && !forceRefresh) {
+    hydrateNodeBuild(existing);
+    return;
+  }
+
+  refreshNodeBuildButton.disabled = true;
+  refreshNodeBuildButton.textContent = forceRefresh ? "Refreshing..." : "Loading...";
+  try {
+    const response = await fetch("/api/node-build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problem: state.problem,
+        problem_details: state.problemDetails,
+        problem_type: state.problemTypeKey,
+        node_title: node.title,
+        node_why: node.why,
+        node_breakdown: node.breakdown,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to prepare this node build.");
+    }
+    const scaffold = {
+      node_name: node.title,
+      node_description: node.why,
+      node_breakdown: node.breakdown,
+      execution_summary: payload.execution_summary || "",
+      key_question: payload.key_question || "",
+      workstreams: Array.isArray(payload.workstreams) ? payload.workstreams : [],
+      extracted_context: payload.extracted_context || "",
+      open_questions: Array.isArray(payload.open_questions) ? payload.open_questions : [],
+      execution_items: Array.isArray(payload.execution_items) ? payload.execution_items : [],
+      output: payload.output || "",
+      output_sections: normalizeOutputSections(payload.output_sections || parseStructuredOutput(payload.output || "")),
+    };
+    state.nodeBuilds[node.id] = scaffold;
+    hydrateNodeBuild(scaffold);
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    refreshNodeBuildButton.disabled = false;
+    refreshNodeBuildButton.textContent = "Refresh Node Draft";
+  }
+}
+
+function hydrateNodeBuild(build) {
+  detailNodeName.textContent = build.node_name || "";
+  detailNodeDescription.value = build.node_description || "";
+  detailNodeBreakdown.value = build.node_breakdown || "";
+  syncBriefPreviews();
+  detailExecutionSummary.value = build.execution_summary || "";
+  detailKeyQuestion.value = build.key_question || "";
+  detailWorkstreams.value = formatWorkstreams(build.workstreams || []);
+  detailExtractedContext.value = build.extracted_context || "";
+  detailOpenQuestions.value = formatList(build.open_questions || []);
+  applyStructuredOutput(build.output || "", build.output_sections || parseStructuredOutput(build.output || ""));
+  detailWorkItems.innerHTML = "";
+  (build.execution_items || []).forEach((item) => renderWorkItemCard(item));
+  refreshContextPreviews();
+  refreshExecutionPreview();
+  autoResizeAll();
+}
+
+function renderWorkItemCard(item) {
+  const fragment = workItemTemplate.content.cloneNode(true);
+  const card = fragment.querySelector(".work-item-card");
+  const summaryButton = fragment.querySelector(".work-item-summary");
+  const summaryTitle = fragment.querySelector(".work-item-summary-title");
+  const summaryMeta = fragment.querySelector(".work-item-summary-meta");
+  const summaryToggle = fragment.querySelector(".work-item-summary-toggle");
+  const actionInput = fragment.querySelector(".work-item-action");
+  const ownerInput = fragment.querySelector(".work-item-owner");
+  const collaboratorInput = fragment.querySelector(".work-item-collaborator");
+  const sourceInput = fragment.querySelector(".work-item-source");
+  const artifactInput = fragment.querySelector(".work-item-artifact");
+  const approvalInput = fragment.querySelector(".work-item-approval");
+  const blockersInput = fragment.querySelector(".work-item-blockers");
+  const removeButton = fragment.querySelector(".remove-work-item");
+  actionInput.value = item.action || "";
+  ownerInput.value = item.owner || "";
+  collaboratorInput.value = item.collaborator || "";
+  sourceInput.value = item.source || "";
+  artifactInput.value = item.artifact || "";
+  const approvalValue = item.approval || "No approval needed";
+  if (!Array.from(approvalInput.options).some((option) => option.value === approvalValue)) {
+    const option = document.createElement("option");
+    option.value = approvalValue;
+    option.textContent = approvalValue;
+    approvalInput.appendChild(option);
+  }
+  approvalInput.value = approvalValue;
+  blockersInput.value = item.blockers || "";
+  const refreshSummary = () => {
+    const action = actionInput.value.trim() || "New action item";
+    const owner = ownerInput.value.trim() || "Owner not set";
+    const source = sourceInput.value.trim() || "Source not set";
+    summaryTitle.textContent = action;
+    summaryMeta.textContent = `${owner} | ${source}`;
+  };
+  [actionInput, ownerInput, sourceInput].forEach((input) => {
+    input.addEventListener("input", () => {
+      refreshSummary();
+      refreshExecutionPreview();
+    });
+  });
+  summaryButton.addEventListener("click", () => {
+    const shouldOpen = !card.classList.contains("is-open");
+    detailWorkItems.querySelectorAll(".work-item-card").forEach((itemCard) => {
+      itemCard.classList.remove("is-open");
+      const toggle = itemCard.querySelector(".work-item-summary-toggle");
+      if (toggle) {
+        toggle.textContent = "Expand";
+      }
+    });
+    if (shouldOpen) {
+      card.classList.add("is-open");
+      summaryToggle.textContent = "Collapse";
+    }
+  });
+  removeButton.addEventListener("click", () => {
+    card.remove();
+    refreshExecutionPreview();
+  });
+  refreshSummary();
+  detailWorkItems.appendChild(card);
 }
 
 function saveCurrentNote() {
@@ -486,43 +812,171 @@ function saveCurrentNote() {
   if (!currentNode) {
     return;
   }
-  state.notes[currentNode.id] = detailNotes.value.trim();
+  currentNode.title = detailNodeName.textContent.trim() || currentNode.title;
+  currentNode.why = detailNodeDescription.value.trim();
+  currentNode.breakdown = detailNodeBreakdown.value.trim();
+
+  const workItems = collectWorkItems();
+
+  state.nodeBuilds[currentNode.id] = {
+    node_name: detailNodeName.textContent.trim() || currentNode.title,
+    node_description: detailNodeDescription.value.trim(),
+    node_breakdown: detailNodeBreakdown.value.trim(),
+    execution_summary: detailExecutionSummary.value.trim(),
+    key_question: detailKeyQuestion.value.trim(),
+    workstreams: parseWorkstreams(detailWorkstreams.value),
+    extracted_context: detailExtractedContext.value.trim(),
+    open_questions: parseList(detailOpenQuestions.value),
+    execution_items: workItems,
+    output: buildStructuredOutput(),
+    output_sections: normalizeOutputSections({
+      focus: detailOutputFocus.value.trim(),
+      work_to_complete: detailOutputWork.value.trim(),
+      owners_and_sources: detailOutputOwners.value.trim(),
+      risks_and_handoff: detailOutputRisks.value.trim(),
+    }),
+  };
+  syncBriefPreviews();
+  refreshContextPreviews();
+  refreshExecutionPreview();
 }
 
 function renderSummary() {
   summaryContent.innerHTML = "";
-
-  const intro = document.createElement("article");
-  intro.className = "summary-card";
-  intro.innerHTML = `
-    <h3>Problem to Solve</h3>
-    <p>${escapeHtml(state.problem)}</p>
-    <p>${escapeHtml(state.problemDetails || "No detailed bucket added yet.")}</p>
-    <p>${escapeHtml(state.problemType || "Problem type not set yet.")}</p>
-    <p>${escapeHtml(state.assessmentTitle || "No assessment added yet.")}</p>
-    <p>${escapeHtml(state.assessmentRecap || "No recap added yet.")}</p>
+  const allActions = state.roadmap.flatMap((node) =>
+    ((state.nodeBuilds[node.id]?.execution_items || []).map((item) => ({ ...item, node: node.title }))),
+  );
+  const readyCount = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
+  const overview = document.createElement("section");
+  overview.className = "summary-overview-grid";
+  overview.innerHTML = `
+    <article class="summary-overview-card problem">
+      <p class="card-label">Problem Review</p>
+      <h3>Main Question</h3>
+      <p>${escapeHtml(state.problem)}</p>
+      <button class="ghost-button summary-problem-button" type="button">Review Detail</button>
+    </article>
+    <article class="summary-overview-card actions">
+      <p class="card-label">Action Coverage</p>
+      <h3>Actionable Items</h3>
+      <strong>${allActions.length}</strong>
+      <p>Concrete actions captured across the full roadmap buildup.</p>
+    </article>
+    <article class="summary-overview-card readiness">
+      <p class="card-label">Readiness</p>
+      <h3>Ready Nodes</h3>
+      <strong>${readyCount}/${state.roadmap.length}</strong>
+      <p>Nodes that no longer need additional suggested context.</p>
+    </article>
   `;
-  summaryContent.appendChild(intro);
+  summaryContent.appendChild(overview);
+  overview.querySelector(".summary-problem-button")?.addEventListener("click", openSummaryProblemModal);
 
+  const nodesSection = document.createElement("section");
+  nodesSection.className = "summary-section-card";
+  nodesSection.innerHTML = `
+    <div class="summary-section-header">
+      <div>
+        <p class="card-label">Node Review</p>
+        <h3>Roadmap Build Summary</h3>
+        <p class="section-copy">Review the framework node by node, then open any node to inspect the execution items behind it.</p>
+      </div>
+      <span class="status-chip">${state.roadmap.length} nodes</span>
+    </div>
+  `;
+  const nodeGrid = document.createElement("div");
+  nodeGrid.className = "summary-node-grid";
   state.roadmap.forEach((node) => {
+    const nodeBuild = state.nodeBuilds[node.id] || {};
+    const outputSections = normalizeOutputSections(nodeBuild.output_sections || parseStructuredOutput(nodeBuild.output || ""));
+    const actionCount = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items.length : 0;
+    const isReady = isNoAdditionalSuggestedItem(node.suggested_context || "");
     const card = document.createElement("article");
-    card.className = "summary-card";
+    card.className = `summary-node-card ${isReady ? "ready" : "needs-attention"}`;
     card.innerHTML = `
-      <h3>${escapeHtml(node.title)}</h3>
-      <p>${escapeHtml(node.why)}</p>
-      <p>${escapeHtml(node.breakdown)}</p>
-      <p>${escapeHtml(node.suggested_context || "No suggested context added yet.")}</p>
-      <p>${escapeHtml(state.notes[node.id] || "No notes added yet.")}</p>
+      <div class="summary-node-top">
+        <div>
+          <h4>${escapeHtml(node.title)}</h4>
+          <p>${escapeHtml(node.why)}</p>
+        </div>
+        <span class="status-chip">${isReady ? "Ready" : "Needs Context"}</span>
+      </div>
+      <div class="summary-node-copy">
+        <p>${escapeHtml(nodeBuild.execution_summary || "No execution summary added yet.")}</p>
+        <p>${escapeHtml(outputSections.focus || "No focus added yet.")}</p>
+      </div>
+      <div class="summary-section-header">
+        <span class="status-chip">${actionCount} actions</span>
+        <button class="ghost-button summary-review-button" type="button">Review Node</button>
+      </div>
     `;
-    summaryContent.appendChild(card);
+    card.querySelector(".summary-review-button")?.addEventListener("click", () => openSummaryNodeModal(node, nodeBuild));
+    nodeGrid.appendChild(card);
   });
+  nodesSection.appendChild(nodeGrid);
+  summaryContent.appendChild(nodesSection);
+}
+
+async function exportWorkflow(format, button, idleText) {
+  const payload = buildExportPayload(format);
+  button.disabled = true;
+  button.textContent = format === "docx" ? "Preparing Word..." : "Preparing PowerPoint...";
+  try {
+    const response = await fetch("/api/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      let message = "Unable to export this workflow.";
+      try {
+        const data = await response.json();
+        message = data.error || message;
+      } catch {
+        // ignore
+      }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = format === "docx" ? "strenaysis-workflow.docx" : "strenaysis-workflow.pptx";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = idleText;
+  }
+}
+
+function buildExportPayload(format) {
+  return {
+    format,
+    problem: state.problem,
+    problem_details: state.problemDetails,
+    problem_type: state.problemType,
+    assessment_title: state.assessmentTitle,
+    assessment_recap: state.assessmentRecap,
+    nodes: state.roadmap.map((node) => ({
+      title: node.title,
+      why: node.why,
+      breakdown: node.breakdown,
+      suggested_context: node.suggested_context,
+      build: state.nodeBuilds[node.id] || {},
+    })),
+  };
 }
 
 function showPanel(name) {
   Object.entries(panels).forEach(([key, panel]) => {
     panel.classList.toggle("active", key === name);
   });
-  const activeNav = name === "details" ? "actions" : name === "summary" ? "review" : "problems";
+  const activeNav = name === "summary" ? "review" : "problems";
   sidebarNavItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === activeNav);
   });
@@ -568,7 +1022,7 @@ async function generateRoadmap(problem, options) {
     state.assessmentTitle = String(payload.assessment_title || "").trim();
     state.assessmentRecap = String(payload.assessment_recap || "").trim();
     if (options.resetNotes) {
-      state.notes = {};
+      state.nodeBuilds = {};
     }
     state.nextNodeId = state.roadmap.length + 1;
     problemInput.value = problem;
@@ -815,6 +1269,337 @@ function updateProblemDetailsPreviews() {
       : "No detailed bucket added yet.";
     preview.classList.toggle("empty", !value);
     preview.classList.toggle("has-content", Boolean(value));
+  });
+}
+
+function collectWorkItems() {
+  return Array.from(detailWorkItems.querySelectorAll(".work-item-card"))
+    .map((card) => ({
+      action: card.querySelector(".work-item-action")?.value.trim() || "",
+      owner: card.querySelector(".work-item-owner")?.value.trim() || "",
+      collaborator: card.querySelector(".work-item-collaborator")?.value.trim() || "",
+      source: card.querySelector(".work-item-source")?.value.trim() || "",
+      artifact: card.querySelector(".work-item-artifact")?.value.trim() || "",
+      approval: card.querySelector(".work-item-approval")?.value.trim() || "",
+      blockers: card.querySelector(".work-item-blockers")?.value.trim() || "",
+    }))
+    .filter(
+      (item) =>
+        item.action ||
+        item.owner ||
+        item.collaborator ||
+        item.source ||
+        item.artifact ||
+        item.blockers ||
+        item.approval !== "No approval needed",
+    );
+}
+
+function formatList(items) {
+  return (items || []).join("\n");
+}
+
+function parseList(text) {
+  return String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function formatWorkstreams(items) {
+  return (items || [])
+    .map((item) => `${item.name}: ${item.purpose} | Priority: ${item.priority} | Done when: ${item.completion_criteria}`)
+    .join("\n");
+}
+
+function syncBriefPreviews() {
+  if (detailNodeDescriptionPreview) {
+    detailNodeDescriptionPreview.textContent = detailNodeDescription.value.trim() || "No node description added yet.";
+  }
+  if (detailNodeBreakdownPreview) {
+    detailNodeBreakdownPreview.textContent = detailNodeBreakdown.value.trim() || "No node breakdown added yet.";
+  }
+}
+
+function refreshContextPreviews() {
+  if (detailExecutionSummaryPreview) {
+    detailExecutionSummaryPreview.textContent = detailExecutionSummary.value.trim() || "No execution summary yet.";
+  }
+  if (detailKeyQuestionPreview) {
+    detailKeyQuestionPreview.textContent = detailKeyQuestion.value.trim() || "No guiding question yet.";
+  }
+  renderPreviewList(detailWorkstreamsPreview, parseWorkstreams(detailWorkstreams.value).map((item) => item.name || item.purpose || ""));
+  renderPreviewList(detailExtractedContextPreview, parseList(detailExtractedContext.value));
+  renderPreviewList(detailOpenQuestionsPreview, parseList(detailOpenQuestions.value));
+}
+
+function renderPreviewList(container, items) {
+  if (!container) {
+    return;
+  }
+  const values = (items || []).filter((item) => String(item || "").trim());
+  if (!values.length) {
+    container.innerHTML = `<div class="context-preview-item">No items added yet.</div>`;
+    return;
+  }
+  container.innerHTML = values
+    .map((item) => `<div class="context-preview-item">${escapeHtml(String(item))}</div>`)
+    .join("");
+}
+
+function refreshExecutionPreview() {
+  if (!executionItemsPreview) {
+    return;
+  }
+  const items = collectWorkItems();
+  if (!items.length) {
+    executionItemsPreview.innerHTML = `
+      <div class="execution-preview-copy">
+        No action items yet. Open planning to add tasks, owners, approvals, and blockers.
+      </div>
+    `;
+    return;
+  }
+  executionItemsPreview.innerHTML = items
+    .map(
+      (item, index) => `
+        <div class="execution-preview-item">
+          <div class="execution-preview-main">
+            <div class="execution-preview-title">${escapeHtml(item.action || `Action item ${index + 1}`)}</div>
+            <div class="execution-preview-meta">${escapeHtml(`${item.owner || "Owner not set"} | ${item.source || "Source not set"}`)}</div>
+          </div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function normalizeOutputSections(sections) {
+  return {
+    focus: String(sections?.focus || "").trim(),
+    work_to_complete: String(sections?.work_to_complete || "").trim(),
+    owners_and_sources: String(sections?.owners_and_sources || "").trim(),
+    risks_and_handoff: String(sections?.risks_and_handoff || "").trim(),
+  };
+}
+
+function parseStructuredOutput(text) {
+  const sections = {
+    focus: "",
+    work_to_complete: "",
+    owners_and_sources: "",
+    risks_and_handoff: "",
+  };
+  String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      if (line.startsWith("Focus:")) {
+        sections.focus = line.replace("Focus:", "").trim();
+      } else if (line.startsWith("What will be done:")) {
+        sections.work_to_complete = line.replace("What will be done:", "").trim();
+      } else if (line.startsWith("Who and where:")) {
+        sections.owners_and_sources = line.replace("Who and where:", "").trim();
+      } else if (line.startsWith("Deliverable and risk:")) {
+        sections.risks_and_handoff = line.replace("Deliverable and risk:", "").trim();
+      }
+    });
+  return sections;
+}
+
+function buildStructuredOutput() {
+  const sections = normalizeOutputSections({
+    focus: detailOutputFocus.value.trim(),
+    work_to_complete: detailOutputWork.value.trim(),
+    owners_and_sources: detailOutputOwners.value.trim(),
+    risks_and_handoff: detailOutputRisks.value.trim(),
+  });
+  detailOutput.value = [
+    `Focus: ${sections.focus}`,
+    `What will be done: ${sections.work_to_complete}`,
+    `Who and where: ${sections.owners_and_sources}`,
+    `Deliverable and risk: ${sections.risks_and_handoff}`,
+  ].join("\n");
+  return detailOutput.value;
+}
+
+function applyStructuredOutput(output, sections) {
+  const normalized = normalizeOutputSections(Object.values(sections || {}).some(Boolean) ? sections : parseStructuredOutput(output));
+  detailOutputFocus.value = normalized.focus;
+  detailOutputWork.value = normalized.work_to_complete;
+  detailOutputOwners.value = normalized.owners_and_sources;
+  detailOutputRisks.value = normalized.risks_and_handoff;
+  detailOutput.value = output || buildStructuredOutput();
+}
+
+function parseWorkstreams(text) {
+  return String(text || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => ({ name: line, purpose: "", priority: "", completion_criteria: "" }));
+}
+
+function openDetailBriefModal() {
+  detailBriefModalName.value = detailNodeName.textContent.trim();
+  detailBriefModalDescription.value = detailNodeDescription.value;
+  detailBriefModalBreakdown.value = detailNodeBreakdown.value;
+  detailBriefModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  autoResize(detailBriefModalDescription);
+  autoResize(detailBriefModalBreakdown);
+}
+
+function closeDetailBriefModal() {
+  detailBriefModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function openExecutionModal() {
+  executionModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeExecutionModal() {
+  executionModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function openAgentNoteModal(title, copy, items) {
+  agentNoteModalTitle.textContent = title;
+  agentNoteModalCopy.textContent = copy;
+  const values = (items || []).filter((item) => String(item || "").trim());
+  agentNoteModalContent.innerHTML = values.length
+    ? values.map((item) => `<div class="context-preview-item">${escapeHtml(String(item))}</div>`).join("")
+    : `<div class="context-preview-item">No agent note available yet.</div>`;
+  agentNoteModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeAgentNoteModal() {
+  agentNoteModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function openSummaryNodeModal(node, nodeBuild) {
+  const outputSections = normalizeOutputSections(nodeBuild.output_sections || parseStructuredOutput(nodeBuild.output || ""));
+  const workstreams = Array.isArray(nodeBuild.workstreams)
+    ? nodeBuild.workstreams.map((item) => item.name || item.purpose || "").filter(Boolean)
+    : [];
+  const actions = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items : [];
+  summaryNodeModalTitle.textContent = node.title;
+  summaryNodeModalCopy.textContent = node.why || "Review the full node synthesis and execution trail.";
+  summaryNodeModalBody.className = "modal-body summary-modal-body";
+  summaryNodeModalBody.innerHTML = `
+    <section class="summary-modal-section">
+      <h4>Node Breakdown</h4>
+      <p>${escapeHtml(node.breakdown || "No node breakdown added yet.")}</p>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Execution Summary</h4>
+      <p>${escapeHtml(nodeBuild.execution_summary || "No execution summary added yet.")}</p>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Problem Parse</h4>
+      <p>${escapeHtml(nodeBuild.extracted_context || "No extracted context added yet.")}</p>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Workstreams</h4>
+      <div class="summary-modal-list">
+        ${
+          workstreams.length
+            ? workstreams.map((item) => `<div class="summary-modal-item">${escapeHtml(item)}</div>`).join("")
+            : `<div class="summary-modal-item">No workstreams added yet.</div>`
+        }
+      </div>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Action Items</h4>
+      <div class="summary-modal-list">
+        ${
+          actions.length
+            ? actions
+                .map(
+                  (item) => `
+                    <div class="summary-modal-item">
+                      <p>${escapeHtml(item.action || "No action title")}</p>
+                      <p>${escapeHtml(`Owner: ${item.owner || "Not set"} | Collaborator: ${item.collaborator || "Not set"}`)}</p>
+                      <p>${escapeHtml(`Source: ${item.source || "Not set"}`)}</p>
+                      <p>${escapeHtml(`Artifact: ${item.artifact || "Not set"}`)}</p>
+                      <p>${escapeHtml(`Approval: ${item.approval || "Not set"} | Blocker: ${item.blockers || "Not set"}`)}</p>
+                    </div>
+                  `,
+                )
+                .join("")
+            : `<div class="summary-modal-item">No action items added yet.</div>`
+        }
+      </div>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Deck Background Context</h4>
+      <div class="summary-modal-list">
+        <div class="summary-modal-item">${escapeHtml(`Focus: ${outputSections.focus || "No focus added yet."}`)}</div>
+        <div class="summary-modal-item">${escapeHtml(`Work to complete: ${outputSections.work_to_complete || "No work summary added yet."}`)}</div>
+        <div class="summary-modal-item">${escapeHtml(`Owners and sources: ${outputSections.owners_and_sources || "No owners or sources added yet."}`)}</div>
+        <div class="summary-modal-item">${escapeHtml(`Risks and handoff: ${outputSections.risks_and_handoff || "No risks or handoff added yet."}`)}</div>
+      </div>
+    </section>
+  `;
+  summaryNodeModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSummaryNodeModal() {
+  summaryNodeModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function openSummaryProblemModal() {
+  summaryProblemModalBody.innerHTML = `
+    <section class="summary-modal-section">
+      <h4>Main Question</h4>
+      <p>${escapeHtml(state.problem || "No problem captured yet.")}</p>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Detailed Context</h4>
+      <p>${escapeHtml(state.problemDetails || "No detailed bucket added yet.")}</p>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Assessment</h4>
+      <p>${escapeHtml(state.problemType || "Problem type not set yet.")}</p>
+      <p>${escapeHtml(state.assessmentTitle || "No assessment explanation yet.")}</p>
+      <p>${escapeHtml(state.assessmentRecap || "No recap added yet.")}</p>
+    </section>
+  `;
+  summaryProblemModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSummaryProblemModal() {
+  summaryProblemModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function saveDetailBriefModal() {
+  detailNodeName.textContent = detailBriefModalName.value.trim();
+  detailNodeDescription.value = detailBriefModalDescription.value.trim();
+  detailNodeBreakdown.value = detailBriefModalBreakdown.value.trim();
+  if (detailStepTitle) {
+    detailStepTitle.textContent = detailNodeName.textContent || "Detail Builder";
+  }
+  syncBriefPreviews();
+  autoResize(detailNodeDescription);
+  autoResize(detailNodeBreakdown);
+  closeDetailBriefModal();
+}
+
+function resetDetailSections() {
+  document.querySelectorAll(".collapsible-section").forEach((section) => {
+    section.classList.add("is-open");
+  });
+  sectionToggles.forEach((button) => {
+    button.textContent = "Collapse";
   });
 }
 

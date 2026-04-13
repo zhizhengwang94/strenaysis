@@ -194,6 +194,220 @@ def polish_node(problem: str, problem_details: str, draft: str) -> dict[str, str
     polished = _extract_polished_node(body)
     return polished or _fallback_polish_node(problem, problem_details, draft)
 
+
+def generate_node_build(
+    problem: str,
+    problem_details: str,
+    problem_type: str,
+    node_title: str,
+    node_why: str,
+    node_breakdown: str,
+) -> dict[str, Any]:
+    fallback = _fallback_node_build(problem, problem_details, problem_type, node_title, node_why, node_breakdown)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return fallback
+
+    prompt = (
+        "You are translating one roadmap node into a concrete execution plan for a data analyst or data scientist. "
+        "Your job is to convert high-level structure into actionable next steps. "
+        "Return JSON with keys execution_summary, key_question, workstreams, extracted_context, open_questions, execution_items, output. "
+        "execution_summary should be a short paragraph describing what this node needs to achieve operationally. "
+        "key_question should be one sentence. extracted_context should be 3-5 short lines tailored to the problem and this node. "
+        "workstreams should be 2-4 execution buckets. Each workstream must contain name, purpose, priority, completion_criteria. "
+        "open_questions should be 0-4 unresolved questions that could block or change the work. "
+        "execution_items should be 2-6 concrete actions. Each execution item must contain action, owner, collaborator, source, artifact, approval, blockers. "
+        "Make each row operationally useful: what needs to be done now, who to talk to, where the information or data should come from, what deliverable should be created, whether approval is needed, and what could block progress. "
+        "Treat the node breakdown as the structure to translate, not as text to restate. "
+        "Break it into work that a real analyst can execute next week. "
+        "When helpful, use one execution item per major breakdown bucket plus one cross-cutting item for quality, alignment, or synthesis. "
+        "Avoid generic advice like 'analyze the data' unless you specify the dataset, stakeholder, or artifact. "
+        "If the node is Data, think in terms of data gathering, source mapping, data profiling, quality checks, and access alignment. "
+        "If the node is Metric, think in terms of KPI alignment, baseline definitions, dashboard definitions, and sign-off. "
+        "If no approval is needed, say exactly 'No approval needed'. If no major blocker exists, say exactly 'No blocker identified yet.'. "
+        "output should synthesize what this node will produce and why the listed actions are enough to move the roadmap forward. "
+        "The best output sounds like a concise implementation brief, not a glossary note. "
+        "Keep it professional, concrete, and immediately editable.\n\n"
+        f"Problem to solve: {problem}\n"
+        f"Problem details: {problem_details or 'None provided.'}\n"
+        f"Problem type: {problem_type or 'Not set'}\n"
+        f"Node name: {node_title}\n"
+        f"Node description: {node_why}\n"
+        f"Node breakdown:\n{node_breakdown}"
+    )
+    payload = {
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        "input": prompt,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "node_build_response",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "execution_summary": {"type": "string"},
+                        "key_question": {"type": "string"},
+                        "workstreams": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "purpose": {"type": "string"},
+                                    "priority": {"type": "string"},
+                                    "completion_criteria": {"type": "string"},
+                                },
+                                "required": ["name", "purpose", "priority", "completion_criteria"],
+                                "additionalProperties": False,
+                            },
+                        },
+                        "extracted_context": {"type": "string"},
+                        "open_questions": {"type": "array", "items": {"type": "string"}},
+                        "execution_items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {"type": "string"},
+                                    "owner": {"type": "string"},
+                                    "collaborator": {"type": "string"},
+                                    "source": {"type": "string"},
+                                    "artifact": {"type": "string"},
+                                    "approval": {"type": "string"},
+                                    "blockers": {"type": "string"},
+                                },
+                                "required": ["action", "owner", "collaborator", "source", "artifact", "approval", "blockers"],
+                                "additionalProperties": False,
+                            },
+                            "minItems": 1,
+                        },
+                        "output": {"type": "string"},
+                    },
+                    "required": ["execution_summary", "key_question", "workstreams", "extracted_context", "open_questions", "execution_items", "output"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    }
+    req = request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=45) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
+        return fallback
+
+    parsed = _extract_node_build(body)
+    return parsed or fallback
+
+
+def synthesize_node_output(
+    problem: str,
+    problem_details: str,
+    node_title: str,
+    node_description: str,
+    node_breakdown: str,
+    key_question: str,
+    extracted_context: str,
+    execution_items: list[dict[str, str]],
+) -> dict[str, Any]:
+    fallback = _fallback_node_output(node_title, node_description, key_question, extracted_context, execution_items)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return fallback
+
+    prompt = (
+        "You are writing the final synthesized output for one roadmap node in a business-to-analytics planning workspace. "
+        "Return JSON with keys output and output_sections. "
+        "The output should be concise, professional, and useful in a later roadmap review. "
+        "Do not restate the node at a high level. Translate it into an execution-ready synthesis. "
+        "output_sections must contain four strings: focus, work_to_complete, owners_and_sources, risks_and_handoff. "
+        "Write them as deck background context, not as chatty notes. "
+        "The combined output should be 4 short labeled lines separated by newline characters with this style: "
+        "'Focus:', 'What will be done:', 'Who and where:', 'Deliverable and risk:'. "
+        "The note should make it obvious what the team needs to do next, who is involved, where the information comes from, what artifact will be created, and what main risk or approval remains. "
+        "Synthesize across the execution items instead of only repeating the first one. "
+        "Name the major workstreams or action themes when possible.\n\n"
+        f"Problem: {problem}\n"
+        f"Problem details: {problem_details or 'None provided.'}\n"
+        f"Node name: {node_title}\n"
+        f"Node description: {node_description}\n"
+        f"Node breakdown:\n{node_breakdown}\n\n"
+        f"Key question:\n{key_question}\n\n"
+        f"Extracted context:\n{extracted_context}\n\n"
+        f"Execution items:\n{json.dumps(execution_items)}"
+    )
+    payload = {
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        "input": prompt,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "node_output_response",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "output": {"type": "string"},
+                        "output_sections": {
+                            "type": "object",
+                            "properties": {
+                                "focus": {"type": "string"},
+                                "work_to_complete": {"type": "string"},
+                                "owners_and_sources": {"type": "string"},
+                                "risks_and_handoff": {"type": "string"},
+                            },
+                            "required": ["focus", "work_to_complete", "owners_and_sources", "risks_and_handoff"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "required": ["output", "output_sections"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    }
+    req = request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=45) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
+        return fallback
+
+    for item in body.get("output", []):
+        for content in item.get("content", []):
+            if content.get("type") == "output_text" and "text" in content:
+                try:
+                    parsed = json.loads(content["text"])
+                except json.JSONDecodeError:
+                    continue
+                output = str(parsed.get("output", "")).strip()
+                output_sections = parsed.get("output_sections")
+                if output and isinstance(output_sections, dict):
+                    focus = str(output_sections.get("focus", "")).strip()
+                    work_to_complete = str(output_sections.get("work_to_complete", "")).strip()
+                    owners_and_sources = str(output_sections.get("owners_and_sources", "")).strip()
+                    risks_and_handoff = str(output_sections.get("risks_and_handoff", "")).strip()
+                    if focus and work_to_complete and owners_and_sources and risks_and_handoff:
+                        return {
+                            "output": output,
+                            "output_sections": {
+                                "focus": focus,
+                                "work_to_complete": work_to_complete,
+                                "owners_and_sources": owners_and_sources,
+                                "risks_and_handoff": risks_and_handoff,
+                            },
+                        }
+    return fallback
+
 def _extract_roadmap_response(body: dict[str, Any]) -> dict[str, Any] | None:
     output = body.get("output", [])
     for item in output:
@@ -232,6 +446,551 @@ def _extract_polished_node(body: dict[str, Any]) -> dict[str, str] | None:
                 if title and why and breakdown and suggested_context:
                     return {"title": title, "why": why, "breakdown": breakdown, "suggested_context": suggested_context}
     return None
+
+
+def _extract_node_build(body: dict[str, Any]) -> dict[str, Any] | None:
+    output = body.get("output", [])
+    for item in output:
+        for content in item.get("content", []):
+            if content.get("type") != "output_text" or "text" not in content:
+                continue
+            try:
+                parsed = json.loads(content["text"])
+            except json.JSONDecodeError:
+                continue
+            execution_summary = str(parsed.get("execution_summary", "")).strip()
+            key_question = str(parsed.get("key_question", "")).strip()
+            workstreams = parsed.get("workstreams")
+            extracted_context = str(parsed.get("extracted_context", "")).strip()
+            open_questions = parsed.get("open_questions")
+            execution_items = parsed.get("execution_items")
+            synthesis = str(parsed.get("output", "")).strip()
+            if (
+                execution_summary
+                and key_question
+                and extracted_context
+                and synthesis
+                and isinstance(workstreams, list)
+                and isinstance(open_questions, list)
+                and isinstance(execution_items, list)
+                and execution_items
+            ):
+                cleaned_workstreams = []
+                for raw in workstreams:
+                    if not isinstance(raw, dict):
+                        continue
+                    workstream = {
+                        "name": str(raw.get("name", "")).strip(),
+                        "purpose": str(raw.get("purpose", "")).strip(),
+                        "priority": str(raw.get("priority", "")).strip(),
+                        "completion_criteria": str(raw.get("completion_criteria", "")).strip(),
+                    }
+                    if all(workstream.values()):
+                        cleaned_workstreams.append(workstream)
+                cleaned_items = []
+                for raw in execution_items:
+                    if not isinstance(raw, dict):
+                        continue
+                    entry = {
+                        "action": str(raw.get("action", "")).strip(),
+                        "owner": str(raw.get("owner", "")).strip(),
+                        "collaborator": str(raw.get("collaborator", "")).strip(),
+                        "source": str(raw.get("source", "")).strip(),
+                        "artifact": str(raw.get("artifact", "")).strip(),
+                        "approval": str(raw.get("approval", "")).strip(),
+                        "blockers": str(raw.get("blockers", "")).strip(),
+                    }
+                    if all(entry.values()):
+                        cleaned_items.append(entry)
+                if cleaned_items and cleaned_workstreams:
+                    return {
+                        "execution_summary": execution_summary,
+                        "key_question": key_question,
+                        "workstreams": cleaned_workstreams,
+                        "extracted_context": extracted_context,
+                        "open_questions": [str(item).strip() for item in open_questions if str(item).strip()],
+                        "execution_items": cleaned_items,
+                        "output": synthesis,
+                    }
+    return None
+
+
+def _fallback_node_build(
+    problem: str,
+    problem_details: str,
+    problem_type: str,
+    node_title: str,
+    node_why: str,
+    node_breakdown: str,
+) -> dict[str, Any]:
+    audience = _detect_audience(f"{problem} {problem_details}".lower())
+    breakdown_parts = _parse_breakdown_lines(node_breakdown)
+    subject = _infer_subject(problem, problem_details)
+    key_question = f"What needs to be true for the {node_title.lower()} stage to support the final decision cleanly?"
+    execution_summary = (
+        f"The immediate goal is to translate the {node_title.lower()} node into concrete work that can be assigned, "
+        "executed, and reviewed without ambiguity."
+    )
+    extracted_context = "\n".join([
+        f"Problem link: {node_title} should support the core question '{problem}'.",
+        f"Node role: {node_why}",
+        f"Structured scope: {node_breakdown.splitlines()[0] if node_breakdown.splitlines() else node_breakdown}",
+        f"Problem type lens: {PROBLEM_TYPE_LABELS.get(problem_type, PROBLEM_TYPE_LABELS[DEFAULT_PROBLEM_TYPE])}.",
+    ])
+    workstreams = [
+        {
+            "name": "Scope and Alignment",
+            "purpose": f"Define what the {node_title.lower()} node must answer before deeper work starts.",
+            "priority": "high",
+            "completion_criteria": "Stakeholders agree on the node objective and decision use.",
+        },
+        {
+            "name": "Execution Setup",
+            "purpose": f"Gather the inputs, systems, and owners needed to complete the {node_title.lower()} node.",
+            "priority": "high",
+            "completion_criteria": "The team knows what to pull, from where, and who owns each dependency.",
+        },
+    ]
+    execution_items = [
+        {
+            "action": f"Align on what {node_title.lower()} means for {audience.lower()} and confirm the decision use.",
+            "owner": "Analytics lead",
+            "collaborator": "Business owner",
+            "source": "Problem statement and stakeholder notes",
+            "artifact": f"Working definition for the {node_title.lower()} node",
+            "approval": "Business owner sign-off",
+            "blockers": "Ambiguous objective or conflicting stakeholder definitions.",
+        },
+        {
+            "action": f"Gather the core inputs needed to complete the {node_title.lower()} node and document any missing evidence.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": "Internal systems, source tables, and existing documentation",
+            "artifact": f"Source inventory for the {node_title.lower()} node",
+            "approval": "Data access approval",
+            "blockers": "Missing data access, unclear source definitions, or weak historical coverage.",
+        },
+    ]
+    if node_title.lower() in {"decision", "impact", "takeaway", "result"}:
+        execution_items.append(
+            {
+                "action": f"Review the {node_title.lower()} recommendation with the business team and pressure-test feasibility before finalizing.",
+                "owner": "Business stakeholder",
+                "collaborator": "Analytics lead",
+                "source": "Draft recommendation and supporting evidence",
+                "artifact": f"Decision-ready readout for {node_title.lower()}",
+                "approval": "Leadership review",
+                "blockers": "Budget, capacity, policy, or execution concerns remain unresolved.",
+            }
+        )
+    else:
+        execution_items.append(
+            {
+                "action": f"Translate the {node_title.lower()} findings into a reusable artifact for the next roadmap stage.",
+                "owner": "Analytics lead",
+                "collaborator": "Data analyst",
+                "source": f"Completed {node_title.lower()} work products",
+                "artifact": f"Reusable handoff for the next node after {node_title.lower()}",
+                "approval": "No approval needed",
+                "blockers": "Node output is still too generic to support downstream work.",
+            }
+        )
+
+    if node_title.lower() == "data":
+        execution_summary = (
+            "The immediate goal is to identify the required data sources, confirm access, assess quality, and create "
+            "a usable data-readiness package for churn analysis."
+        )
+        workstreams = [
+            {
+                "name": "Source Inventory",
+                "purpose": "Map each required data type to a concrete system, table, and owner.",
+                "priority": "high",
+                "completion_criteria": "All core source systems, owners, and access paths are documented.",
+            },
+            {
+                "name": "Data Quality Validation",
+                "purpose": "Confirm the most important fields are reliable enough for analysis.",
+                "priority": "high",
+                "completion_criteria": "Core fields have been profiled and major risks are documented.",
+            },
+            {
+                "name": "Analysis Dataset Build",
+                "purpose": "Define the first analysis-ready table and the gaps that remain.",
+                "priority": "high",
+                "completion_criteria": "A documented dataset plan exists with required fields, keys, and known limitations.",
+            },
+        ]
+        execution_items = [
+            {
+                "action": "List the required behavioral, value-related, historical, profile, and contextual datasets and map each one to a concrete system or table.",
+                "owner": "Data analyst",
+                "collaborator": "Data engineering or BI owner",
+                "source": "CRM, billing, product telemetry, support logs, campaign systems",
+                "artifact": "Data source inventory with system and table mapping",
+                "approval": "Data access approval",
+                "blockers": "Source ownership is unclear or access has not been provisioned.",
+            },
+            {
+                "action": "Run initial data profiling on the shortlisted sources to check completeness, granularity, join keys, and usable history for churn analysis.",
+                "owner": "Data analyst",
+                "collaborator": "Analytics engineering",
+                "source": "Candidate source tables and schema documentation",
+                "artifact": "Data quality and profiling report",
+                "approval": "No approval needed",
+                "blockers": "Tables do not align on subscriber keys or history is too short for the use case.",
+            },
+            {
+                "action": "Confirm with business stakeholders which fields are required now versus later so the first dataset pull is scoped to decision-relevant evidence.",
+                "owner": "Analytics lead",
+                "collaborator": "Retention lead",
+                "source": "Roadmap node breakdown and stakeholder priorities",
+                "artifact": "Prioritized data request list",
+                "approval": "Business owner sign-off",
+                "blockers": "Stakeholders want a broader data pull than the current timeline supports.",
+            },
+        ]
+    open_questions = [
+        f"What still needs clarification before the {node_title.lower()} node can be executed confidently?",
+    ]
+    if node_title.lower() == "data":
+        plan = _build_data_plan(problem, problem_details, problem_type, subject, breakdown_parts)
+        execution_summary = plan["execution_summary"]
+        workstreams = plan["workstreams"]
+        execution_items = plan["execution_items"]
+        open_questions = plan["open_questions"]
+    elif node_title.lower() == "metric":
+        plan = _build_metric_plan(problem, problem_details, subject, breakdown_parts)
+        execution_summary = plan["execution_summary"]
+        workstreams = plan["workstreams"]
+        execution_items = plan["execution_items"]
+        open_questions = plan["open_questions"]
+    elif breakdown_parts:
+        plan = _build_breakdown_plan(node_title, subject, breakdown_parts)
+        workstreams = plan["workstreams"]
+        execution_items = plan["execution_items"]
+        open_questions = plan["open_questions"]
+    output = _fallback_node_output(
+        node_title,
+        node_why,
+        key_question,
+        extracted_context,
+        execution_items,
+    )
+    return {
+        "execution_summary": execution_summary,
+        "key_question": key_question,
+        "workstreams": workstreams,
+        "extracted_context": extracted_context,
+        "open_questions": open_questions,
+        "execution_items": execution_items,
+        "output": output,
+    }
+
+
+def _fallback_node_output(
+    node_title: str,
+    node_description: str,
+    key_question: str,
+    extracted_context: str,
+    execution_items: list[dict[str, str]],
+) -> dict[str, Any]:
+    focus = key_question or node_description or f"What needs to happen in {node_title}?"
+    action_summary = _summarize_execution_actions(execution_items)
+    people_summary = _summarize_people_and_sources(execution_items)
+    deliverable_summary = _summarize_deliverables_and_risks(execution_items)
+    output = "\n".join([
+        f"Focus: {focus}",
+        f"What will be done: {action_summary}",
+        f"Who and where: {people_summary}",
+        f"Deliverable and risk: {deliverable_summary}",
+    ])
+    return {
+        "output": output,
+        "output_sections": {
+            "focus": focus,
+            "work_to_complete": action_summary,
+            "owners_and_sources": people_summary,
+            "risks_and_handoff": deliverable_summary,
+        },
+    }
+
+
+def _parse_breakdown_lines(text: str) -> list[tuple[str, str]]:
+    parts = []
+    for raw in str(text).splitlines():
+        line = raw.strip().lstrip("-").strip()
+        if not line:
+            continue
+        if ":" in line:
+            label, detail = line.split(":", 1)
+            parts.append((label.strip(), detail.strip()))
+        else:
+            parts.append((line, line))
+    return parts
+
+
+def _infer_subject(problem: str, problem_details: str) -> str:
+    combined = f"{problem} {problem_details}".lower()
+    if "subscriber" in combined:
+        return "subscribers"
+    if "customer" in combined:
+        return "customers"
+    if "user" in combined:
+        return "users"
+    if "merchant" in combined:
+        return "merchants"
+    if "account" in combined:
+        return "accounts"
+    return "the target population"
+
+
+def _build_data_plan(
+    problem: str,
+    problem_details: str,
+    problem_type: str,
+    subject: str,
+    breakdown_parts: list[tuple[str, str]],
+) -> dict[str, Any]:
+    system_hint = _detect_data_sources(problem, problem_details)
+    if not breakdown_parts:
+        breakdown_parts = [
+            ("Behavioral data", f"Usage and activity signals for {subject}"),
+            ("Value-related data", f"Commercial value, spend, revenue, or margin for {subject}"),
+            ("Historical outcome data", f"Past outcomes, interventions, or responses for {subject}"),
+        ]
+
+    scope_items = []
+    for label, detail in breakdown_parts[:5]:
+        scope_items.append({
+            "action": f"Define the required fields for {label.lower()} and map them to the best available source for {subject}.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": system_hint,
+            "artifact": f"{label} source map with required fields and join keys",
+            "approval": "Data access approval" if "telemetry" in system_hint.lower() or "billing" in system_hint.lower() else "No approval needed",
+            "blockers": f"Field definitions for {label.lower()} are unclear or the source owner has not confirmed availability.",
+        })
+
+    profiling_item = {
+        "action": "Run data profiling on the shortlisted sources to validate completeness, freshness, segment coverage, and joinability before building the first analysis dataset.",
+        "owner": "Data analyst",
+        "collaborator": "Analytics engineering",
+        "source": system_hint,
+        "artifact": "Data profiling report with quality risks and recommended fixes",
+        "approval": "No approval needed",
+        "blockers": "Join keys are inconsistent across systems or the history window is too short for the target analysis.",
+    }
+    alignment_item = {
+        "action": "Review the source map and profiling findings with the business owner so the first data pull is scoped to the decision-critical evidence only.",
+        "owner": "Analytics lead",
+        "collaborator": "Business owner",
+        "source": "Roadmap node breakdown, source inventory, and profiling report",
+        "artifact": "Prioritized data request and first-pass analysis dataset plan",
+        "approval": "Business owner sign-off",
+        "blockers": "Stakeholders ask for more data than the current timeline, access, or engineering capacity supports.",
+    }
+    execution_items = (scope_items + [profiling_item, alignment_item])[:6]
+    workstreams = [
+        {
+            "name": "Data Scope Translation",
+            "purpose": "Turn each data bucket in the roadmap into a concrete request with fields, systems, and owners.",
+            "priority": "high",
+            "completion_criteria": "Each required data bucket is mapped to a source, owner, and join path.",
+        },
+        {
+            "name": "Data Readiness Validation",
+            "purpose": "Pressure-test whether the shortlisted sources are reliable enough for the intended analysis.",
+            "priority": "high",
+            "completion_criteria": "The team has a profiling view of completeness, freshness, and key data risks.",
+        },
+        {
+            "name": "Decision-Ready Dataset Plan",
+            "purpose": "Narrow the data pull to what the business decision actually needs now.",
+            "priority": "high",
+            "completion_criteria": "A prioritized dataset plan is approved for the first analysis pass.",
+        },
+    ]
+    open_questions = [
+        "What is the official outcome definition and look-forward window for this case?",
+        f"Which systems contain the most reliable identifier for linking {subject} across sources?",
+        "Which contextual sources are available immediately and which require separate access or engineering work?",
+    ]
+    execution_summary = (
+        "The data node should translate the roadmap buckets into a concrete source plan, validate data readiness, "
+        "and produce a first-pass dataset request that the analyst team can execute without ambiguity."
+    )
+    return {
+        "execution_summary": execution_summary,
+        "workstreams": workstreams,
+        "execution_items": execution_items,
+        "open_questions": open_questions,
+    }
+
+
+def _build_metric_plan(problem: str, problem_details: str, subject: str, breakdown_parts: list[tuple[str, str]]) -> dict[str, Any]:
+    if not breakdown_parts:
+        breakdown_parts = [
+            ("Business metric", f"Top business value metric for {subject}"),
+            ("Decision metric", "Targeting or prioritization rule"),
+            ("Model metric", "Technical score used to judge model usefulness"),
+        ]
+    execution_items = []
+    for label, _detail in breakdown_parts[:4]:
+        execution_items.append({
+            "action": f"Define the exact {label.lower()} to use, including formula, time window, baseline, and decision relevance.",
+            "owner": "Analytics lead",
+            "collaborator": "Business owner",
+            "source": "Problem statement, finance definitions, and existing reporting logic",
+            "artifact": f"{label} definition sheet with formula and business interpretation",
+            "approval": "Business owner sign-off" if "business" in label.lower() or "decision" in label.lower() else "No approval needed",
+            "blockers": f"The team has not aligned on what success means for the {label.lower()} yet.",
+        })
+    execution_items.append({
+        "action": "Build a lightweight scorecard or dashboard mock so stakeholders can see how the chosen metrics will be reviewed during execution.",
+        "owner": "Data analyst",
+        "collaborator": "BI or analytics engineering",
+        "source": "Agreed metric definitions and historical baseline cuts",
+        "artifact": "Metric scorecard mockup with baseline and target view",
+        "approval": "No approval needed",
+        "blockers": "Historical baselines are inconsistent across reports.",
+    })
+    workstreams = [
+        {
+            "name": "Metric Definition",
+            "purpose": "Lock the formulas, windows, and business meaning of each metric bucket.",
+            "priority": "high",
+            "completion_criteria": "Business, decision, and technical metrics are clearly defined and non-conflicting.",
+        },
+        {
+            "name": "Baseline Alignment",
+            "purpose": "Anchor the chosen metrics to current-state performance and target thresholds.",
+            "priority": "high",
+            "completion_criteria": "A baseline and target range exists for the core metrics.",
+        },
+        {
+            "name": "Reporting Setup",
+            "purpose": "Show how the metrics will be reviewed once the analysis starts.",
+            "priority": "medium",
+            "completion_criteria": "A review-ready scorecard or dashboard mock exists.",
+        },
+    ]
+    open_questions = [
+        "Which metric should drive the final business decision if the business and technical metrics disagree?",
+        "What target threshold or improvement level would count as success for leadership?",
+    ]
+    return {
+        "execution_summary": "The metric node should lock the exact success measures, tie them to a baseline, and produce a review-ready scorecard for the rest of the roadmap.",
+        "workstreams": workstreams,
+        "execution_items": execution_items[:6],
+        "open_questions": open_questions,
+    }
+
+
+def _build_breakdown_plan(node_title: str, subject: str, breakdown_parts: list[tuple[str, str]]) -> dict[str, Any]:
+    execution_items = []
+    for label, detail in breakdown_parts[:4]:
+        execution_items.append({
+            "action": f"Translate {label.lower()} into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": detail or "Problem statement and roadmap breakdown",
+            "artifact": f"{label} working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": f"The current {label.lower()} scope is still too broad to assign cleanly.",
+        })
+    if execution_items:
+        execution_items.append({
+            "action": f"Synthesize the {node_title.lower()} work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": f"Completed {node_title.lower()} workstreams",
+            "artifact": f"{node_title} handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work.",
+        })
+    workstreams = [
+        {
+            "name": "Node Translation",
+            "purpose": f"Convert the {node_title.lower()} breakdown into concrete tasks, owners, and evidence needs.",
+            "priority": "high",
+            "completion_criteria": f"Each major {node_title.lower()} bucket is represented by executable work.",
+        },
+        {
+            "name": "Handoff Readiness",
+            "purpose": f"Package the {node_title.lower()} node so the next stage can start with minimal rework.",
+            "priority": "medium",
+            "completion_criteria": "The node has a clean output, owners, and unresolved questions clearly documented.",
+        },
+    ]
+    open_questions = [
+        f"Which part of the {node_title.lower()} node still lacks a named owner or source?",
+    ]
+    return {
+        "workstreams": workstreams,
+        "execution_items": execution_items[:6],
+        "open_questions": open_questions,
+    }
+
+
+def _detect_data_sources(problem: str, problem_details: str) -> str:
+    combined = f"{problem} {problem_details}".lower()
+    systems = []
+    for candidate in ["CRM", "billing", "telemetry", "support logs", "usage logs", "campaign systems", "product analytics", "finance reporting"]:
+        if candidate.lower() in combined:
+            systems.append(candidate)
+    if systems:
+        return ", ".join(systems)
+    return "CRM, billing, product telemetry, support logs, campaign systems"
+
+
+def _summarize_execution_actions(execution_items: list[dict[str, str]]) -> str:
+    actions = [item.get("action", "").strip().rstrip(".") for item in execution_items if item.get("action")]
+    if not actions:
+        return "No execution items captured yet."
+    top_actions = actions[:3]
+    return "; ".join(top_actions) + ("." if top_actions else "")
+
+
+def _summarize_people_and_sources(execution_items: list[dict[str, str]]) -> str:
+    owners = []
+    collaborators = []
+    sources = []
+    for item in execution_items:
+        owner = item.get("owner", "").strip()
+        collaborator = item.get("collaborator", "").strip()
+        source = item.get("source", "").strip()
+        if owner and owner not in owners:
+            owners.append(owner)
+        if collaborator and collaborator not in collaborators:
+            collaborators.append(collaborator)
+        if source and source not in sources:
+            sources.append(source)
+    if not owners and not collaborators and not sources:
+        return "Owner, collaborators, and sources are not set yet."
+    people = ", ".join((owners + collaborators)[:4]) or "Team to be defined"
+    source_text = "; ".join(sources[:2]) or "sources to be confirmed"
+    return f"Involve {people} and use {source_text}."
+
+
+def _summarize_deliverables_and_risks(execution_items: list[dict[str, str]]) -> str:
+    artifacts = []
+    approvals = []
+    blockers = []
+    for item in execution_items:
+        artifact = item.get("artifact", "").strip()
+        approval = item.get("approval", "").strip()
+        blocker = item.get("blockers", "").strip()
+        if artifact and artifact not in artifacts:
+            artifacts.append(artifact)
+        if approval and approval not in approvals:
+            approvals.append(approval)
+        if blocker and blocker not in blockers:
+            blockers.append(blocker)
+    artifact_text = ", ".join(artifacts[:2]) or "required artifacts to be defined"
+    approval_text = ", ".join(approvals[:2]) or "approvals to be defined"
+    blocker_text = blockers[0] if blockers else "No blocker identified yet."
+    return f"Create {artifact_text}; approvals: {approval_text}; main risk: {blocker_text}"
 
 
 def _normalize_roadmap(raw_roadmap: list[Any], problem: str, problem_details: str) -> list[dict[str, str]]:

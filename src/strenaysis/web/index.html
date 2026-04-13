@@ -127,13 +127,6 @@
               <div class="board-hero-badge">Roadmap Buildup</div>
             </div>
 
-            <div class="board-tabs" aria-label="Workspace sections">
-              <div class="board-tab is-active">Main Question</div>
-              <div class="board-tab">Roadmap Buildup</div>
-              <div class="board-tab">Review &amp; Assessment</div>
-              <div class="board-tab">Actions</div>
-            </div>
-
             <section class="board-card board-section">
               <div class="section-heading">
                 <div>
@@ -291,22 +284,151 @@
           </section>
 
           <section id="step-details" class="step-panel">
-            <div class="board-hero">
+            <div class="board-hero detail-hero">
               <div>
                 <div class="step-label">Step 3</div>
-                <h2 id="detail-title">Detail Builder</h2>
+                <h2 id="detail-title">Roadmap Buildup</h2>
                 <p class="section-copy" id="detail-subtitle"></p>
               </div>
-              <span id="detail-progress" class="status-chip"></span>
-            </div>
-            <section class="board-card board-section">
-              <label class="field-label" for="detail-notes">Notes for this bucket</label>
-              <textarea id="detail-notes" rows="8" placeholder=""></textarea>
-              <div class="detail-actions">
-                <button id="prev-node" class="secondary-button">Back</button>
-                <button id="next-node" class="primary-button">Save and Continue</button>
+              <div class="detail-hero-actions">
+                <span id="detail-progress" class="status-chip"></span>
+                <button id="refresh-node-build" class="secondary-button" type="button">Refresh Node Draft</button>
               </div>
-            </section>
+            </div>
+
+            <div class="detail-workspace">
+              <aside class="detail-sidebar">
+                <section class="board-card board-section detail-brief-card">
+                  <div class="detail-brief-header">
+                    <div>
+                      <p class="card-label">Node Brief</p>
+                      <h3 id="detail-step-title">Detail Builder</h3>
+                    </div>
+                    <button id="open-detail-brief-modal" class="ghost-button" type="button">Edit Brief</button>
+                  </div>
+                  <div class="detail-brief-block">
+                    <span class="detail-brief-label">Node Name</span>
+                    <div id="detail-node-name" class="detail-brief-value"></div>
+                  </div>
+                  <div class="detail-brief-block">
+                    <span class="detail-brief-label">Node Description</span>
+                    <div id="detail-node-description-preview" class="detail-brief-preview"></div>
+                  </div>
+                  <div class="detail-brief-block">
+                    <span class="detail-brief-label">Node Breakdown</span>
+                    <div id="detail-node-breakdown-preview" class="detail-brief-preview detail-brief-preview-breakdown"></div>
+                  </div>
+                  <textarea id="detail-node-description" class="visually-hidden" rows="3"></textarea>
+                  <textarea id="detail-node-breakdown" class="visually-hidden" rows="5"></textarea>
+                  <div class="detail-brief-footnote">
+                    Keep the brief compact here. Use the focused brief window if you want to rewrite the node.
+                  </div>
+                </section>
+              </aside>
+
+              <div class="detail-main">
+                <section class="board-card board-section detail-parse-card collapsible-section is-open" data-section="parse">
+                  <div class="section-heading collapsible-heading">
+                    <div>
+                      <p class="card-label">Agent Parse</p>
+                      <h3>Problem-Specific Context</h3>
+                      <p class="section-copy">
+                        Use the translated context to understand what matters most before turning it into assigned work.
+                      </p>
+                    </div>
+                      <button class="ghost-button section-toggle" type="button" data-target="parse">Collapse</button>
+                  </div>
+                  <div class="section-body detail-context-grid">
+                    <article class="context-panel context-panel-priority">
+                      <span class="context-panel-label">Execution Spine</span>
+                      <div class="context-heading-row">
+                        <h4>Execution Summary</h4>
+                        <button class="context-help-button" type="button" data-help-target="guiding-question">Agent Note</button>
+                      </div>
+                      <div id="detail-execution-summary-preview" class="context-preview"></div>
+                      <textarea id="detail-execution-summary" class="visually-hidden" rows="3"></textarea>
+                      <textarea id="detail-key-question" class="visually-hidden" rows="3"></textarea>
+                    </article>
+                    <article class="context-panel context-panel-context">
+                      <span class="context-panel-label">Problem Parse</span>
+                      <div class="context-heading-row">
+                        <h4>Extracted Context</h4>
+                        <button class="context-help-button" type="button" data-help-target="open-questions">Agent Note</button>
+                      </div>
+                      <div id="detail-extracted-context-preview" class="context-preview context-preview-list"></div>
+                      <textarea id="detail-extracted-context" class="visually-hidden" rows="5"></textarea>
+                      <textarea id="detail-open-questions" class="visually-hidden" rows="5"></textarea>
+                    </article>
+                    <article class="context-panel context-panel-workstreams context-panel-wide">
+                      <span class="context-panel-label">Working Structure</span>
+                      <h4>Workstreams</h4>
+                      <div id="detail-workstreams-preview" class="context-preview context-preview-list"></div>
+                      <textarea id="detail-workstreams" class="visually-hidden" rows="4"></textarea>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="board-card board-section detail-section-emphasis collapsible-section is-open" data-section="planning">
+                  <div class="section-heading collapsible-heading">
+                    <div>
+                      <p class="card-label">Execution Planning</p>
+                      <h3>Action Items and Blockers</h3>
+                      <p class="section-copy">
+                        Turn the node into practical tasks, named ownership, approval needs, and visible blockers.
+                      </p>
+                    </div>
+                    <div class="section-heading-actions">
+                      <button id="open-execution-modal" class="secondary-button" type="button">Open Planning</button>
+                      <button class="ghost-button section-toggle" type="button" data-target="planning">Collapse</button>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                    <div id="execution-items-preview" class="execution-preview-list"></div>
+                  </div>
+                </section>
+
+                <section class="board-card board-section detail-output-section collapsible-section is-open" data-section="output">
+                  <div class="section-heading collapsible-heading">
+                    <div>
+                      <p class="card-label">Deck Background Context</p>
+                      <h3>Structured Output</h3>
+                      <p class="section-copy">
+                        This is required. Think of it as the writing-ready background context for a slide or review readout.
+                      </p>
+                    </div>
+                    <div class="section-heading-actions">
+                      <button id="synthesize-output" class="secondary-button" type="button">Synthesize Output</button>
+                      <button class="ghost-button section-toggle" type="button" data-target="output">Collapse</button>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                  <div class="detail-output-grid">
+                    <article class="output-panel output-panel-focus">
+                      <label class="field-label" for="detail-output-focus">Focus</label>
+                      <textarea id="detail-output-focus" rows="3" placeholder="What is this node trying to establish?"></textarea>
+                    </article>
+                    <article class="output-panel output-panel-work">
+                      <label class="field-label" for="detail-output-work">Work to Complete</label>
+                      <textarea id="detail-output-work" rows="4" placeholder="What concrete work needs to happen next?"></textarea>
+                    </article>
+                    <article class="output-panel output-panel-owners">
+                      <label class="field-label" for="detail-output-owners">Owners and Sources</label>
+                      <textarea id="detail-output-owners" rows="4" placeholder="Who is involved and where does the information come from?"></textarea>
+                    </article>
+                    <article class="output-panel output-panel-risks">
+                      <label class="field-label" for="detail-output-risks">Risks and Handoff</label>
+                      <textarea id="detail-output-risks" rows="4" placeholder="What approvals, blockers, or handoff notes matter for the next step?"></textarea>
+                    </article>
+                  </div>
+                  <textarea id="detail-output" class="visually-hidden" rows="6" placeholder="Synthesize the node into a usable output for roadmap review."></textarea>
+                  <div class="detail-actions">
+                    <button id="prev-node" class="secondary-button">Back</button>
+                    <button id="next-node" class="primary-button">Save and Continue</button>
+                  </div>
+                  </div>
+                </section>
+              </div>
+            </div>
           </section>
 
           <section id="step-summary" class="step-panel">
@@ -318,7 +440,11 @@
                   You now have the full structure from problem framing through takeaway.
                 </p>
               </div>
-              <div class="board-hero-badge">Summary</div>
+              <div class="section-heading-actions">
+                <button id="export-docx" class="secondary-button" type="button">Download Word</button>
+                <button id="export-pptx" class="secondary-button" type="button">Download PowerPoint</button>
+                <div class="board-hero-badge">Summary</div>
+              </div>
             </div>
             <section class="board-card board-section">
               <div id="summary-content" class="summary-grid"></div>
@@ -346,6 +472,60 @@
           </div>
         </div>
       </article>
+    </template>
+
+    <template id="work-item-template">
+        <article class="work-item-card">
+          <button class="work-item-summary" type="button">
+            <div class="work-item-summary-main">
+              <strong class="work-item-summary-title">New action item</strong>
+              <span class="work-item-summary-meta">Owner not set</span>
+            </div>
+            <span class="work-item-summary-toggle">Expand</span>
+          </button>
+          <div class="work-item-body">
+          <div class="work-item-grid">
+            <div class="work-item-field work-item-field-wide">
+              <label class="field-label">Action</label>
+              <textarea class="work-item-action" rows="3"></textarea>
+          </div>
+          <div class="work-item-field">
+            <label class="field-label">Owner</label>
+            <input class="work-item-owner node-input" type="text" />
+          </div>
+          <div class="work-item-field">
+            <label class="field-label">Collaborator</label>
+            <input class="work-item-collaborator node-input" type="text" />
+          </div>
+          <div class="work-item-field work-item-field-wide">
+            <label class="field-label">Source / System</label>
+            <textarea class="work-item-source" rows="2"></textarea>
+          </div>
+          <div class="work-item-field work-item-field-wide">
+            <label class="field-label">Artifact to Create</label>
+            <textarea class="work-item-artifact" rows="2"></textarea>
+          </div>
+          <div class="work-item-field">
+            <label class="field-label">Needs Approval</label>
+            <select class="work-item-approval node-input">
+              <option value="No approval needed">No approval needed</option>
+              <option value="Business owner sign-off">Business owner sign-off</option>
+              <option value="Leadership review">Leadership review</option>
+              <option value="Data access approval">Data access approval</option>
+              <option value="Legal or compliance review">Legal or compliance review</option>
+              <option value="Finance approval">Finance approval</option>
+            </select>
+          </div>
+          <div class="work-item-field work-item-field-wide">
+            <label class="field-label">Blockers</label>
+            <textarea class="work-item-blockers" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="work-item-actions">
+            <button class="ghost-button remove-work-item" type="button">Remove Item</button>
+          </div>
+          </div>
+        </article>
     </template>
 
     <div id="details-modal" class="modal-shell" hidden>
@@ -400,6 +580,98 @@
       </div>
     </div>
 
-    <script src="app.js"></script>
-  </body>
-</html>
+      <div id="detail-brief-modal" class="modal-shell" hidden>
+      <div id="detail-brief-modal-backdrop" class="modal-backdrop"></div>
+      <div class="modal-card detail-brief-modal-card" role="dialog" aria-modal="true" aria-labelledby="detail-brief-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Focused Brief Editor</p>
+            <h2 id="detail-brief-modal-title">Node Brief</h2>
+            <p class="section-copy">Refine the node framing in a focused view without cluttering the build workspace.</p>
+          </div>
+          <button id="close-detail-brief-modal" class="ghost-button" type="button">Close</button>
+        </div>
+        <div class="modal-body">
+          <label class="field-label" for="detail-brief-modal-name">Node Name</label>
+          <input id="detail-brief-modal-name" class="node-input" type="text" readonly />
+          <label class="field-label" for="detail-brief-modal-description">Node Description</label>
+          <textarea id="detail-brief-modal-description" rows="4"></textarea>
+          <label class="field-label" for="detail-brief-modal-breakdown">Node Breakdown</label>
+          <textarea id="detail-brief-modal-breakdown" rows="7"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="save-detail-brief-modal" class="primary-button" type="button">Save Brief</button>
+        </div>
+        </div>
+      </div>
+
+      <div id="execution-modal" class="modal-shell" hidden>
+        <div id="execution-modal-backdrop" class="modal-backdrop"></div>
+        <div class="modal-card execution-modal-card" role="dialog" aria-modal="true" aria-labelledby="execution-modal-title">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Execution Planning</p>
+              <h2 id="execution-modal-title">Action Items and Blockers</h2>
+              <p class="section-copy">Manage the work like a task board: keep it compact, expand only the item you need, and add more actions as needed.</p>
+            </div>
+            <button id="close-execution-modal" class="ghost-button" type="button">Close</button>
+          </div>
+          <div class="modal-body">
+            <div class="execution-modal-toolbar">
+              <button id="add-work-item" class="secondary-button" type="button">Add Item</button>
+            </div>
+            <div id="detail-work-items" class="work-items-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="agent-note-modal" class="modal-shell" hidden>
+        <div id="agent-note-modal-backdrop" class="modal-backdrop"></div>
+        <div class="modal-card agent-note-modal-card" role="dialog" aria-modal="true" aria-labelledby="agent-note-modal-title">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Agent Note</p>
+              <h2 id="agent-note-modal-title">Agent Thought</h2>
+              <p id="agent-note-modal-copy" class="section-copy">This helper shows how the agent interpreted the current node.</p>
+            </div>
+            <button id="close-agent-note-modal" class="ghost-button" type="button">Close</button>
+          </div>
+          <div class="modal-body">
+            <div id="agent-note-modal-content" class="context-preview context-preview-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="summary-node-modal" class="modal-shell" hidden>
+        <div id="summary-node-modal-backdrop" class="modal-backdrop"></div>
+        <div class="modal-card summary-node-modal-card" role="dialog" aria-modal="true" aria-labelledby="summary-node-modal-title">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Review Detail</p>
+              <h2 id="summary-node-modal-title">Node Review</h2>
+              <p id="summary-node-modal-copy" class="section-copy">Review the full node synthesis and execution trail.</p>
+            </div>
+            <button id="close-summary-node-modal" class="ghost-button" type="button">Close</button>
+          </div>
+          <div id="summary-node-modal-body" class="modal-body"></div>
+        </div>
+      </div>
+
+      <div id="summary-problem-modal" class="modal-shell" hidden>
+        <div id="summary-problem-modal-backdrop" class="modal-backdrop"></div>
+        <div class="modal-card summary-node-modal-card" role="dialog" aria-modal="true" aria-labelledby="summary-problem-modal-title">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Problem Review</p>
+              <h2 id="summary-problem-modal-title">Problem Detail</h2>
+              <p class="section-copy">Review the supporting context behind the main question.</p>
+            </div>
+            <button id="close-summary-problem-modal" class="ghost-button" type="button">Close</button>
+          </div>
+          <div id="summary-problem-modal-body" class="modal-body summary-modal-body"></div>
+        </div>
+      </div>
+
+      <script src="app.js"></script>
+    </body>
+  </html>
