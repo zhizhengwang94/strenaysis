@@ -19,6 +19,7 @@ from .openai_client import DEFAULT_ROADMAP, generate_node_build, generate_roadma
 ACCESS_COOKIE = "strenaysis_access"
 ACCESS_CODE = "2825628257282931"
 SAVE_DIRECTORY = "saved_problem_structures"
+ACTION_DIRECTORY = "active_problem_structures"
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -34,6 +35,12 @@ class AppHandler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/api/problem-framings" or path.endswith("/api/problem-framings"):
             self._handle_list_problem_framings()
+            return
+        if path == "/api/action-problems" or path.endswith("/api/action-problems"):
+            self._handle_list_action_problems()
+            return
+        if path == "/api/pipeline-overview" or path.endswith("/api/pipeline-overview"):
+            self._handle_pipeline_overview()
             return
         if "/api/problem-framings/" in path:
             self._handle_get_problem_framing()
@@ -314,6 +321,178 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         self._send_json(payload)
 
+    def _handle_list_action_problems(self) -> None:
+        storage_dir = self._action_storage_dir()
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        items = []
+        in_progress = 0
+        resolved = 0
+        open_count = 0
+        high_priority = 0
+        due_this_week = 0
+        next_due_dates: list[dict] = []
+
+        for path in sorted(storage_dir.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+
+            status = str(payload.get("status", "")).strip() or "Open"
+            priority = str(payload.get("priority", "")).strip() or "Medium"
+            due_date = str(payload.get("due_date", "")).strip()
+
+            if status.lower() == "resolved":
+                resolved += 1
+            elif status.lower() == "in progress":
+                in_progress += 1
+                open_count += 1
+            else:
+                open_count += 1
+
+            if priority.lower() == "high":
+                high_priority += 1
+
+            due_sort = ""
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", due_date):
+                due_sort = due_date
+            items.append({
+                "filename": path.name,
+                "problem_name": str(payload.get("problem_name", "")).strip() or path.stem,
+                "summary": str(payload.get("summary", "")).strip(),
+                "status": status,
+                "priority": priority,
+                "owner": str(payload.get("owner", "")).strip() or "Owner not assigned",
+                "approver": str(payload.get("approver", "")).strip() or "No approver listed",
+                "due_date": due_date,
+                "updated_at": str(payload.get("updated_at", "")).strip(),
+                "workstream": str(payload.get("workstream", "")).strip() or "General",
+            })
+
+        from datetime import date, timedelta
+
+        today = date.today()
+        week_end = today + timedelta(days=7)
+        for item in items:
+            due_date = item["due_date"]
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", due_date):
+                due = date.fromisoformat(due_date)
+                if today <= due <= week_end:
+                    due_this_week += 1
+                next_due_dates.append({
+                    "problem_name": item["problem_name"],
+                    "due_date": due_date,
+                    "status": item["status"],
+                })
+
+        next_due_dates.sort(key=lambda item: item["due_date"])
+
+        self._send_json({
+            "summary": {
+                "in_progress": in_progress,
+                "resolved": resolved,
+                "open": open_count,
+                "high_priority": high_priority,
+                "due_this_week": due_this_week,
+            },
+            "calendar": next_due_dates[:5],
+            "items": items,
+        })
+
+    def _handle_pipeline_overview(self) -> None:
+        profile_dir = self._storage_dir()
+        action_dir = self._action_storage_dir()
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        action_dir.mkdir(parents=True, exist_ok=True)
+
+        framed_items: list[dict] = []
+        action_items: list[dict] = []
+
+        for path in sorted(profile_dir.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            framed_items.append({
+                "problem_name": str(payload.get("problem_name", "")).strip() or str(payload.get("problem", "")).strip() or path.stem,
+                "saved_at": str(payload.get("saved_at", "")).strip(),
+                "priority": str(payload.get("priority", "")).strip() or "Medium",
+                "problem_type": str(payload.get("problem_type", "")).strip() or "Not set",
+            })
+
+        for path in sorted(action_dir.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            action_items.append({
+                "problem_name": str(payload.get("problem_name", "")).strip() or path.stem,
+                "status": str(payload.get("status", "")).strip() or "Open",
+                "priority": str(payload.get("priority", "")).strip() or "Medium",
+                "owner": str(payload.get("owner", "")).strip() or "Owner not assigned",
+                "updated_at": str(payload.get("updated_at", "")).strip(),
+                "due_date": str(payload.get("due_date", "")).strip(),
+            })
+
+        statuses = {"not_started": 0, "in_progress": 0, "resolved": 0, "blocked": 0}
+        active_names = set()
+        framed_names = {item["problem_name"].strip().lower() for item in framed_items}
+        for item in action_items:
+            active_names.add(item["problem_name"].strip().lower())
+            status = item["status"].strip().lower()
+            if status == "resolved":
+                statuses["resolved"] += 1
+            elif status == "in progress":
+                statuses["in_progress"] += 1
+            elif status == "blocked":
+                statuses["blocked"] += 1
+            else:
+                statuses["not_started"] += 1
+
+        framed_only = [
+            item for item in framed_items
+            if item["problem_name"].strip().lower() not in active_names
+        ]
+        activated_from_framed = sum(1 for name in active_names if name in framed_names)
+
+        recent_activity = []
+        for item in action_items[:8]:
+            recent_activity.append({
+                "problem_name": item["problem_name"],
+                "stage": item["status"],
+                "date": item["updated_at"] or item["due_date"],
+                "owner": item["owner"],
+            })
+        for item in framed_only[:4]:
+            recent_activity.append({
+                "problem_name": item["problem_name"],
+                "stage": "Framed",
+                "date": item["saved_at"],
+                "owner": "Not yet activated",
+            })
+
+        self._send_json({
+            "summary": {
+                "framed_total": len(framed_items),
+                "activated_total": activated_from_framed,
+                "active_total": len(action_items),
+                "conversion_rate": round((activated_from_framed / len(framed_items)) * 100) if framed_items else 0,
+                "framed_only": len(framed_only),
+                "not_started": statuses["not_started"],
+                "in_progress": statuses["in_progress"],
+                "blocked": statuses["blocked"],
+                "resolved": statuses["resolved"],
+            },
+            "stages": [
+                {"label": "Framed", "count": len(framed_items), "tone": "framed"},
+                {"label": "Activated", "count": len(action_items), "tone": "activated"},
+                {"label": "Not Started", "count": statuses["not_started"], "tone": "waiting"},
+                {"label": "In Progress", "count": statuses["in_progress"], "tone": "active"},
+                {"label": "Resolved", "count": statuses["resolved"], "tone": "resolved"},
+            ],
+            "recent_activity": recent_activity[:10],
+        })
+
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         encoded = json.dumps(payload).encode("utf-8")
         self.send_response(status)
@@ -523,6 +702,10 @@ class AppHandler(SimpleHTTPRequestHandler):
     @staticmethod
     def _storage_dir() -> Path:
         return Path.cwd() / SAVE_DIRECTORY
+
+    @staticmethod
+    def _action_storage_dir() -> Path:
+        return Path.cwd() / ACTION_DIRECTORY
 
     def log_message(self, format: str, *args) -> None:  # noqa: A003
         return

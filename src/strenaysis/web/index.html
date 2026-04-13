@@ -22,17 +22,17 @@
             <span class="nav-item-title">Problems</span>
             <span class="nav-item-copy">Frame the business question</span>
           </button>
-          <button class="nav-item nav-item-disabled" data-nav="actions" type="button" disabled>
+          <button class="nav-item" data-nav="profile" type="button">
+            <span class="nav-item-title">Library</span>
+            <span class="nav-item-copy">Browse framed problem structures</span>
+          </button>
+          <button class="nav-item" data-nav="actions" type="button">
             <span class="nav-item-title">Actions</span>
             <span class="nav-item-copy">Turn structure into next steps</span>
           </button>
-          <button class="nav-item nav-item-disabled" data-nav="review" type="button" disabled>
-            <span class="nav-item-title">Review</span>
-            <span class="nav-item-copy">Assess readiness and gaps</span>
-          </button>
-          <button class="nav-item" data-nav="profile" type="button">
-            <span class="nav-item-title">Profile</span>
-            <span class="nav-item-copy">Review saved problem structures</span>
+          <button class="nav-item" data-nav="review" type="button">
+            <span class="nav-item-title">Portfolio</span>
+            <span class="nav-item-copy">See records, conversion, and progress</span>
           </button>
         </nav>
 
@@ -483,6 +483,121 @@
             </section>
           </section>
 
+          <section id="step-actions" class="step-panel">
+            <div class="board-hero">
+              <div>
+                <div class="step-label">Actions</div>
+                <h2>Problem Management</h2>
+                <p class="section-copy">
+                  Track active problems underway, monitor high-level delivery signals, and keep the current problem portfolio visible in one place.
+                </p>
+              </div>
+              <div class="section-heading-actions">
+                <span id="actions-status" class="analysis-status" hidden>
+                  <span class="analysis-status-spinner" aria-hidden="true"></span>
+                  <span class="analysis-status-text">Loading action workspace</span>
+                </span>
+                <button id="add-action-problem" class="primary-button" type="button">Add New</button>
+                <div class="board-hero-badge">Actions</div>
+              </div>
+            </div>
+            <section class="board-card board-section">
+              <div class="section-heading">
+                <div>
+                  <p class="card-label">Overview</p>
+                  <h3>Action Portfolio Snapshot</h3>
+                  <p class="section-copy">
+                    A high-level view of what is active, what is resolved, and what needs attention this week.
+                  </p>
+                </div>
+              </div>
+              <div id="actions-overview" class="summary-overview-grid"></div>
+            </section>
+            <div class="board-grid actions-grid">
+              <section class="board-card board-section">
+                <div class="section-heading">
+                  <div>
+                    <p class="card-label">Calendar</p>
+                    <h3>Upcoming Dates</h3>
+                    <p class="section-copy">
+                      The next few due dates across active problems.
+                    </p>
+                  </div>
+                </div>
+                <div id="actions-calendar" class="actions-calendar-list"></div>
+              </section>
+              <section class="board-card board-section">
+                <div class="section-heading">
+                  <div>
+                    <p class="card-label">Open Problems</p>
+                    <h3>Problems Underway</h3>
+                    <p class="section-copy">
+                      A current list of open or in-progress problems from the local action workspace.
+                    </p>
+                  </div>
+                </div>
+                <div id="actions-list" class="actions-list"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="step-review" class="step-panel">
+            <div class="board-hero">
+              <div>
+                <div class="step-label">Portfolio</div>
+                <h2>Problem Portfolio</h2>
+                <p class="section-copy">
+                  See how framed problems move into action, where they currently sit, and how much of the portfolio is actually progressing.
+                </p>
+              </div>
+              <div class="section-heading-actions">
+                <span id="pipeline-status" class="analysis-status" hidden>
+                  <span class="analysis-status-spinner" aria-hidden="true"></span>
+                  <span class="analysis-status-text">Loading pipeline</span>
+                </span>
+                <div class="board-hero-badge">Portfolio</div>
+              </div>
+            </div>
+            <section class="board-card board-section">
+              <div class="section-heading">
+                <div>
+                  <p class="card-label">Portfolio Overview</p>
+                  <h3>Lifecycle Funnel</h3>
+                  <p class="section-copy">
+                    This funnel shows how many framed problems were created, how many were activated, and how far active work has actually progressed.
+                  </p>
+                </div>
+              </div>
+              <div id="pipeline-overview" class="summary-overview-grid"></div>
+            </section>
+            <div class="board-grid actions-grid">
+              <section class="board-card board-section">
+                <div class="section-heading">
+                  <div>
+                    <p class="card-label">Stage Counts</p>
+                    <h3>Portfolio Stages</h3>
+                    <p class="section-copy">
+                      A structured view of where problems sit from framed through resolved.
+                    </p>
+                  </div>
+                </div>
+                <div id="pipeline-stages" class="pipeline-stage-grid"></div>
+              </section>
+              <section class="board-card board-section">
+                <div class="section-heading">
+                  <div>
+                    <p class="card-label">Recent Movement</p>
+                    <h3>Latest Transitions</h3>
+                    <p class="section-copy">
+                      Recent activity across framed and activated problems.
+                    </p>
+                  </div>
+                </div>
+                <div id="pipeline-activity" class="actions-list"></div>
+              </section>
+            </div>
+          </section>
+
           <section id="step-profile" class="step-panel">
             <div class="board-hero">
               <div>
@@ -497,14 +612,14 @@
                   <span class="analysis-status-spinner" aria-hidden="true"></span>
                   <span class="analysis-status-text">Loading history</span>
                 </span>
-                <div class="board-hero-badge">Profile</div>
+                <div class="board-hero-badge">Library</div>
               </div>
             </div>
             <section class="board-card board-section">
               <div class="section-heading">
                 <div>
-                  <p class="card-label">Profile</p>
-                  <h3>User Context</h3>
+                  <p class="card-label">Library</p>
+                  <h3>Framed Problem Archive</h3>
                   <p class="section-copy">
                     This section is your local archive workspace. Save finished problem framings into JSON files and load them here when you want to review historical structures.
                   </p>

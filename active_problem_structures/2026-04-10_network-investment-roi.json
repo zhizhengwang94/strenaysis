@@ -1,0 +1,11 @@
+{
+  "problem_name": "Network investment ROI",
+  "summary": "Review whether current network investments are improving retention outcomes in targeted regions and cohorts.",
+  "status": "Resolved",
+  "priority": "Low",
+  "owner": "Network Insights Lead",
+  "approver": "CTO",
+  "due_date": "2026-04-11",
+  "updated_at": "2026-04-10",
+  "workstream": "Infrastructure"
+}

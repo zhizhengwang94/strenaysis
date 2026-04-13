@@ -1796,6 +1796,109 @@ body {
   gap: 16px;
 }
 
+.actions-grid {
+  align-items: start;
+}
+
+.actions-calendar-list,
+.actions-list {
+  display: grid;
+  gap: 14px;
+}
+
+.pipeline-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.pipeline-stage-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(39, 61, 82, 0.09);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 30px rgba(25, 47, 69, 0.06);
+}
+
+.pipeline-stage-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--primary-dark);
+}
+
+.pipeline-stage-framed {
+  background: linear-gradient(180deg, rgba(244, 248, 252, 0.98), rgba(235, 242, 249, 0.98));
+}
+
+.pipeline-stage-activated,
+.pipeline-stage-active {
+  background: linear-gradient(180deg, rgba(238, 246, 252, 0.98), rgba(226, 238, 249, 0.98));
+}
+
+.pipeline-stage-waiting {
+  background: linear-gradient(180deg, rgba(253, 248, 236, 0.98), rgba(250, 241, 219, 0.98));
+}
+
+.pipeline-stage-resolved {
+  background: linear-gradient(180deg, rgba(241, 249, 244, 0.98), rgba(229, 243, 234, 0.98));
+}
+
+.action-calendar-item,
+.action-list-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(39, 61, 82, 0.09);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 30px rgba(25, 47, 69, 0.06);
+}
+
+.action-calendar-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.action-calendar-item strong,
+.action-list-header h4 {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  color: var(--primary-dark);
+}
+
+.action-calendar-item p,
+.action-list-header p,
+.action-list-footer {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.action-list-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.action-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.action-list-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 0.92rem;
+}
+
 .profile-history-card {
   padding: 18px;
   border-radius: 20px;

@@ -22,6 +22,8 @@ const panels = {
   roadmap: document.getElementById("step-roadmap"),
   details: document.getElementById("step-details"),
   summary: document.getElementById("step-summary"),
+  actions: document.getElementById("step-actions"),
+  review: document.getElementById("step-review"),
   profile: document.getElementById("step-profile"),
 };
 
@@ -137,6 +139,15 @@ const closeSummaryProblemModalButton = document.getElementById("close-summary-pr
 const summaryProblemModalBody = document.getElementById("summary-problem-modal-body");
 const profileStatus = document.getElementById("profile-status");
 const profileHistoryList = document.getElementById("profile-history-list");
+const actionsStatus = document.getElementById("actions-status");
+const actionsOverview = document.getElementById("actions-overview");
+const actionsCalendar = document.getElementById("actions-calendar");
+const actionsList = document.getElementById("actions-list");
+const addActionProblemButton = document.getElementById("add-action-problem");
+const pipelineStatus = document.getElementById("pipeline-status");
+const pipelineOverview = document.getElementById("pipeline-overview");
+const pipelineStages = document.getElementById("pipeline-stages");
+const pipelineActivity = document.getElementById("pipeline-activity");
 const profileItemModal = document.getElementById("profile-item-modal");
 const profileItemModalBackdrop = document.getElementById("profile-item-modal-backdrop");
 const closeProfileItemModalButton = document.getElementById("close-profile-item-modal");
@@ -174,6 +185,8 @@ const analysisStatusMap = {
   customNode: customNodeStatus,
   detailBuild: detailBuildStatus,
   output: outputStatus,
+  actions: actionsStatus,
+  review: pipelineStatus,
   profile: profileStatus,
 };
 
@@ -203,6 +216,9 @@ closeSaveProblemModalButton.addEventListener("click", closeSaveProblemModal);
 saveProblemModalBackdrop.addEventListener("click", closeSaveProblemModal);
 loadProfileHistoryButton.addEventListener("click", loadProfileHistory);
 appToastCloseButton.addEventListener("click", hideAppToast);
+addActionProblemButton.addEventListener("click", () => {
+  showAppToast("Action conversion is the next step. For now, this workspace is a high-level tracker.", "Actions workspace");
+});
 sectionToggles.forEach((button) => {
   button.addEventListener("click", () => {
     const target = button.dataset.target;
@@ -654,11 +670,18 @@ exportPptxButton.addEventListener("click", () => exportWorkflow("pptx", exportPp
 sidebarNavItems.forEach((item) => {
   item.addEventListener("click", async () => {
     const nav = item.dataset.nav;
-    if (nav === "profile") {
-      showPanel("profile");
+    if (nav === "actions") {
+      showPanel("actions");
+      await loadActionProblems();
       return;
     }
-    if (nav === "actions" || nav === "review") {
+    if (nav === "review") {
+      showPanel("review");
+      await loadPipelineOverview();
+      return;
+    }
+    if (nav === "profile") {
+      showPanel("profile");
       return;
     }
     showPanel(state.activeProblemPanel || "problem");
@@ -1072,6 +1095,206 @@ async function loadProfileHistory() {
   }
 }
 
+async function loadActionProblems() {
+  setAnalysisStatus(["actions"], true, "Loading action workspace");
+  actionsOverview.innerHTML = "";
+  actionsCalendar.innerHTML = `<article class="action-calendar-item">Loading calendar...</article>`;
+  actionsList.innerHTML = `<article class="action-list-card">Loading action problems...</article>`;
+  try {
+    const response = await fetch("/api/action-problems");
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to load active problems.");
+    }
+    renderActionsDashboard(payload.summary || {}, payload.calendar || [], payload.items || []);
+  } catch (error) {
+    actionsOverview.innerHTML = `
+      <article class="summary-overview-card actions">
+        <p class="card-label">Actions</p>
+        <h3>Unavailable</h3>
+        <p>${escapeHtml(error.message)}</p>
+      </article>
+    `;
+    actionsCalendar.innerHTML = `<article class="action-calendar-item">${escapeHtml(error.message)}</article>`;
+    actionsList.innerHTML = `<article class="action-list-card">${escapeHtml(error.message)}</article>`;
+  } finally {
+    setAnalysisStatus(["actions"], false);
+  }
+}
+
+async function loadPipelineOverview() {
+  setAnalysisStatus(["review"], true, "Loading pipeline");
+  pipelineOverview.innerHTML = "";
+  pipelineStages.innerHTML = `<article class="pipeline-stage-card">Loading stage counts...</article>`;
+  pipelineActivity.innerHTML = `<article class="action-list-card">Loading recent movement...</article>`;
+  try {
+    const response = await fetch("/api/pipeline-overview");
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to load pipeline overview.");
+    }
+    renderPipelineOverview(payload.summary || {}, payload.stages || [], payload.recent_activity || []);
+  } catch (error) {
+    pipelineOverview.innerHTML = `
+      <article class="summary-overview-card problem">
+        <p class="card-label">Pipeline</p>
+        <h3>Unavailable</h3>
+        <p>${escapeHtml(error.message)}</p>
+      </article>
+    `;
+    pipelineStages.innerHTML = `<article class="pipeline-stage-card">${escapeHtml(error.message)}</article>`;
+    pipelineActivity.innerHTML = `<article class="action-list-card">${escapeHtml(error.message)}</article>`;
+  } finally {
+    setAnalysisStatus(["review"], false);
+  }
+}
+
+function renderPipelineOverview(summary, stages, activity) {
+  pipelineOverview.innerHTML = `
+    <article class="summary-overview-card problem">
+      <p class="card-label">Framed Problems</p>
+      <h3>Total Structured</h3>
+      <strong>${Number(summary.framed_total || 0)}</strong>
+      <p>The total number of problems that have been fully framed in Strenaysis.</p>
+    </article>
+    <article class="summary-overview-card actions">
+      <p class="card-label">Activated</p>
+      <h3>Moved Into Actions</h3>
+      <strong>${Number(summary.activated_total || 0)}</strong>
+      <p>${Number(summary.conversion_rate || 0)}% of framed problems have been activated into work.</p>
+    </article>
+    <article class="summary-overview-card readiness">
+      <p class="card-label">Still Framed Only</p>
+      <h3>Not Yet Activated</h3>
+      <strong>${Number(summary.framed_only || 0)}</strong>
+      <p>These problems are saved in the library but have not been turned into action.</p>
+    </article>
+    <article class="summary-overview-card actions">
+      <p class="card-label">Current Progress</p>
+      <h3>In Progress / Resolved</h3>
+      <strong>${Number(summary.in_progress || 0)} / ${Number(summary.resolved || 0)}</strong>
+      <p>${Number(summary.active_total || 0)} active problems total, with ${Number(summary.not_started || 0)} not started and ${Number(summary.blocked || 0)} blocked.</p>
+    </article>
+  `;
+
+  if (!stages.length) {
+    pipelineStages.innerHTML = `<article class="pipeline-stage-card">No lifecycle stages available yet.</article>`;
+  } else {
+    pipelineStages.innerHTML = "";
+    stages.forEach((stage) => {
+      const card = document.createElement("article");
+      card.className = `pipeline-stage-card pipeline-stage-${escapeHtml(String(stage.tone || "framed"))}`;
+      card.innerHTML = `
+        <span class="card-label">${escapeHtml(stage.label || "Stage")}</span>
+        <strong>${Number(stage.count || 0)}</strong>
+      `;
+      pipelineStages.appendChild(card);
+    });
+  }
+
+  if (!activity.length) {
+    pipelineActivity.innerHTML = `<article class="action-list-card">No movement recorded yet.</article>`;
+    return;
+  }
+  pipelineActivity.innerHTML = "";
+  activity.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "action-list-card";
+    card.innerHTML = `
+      <div class="action-list-header">
+        <div>
+          <h4>${escapeHtml(item.problem_name || "Untitled problem")}</h4>
+          <p>${escapeHtml(item.owner || "No owner listed")}</p>
+        </div>
+        <span class="status-chip">${escapeHtml(item.stage || "Framed")}</span>
+      </div>
+      <div class="action-list-footer">
+        <span>${escapeHtml(`Date: ${item.date ? formatSavedDate(item.date) : "Not available"}`)}</span>
+      </div>
+    `;
+    pipelineActivity.appendChild(card);
+  });
+}
+
+function renderActionsDashboard(summary, calendar, items) {
+  actionsOverview.innerHTML = `
+    <article class="summary-overview-card actions">
+      <p class="card-label">In Progress</p>
+      <h3>Problems In Progress</h3>
+      <strong>${Number(summary.in_progress || 0)}</strong>
+      <p>Problems currently being worked through in the action workspace.</p>
+    </article>
+    <article class="summary-overview-card readiness">
+      <p class="card-label">Resolved</p>
+      <h3>Resolved Problems</h3>
+      <strong>${Number(summary.resolved || 0)}</strong>
+      <p>Problems already closed out and moved beyond active management.</p>
+    </article>
+    <article class="summary-overview-card problem">
+      <p class="card-label">Open</p>
+      <h3>Open Problems</h3>
+      <strong>${Number(summary.open || 0)}</strong>
+      <p>The current number of open or in-progress problems underway.</p>
+    </article>
+    <article class="summary-overview-card actions">
+      <p class="card-label">Calendar</p>
+      <h3>Due This Week</h3>
+      <strong>${Number(summary.due_this_week || 0)}</strong>
+      <p>${Number(summary.high_priority || 0)} high-priority problems currently being tracked.</p>
+    </article>
+  `;
+
+  if (!calendar.length) {
+    actionsCalendar.innerHTML = `<article class="action-calendar-item">No upcoming dates in the current action workspace.</article>`;
+  } else {
+    actionsCalendar.innerHTML = "";
+    calendar.forEach((item) => {
+      const element = document.createElement("article");
+      element.className = "action-calendar-item";
+      element.innerHTML = `
+        <div>
+          <strong>${escapeHtml(item.problem_name || "Untitled problem")}</strong>
+          <p>${escapeHtml(item.status || "Open")}</p>
+        </div>
+        <span class="status-chip">${escapeHtml(formatSavedDate(item.due_date))}</span>
+      `;
+      actionsCalendar.appendChild(element);
+    });
+  }
+
+  const activeItems = items.filter((item) => String(item.status || "").toLowerCase() !== "resolved");
+  if (!activeItems.length) {
+    actionsList.innerHTML = `<article class="action-list-card">No open problems yet. Seed examples or future action conversions will appear here.</article>`;
+    return;
+  }
+
+  actionsList.innerHTML = "";
+  activeItems.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "action-list-card";
+    card.innerHTML = `
+      <div class="action-list-header">
+        <div>
+          <h4>${escapeHtml(item.problem_name || "Untitled problem")}</h4>
+          <p>${escapeHtml(item.summary || "No summary added yet.")}</p>
+        </div>
+        <span class="status-chip ${priorityClassName(item.priority)}">${escapeHtml(item.priority || "Medium")}</span>
+      </div>
+      <div class="action-list-meta">
+        <span class="profile-history-metric">${escapeHtml(item.status || "Open")}</span>
+        <span class="profile-history-metric">${escapeHtml(item.workstream || "General")}</span>
+        <span class="profile-history-metric">${escapeHtml(`Owner: ${item.owner || "Unassigned"}`)}</span>
+        <span class="profile-history-metric">${escapeHtml(`Approver: ${item.approver || "Not set"}`)}</span>
+      </div>
+      <div class="action-list-footer">
+        <span>${escapeHtml(`Due: ${item.due_date ? formatSavedDate(item.due_date) : "Not set"}`)}</span>
+        <span>${escapeHtml(`Updated: ${item.updated_at ? formatSavedDate(item.updated_at) : "Not available"}`)}</span>
+      </div>
+    `;
+    actionsList.appendChild(card);
+  });
+}
+
 function renderProfileHistory(items) {
   if (!items.length) {
     profileHistoryList.innerHTML = `
@@ -1208,10 +1431,10 @@ function showPanel(name) {
   Object.entries(panels).forEach(([key, panel]) => {
     panel.classList.toggle("active", key === name);
   });
-  if (name !== "profile") {
+  if (!["profile", "actions", "review"].includes(name)) {
     state.activeProblemPanel = name;
   }
-  const activeNav = name === "profile" ? "profile" : "problems";
+  const activeNav = ["profile", "actions", "review"].includes(name) ? name : "problems";
   sidebarNavItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === activeNav);
   });
