@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socketserver
 import webbrowser
 from http.cookies import SimpleCookie
@@ -9,7 +10,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler
 from importlib import resources
 from pathlib import Path
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlsplit
 
 from .exporter import build_export_bundle
 from .openai_client import DEFAULT_ROADMAP, generate_node_build, generate_roadmap, polish_node, synthesize_node_output
@@ -17,6 +18,7 @@ from .openai_client import DEFAULT_ROADMAP, generate_node_build, generate_roadma
 
 ACCESS_COOKIE = "strenaysis_access"
 ACCESS_CODE = "2825628257282931"
+SAVE_DIRECTORY = "saved_problem_structures"
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -29,31 +31,42 @@ class AppHandler(SimpleHTTPRequestHandler):
         if not self._is_authenticated():
             self._serve_unlock_page()
             return
-        if self.path in {"", "/"}:
+        path = urlsplit(self.path).path
+        if path == "/api/problem-framings" or path.endswith("/api/problem-framings"):
+            self._handle_list_problem_framings()
+            return
+        if "/api/problem-framings/" in path:
+            self._handle_get_problem_framing()
+            return
+        if path in {"", "/"}:
             self.path = "/index.html"
         super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path == "/unlock":
+        path = urlsplit(self.path).path
+        if path == "/unlock":
             self._handle_unlock()
             return
         if not self._is_authenticated():
             self._send_json({"error": "Authentication required."}, status=HTTPStatus.UNAUTHORIZED)
             return
-        if self.path == "/api/roadmap":
+        if path == "/api/roadmap" or path.endswith("/api/roadmap"):
             self._handle_generate_roadmap()
             return
-        if self.path == "/api/polish-node":
+        if path == "/api/polish-node" or path.endswith("/api/polish-node"):
             self._handle_polish_node()
             return
-        if self.path == "/api/node-build":
+        if path == "/api/node-build" or path.endswith("/api/node-build"):
             self._handle_node_build()
             return
-        if self.path == "/api/node-output":
+        if path == "/api/node-output" or path.endswith("/api/node-output"):
             self._handle_node_output()
             return
-        if self.path == "/api/export":
+        if path == "/api/export" or path.endswith("/api/export"):
             self._handle_export()
+            return
+        if "save-problem-framing" in path:
+            self._handle_save_problem_framing()
             return
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
@@ -186,6 +199,120 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
+
+    def _handle_save_problem_framing(self) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            try:
+                body = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+                return
+
+            problem = str(body.get("problem", "")).strip()
+            problem_name = str(body.get("problem_name", "")).strip()
+            priority = str(body.get("priority", "")).strip()
+            saved_date = str(body.get("saved_date") or body.get("saved_at") or "").strip()
+            if not problem:
+                self._send_json({"error": "Problem content is required."}, status=HTTPStatus.BAD_REQUEST)
+                return
+            if priority not in {"High", "Medium", "Low"}:
+                self._send_json({"error": "Priority must be High, Medium, or Low."}, status=HTTPStatus.BAD_REQUEST)
+                return
+
+            storage_dir = self._storage_dir()
+            storage_dir.mkdir(parents=True, exist_ok=True)
+            safe_date = re.sub(r"[^0-9-]+", "-", saved_date).strip("-") or "undated"
+            display_name = problem_name or f"Problem_{safe_date}"
+            slug = self._slugify(display_name, max_length=64)
+            base_filename = f"{safe_date}_{slug}" if slug else safe_date
+            filename = f"{base_filename}.json"
+            counter = 2
+            while (storage_dir / filename).exists():
+                filename = f"{base_filename}-{counter}.json"
+                counter += 1
+
+            nodes = body.get("nodes", []) if isinstance(body.get("nodes", []), list) else []
+            action_count = 0
+            ready_count = 0
+            for node in nodes:
+                if not isinstance(node, dict):
+                    continue
+                build = node.get("build", {})
+                execution_items = build.get("execution_items", []) if isinstance(build, dict) else []
+                action_count += len(execution_items) if isinstance(execution_items, list) else 0
+                if str(node.get("suggested_context", "")).strip().lower() == "no additional suggested item":
+                    ready_count += 1
+
+            payload = {
+                "problem": problem,
+                "problem_name": display_name,
+                "priority": priority,
+                "saved_at": safe_date,
+                "problem_type": str(body.get("problem_type", "")).strip(),
+                "assessment_title": str(body.get("assessment_title", "")).strip(),
+                "assessment_recap": str(body.get("assessment_recap", "")).strip(),
+                "problem_details": str(body.get("problem_details", "")).strip(),
+                "node_count": len(nodes),
+                "ready_count": ready_count,
+                "action_count": action_count,
+                "nodes": nodes,
+            }
+
+            path = storage_dir / filename
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            self._send_json({
+                "saved": True,
+                "filename": filename,
+                "problem": problem,
+                "problem_name": display_name,
+                "priority": priority,
+            })
+        except Exception as exc:
+            self._send_json({"error": f"Unable to save framing: {exc}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def _handle_list_problem_framings(self) -> None:
+        storage_dir = self._storage_dir()
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        records = []
+        for path in sorted(storage_dir.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            records.append({
+                "filename": path.name,
+                "problem": str(payload.get("problem", "")).strip(),
+                "problem_name": str(payload.get("problem_name", "")).strip(),
+                "saved_at": str(payload.get("saved_at", "")).strip(),
+                "priority": str(payload.get("priority", "")).strip() or "Medium",
+                "problem_type": str(payload.get("problem_type", "")).strip() or "Not set",
+                "node_count": int(payload.get("node_count", 0) or 0),
+                "ready_count": int(payload.get("ready_count", 0) or 0),
+                "action_count": int(payload.get("action_count", 0) or 0),
+            })
+        self._send_json({"items": records})
+
+    def _handle_get_problem_framing(self) -> None:
+        path = urlsplit(self.path).path
+        filename = path.split("/api/problem-framings/", 1)[-1].strip()
+        if not filename.endswith(".json"):
+            self._send_json({"error": "Invalid saved framing request."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        storage_dir = self._storage_dir()
+        path = storage_dir / Path(filename).name
+        if not path.exists():
+            self._send_json({"error": "Saved framing not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Saved framing is unreadable."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        self._send_json(payload)
 
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         encoded = json.dumps(payload).encode("utf-8")
@@ -386,6 +513,16 @@ class AppHandler(SimpleHTTPRequestHandler):
             .replace('"', "&quot;")
             .replace("'", "&#x27;")
         )
+
+    @staticmethod
+    def _slugify(value: str, max_length: int = 80) -> str:
+        cleaned = re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
+        cleaned = cleaned[:max_length].strip("-")
+        return cleaned or "problem-framing"
+
+    @staticmethod
+    def _storage_dir() -> Path:
+        return Path.cwd() / SAVE_DIRECTORY
 
     def log_message(self, format: str, *args) -> None:  # noqa: A003
         return

@@ -14,6 +14,7 @@ const state = {
   sequenceEditMode: false,
   dragNodeId: null,
   activeNodeId: null,
+  activeProblemPanel: "problem",
 };
 
 const panels = {
@@ -21,6 +22,7 @@ const panels = {
   roadmap: document.getElementById("step-roadmap"),
   details: document.getElementById("step-details"),
   summary: document.getElementById("step-summary"),
+  profile: document.getElementById("step-profile"),
 };
 
 const problemInput = document.getElementById("problem-input");
@@ -88,6 +90,7 @@ const prevNodeButton = document.getElementById("prev-node");
 const nextNodeButton = document.getElementById("next-node");
 const summaryContent = document.getElementById("summary-content");
 const restartFlowButton = document.getElementById("restart-flow");
+const saveProblemFramingButton = document.getElementById("save-problem-framing");
 const exportDocxButton = document.getElementById("export-docx");
 const exportPptxButton = document.getElementById("export-pptx");
 const nodeTemplate = document.getElementById("roadmap-node-template");
@@ -132,6 +135,25 @@ const summaryProblemModal = document.getElementById("summary-problem-modal");
 const summaryProblemModalBackdrop = document.getElementById("summary-problem-modal-backdrop");
 const closeSummaryProblemModalButton = document.getElementById("close-summary-problem-modal");
 const summaryProblemModalBody = document.getElementById("summary-problem-modal-body");
+const profileStatus = document.getElementById("profile-status");
+const profileHistoryList = document.getElementById("profile-history-list");
+const profileItemModal = document.getElementById("profile-item-modal");
+const profileItemModalBackdrop = document.getElementById("profile-item-modal-backdrop");
+const closeProfileItemModalButton = document.getElementById("close-profile-item-modal");
+const profileItemModalTitle = document.getElementById("profile-item-modal-title");
+const profileItemModalBody = document.getElementById("profile-item-modal-body");
+const loadProfileHistoryButton = document.getElementById("load-profile-history");
+const saveProblemModal = document.getElementById("save-problem-modal");
+const saveProblemModalBackdrop = document.getElementById("save-problem-modal-backdrop");
+const closeSaveProblemModalButton = document.getElementById("close-save-problem-modal");
+const confirmSaveProblemButton = document.getElementById("confirm-save-problem");
+const saveProblemNameInput = document.getElementById("save-problem-name");
+const saveProblemDateInput = document.getElementById("save-problem-date");
+const saveProblemPriorityInput = document.getElementById("save-problem-priority");
+const appToast = document.getElementById("app-toast");
+const appToastEyebrow = document.getElementById("app-toast-eyebrow");
+const appToastMessage = document.getElementById("app-toast-message");
+const appToastCloseButton = document.getElementById("app-toast-close");
 const startRoadmapStatus = document.getElementById("start-roadmap-status");
 const glossaryStatus = document.getElementById("glossary-status");
 const assessmentStatus = document.getElementById("assessment-status");
@@ -152,9 +174,11 @@ const analysisStatusMap = {
   customNode: customNodeStatus,
   detailBuild: detailBuildStatus,
   output: outputStatus,
+  profile: profileStatus,
 };
 
 let detailsModalTarget = "problem";
+let appToastTimer = null;
 
 refreshNodeBuildButton.addEventListener("click", async () => {
   await loadNodeBuild(state.roadmap[state.currentIndex], true);
@@ -173,6 +197,12 @@ closeSummaryNodeModalButton.addEventListener("click", closeSummaryNodeModal);
 summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
 closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
 summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
+closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
+profileItemModalBackdrop.addEventListener("click", closeProfileItemModal);
+closeSaveProblemModalButton.addEventListener("click", closeSaveProblemModal);
+saveProblemModalBackdrop.addEventListener("click", closeSaveProblemModal);
+loadProfileHistoryButton.addEventListener("click", loadProfileHistory);
+appToastCloseButton.addEventListener("click", hideAppToast);
 sectionToggles.forEach((button) => {
   button.addEventListener("click", () => {
     const target = button.dataset.target;
@@ -389,6 +419,12 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !summaryProblemModal.hidden) {
     closeSummaryProblemModal();
   }
+  if (event.key === "Escape" && !profileItemModal.hidden) {
+    closeProfileItemModal();
+  }
+  if (event.key === "Escape" && !saveProblemModal.hidden) {
+    closeSaveProblemModal();
+  }
 });
 closeNodeModalButton.addEventListener("click", closeNodeModal);
 nodeModalBackdrop.addEventListener("click", closeNodeModal);
@@ -553,8 +589,81 @@ restartFlowButton.addEventListener("click", () => {
   showPanel("problem");
 });
 
+saveProblemFramingButton.addEventListener("click", async () => {
+  if (!state.problem || !state.roadmap.length) {
+    window.alert("Please finish a problem framing before saving it.");
+    return;
+  }
+  openSaveProblemModal();
+});
+
+confirmSaveProblemButton.addEventListener("click", async () => {
+  const selectedDate = saveProblemDateInput.value || new Date().toISOString().slice(0, 10);
+  const displayName = saveProblemNameInput.value.trim() || `Problem_${selectedDate}`;
+
+  confirmSaveProblemButton.disabled = true;
+  confirmSaveProblemButton.textContent = "Saving...";
+  try {
+    const response = await fetch("/api/save-problem-framing", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        problem: state.problem,
+        problem_name: displayName,
+        problem_details: state.problemDetails,
+        problem_type: state.problemType,
+        assessment_title: state.assessmentTitle,
+        assessment_recap: state.assessmentRecap,
+        priority: saveProblemPriorityInput.value,
+        saved_date: selectedDate,
+        nodes: state.roadmap.map((node) => ({
+          title: node.title,
+          why: node.why,
+          breakdown: node.breakdown,
+          suggested_context: node.suggested_context,
+          build: state.nodeBuilds[node.id] || {},
+        })),
+      }),
+    });
+    const raw = await response.text();
+    let payload = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error(raw || "Unable to save this problem framing.");
+    }
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to save this problem framing.");
+    }
+    closeSaveProblemModal();
+    showAppToast(`Saved locally: ${payload.problem_name || payload.problem}`, "Problem framing saved");
+    showPanel("profile");
+    await loadProfileHistory();
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    confirmSaveProblemButton.disabled = false;
+    confirmSaveProblemButton.textContent = "Save Locally";
+  }
+});
+
 exportDocxButton.addEventListener("click", () => exportWorkflow("docx", exportDocxButton, "Download Word"));
 exportPptxButton.addEventListener("click", () => exportWorkflow("pptx", exportPptxButton, "Download PowerPoint"));
+
+sidebarNavItems.forEach((item) => {
+  item.addEventListener("click", async () => {
+    const nav = item.dataset.nav;
+    if (nav === "profile") {
+      showPanel("profile");
+      return;
+    }
+    if (nav === "actions" || nav === "review") {
+      return;
+    }
+    showPanel(state.activeProblemPanel || "problem");
+  });
+});
 
 function renderRoadmapEditor() {
   roadmapList.innerHTML = "";
@@ -946,6 +1055,100 @@ function renderSummary() {
   summaryContent.appendChild(nodesSection);
 }
 
+async function loadProfileHistory() {
+  setAnalysisStatus(["profile"], true, "Loading history");
+  profileHistoryList.innerHTML = `<article class="profile-history-card"><div class="profile-history-meta">Loading saved structures...</div></article>`;
+  try {
+    const response = await fetch("/api/problem-framings");
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to load saved problem structures.");
+    }
+    renderProfileHistory(payload.items || []);
+  } catch (error) {
+    profileHistoryList.innerHTML = `<article class="profile-history-card"><div class="profile-history-meta">${escapeHtml(error.message)}</div></article>`;
+  } finally {
+    setAnalysisStatus(["profile"], false);
+  }
+}
+
+function renderProfileHistory(items) {
+  if (!items.length) {
+    profileHistoryList.innerHTML = `
+      <article class="profile-history-card">
+        <div class="profile-history-meta">
+          No saved problem structures yet. Save one from Workflow Summary and it will appear here.
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  profileHistoryList.innerHTML = "";
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "profile-history-card";
+    card.innerHTML = `
+      <div class="profile-history-header">
+        <div>
+          <h4>${escapeHtml(item.problem_name || item.problem || "Untitled problem framing")}</h4>
+          <div class="profile-history-meta">
+            <div>${escapeHtml(formatSavedDate(item.saved_at))}</div>
+            <div>${escapeHtml(item.problem_type || "Not set")}</div>
+          </div>
+        </div>
+        <span class="status-chip ${priorityClassName(item.priority)}">${escapeHtml(item.priority || "Medium")}</span>
+      </div>
+      <div class="profile-history-metrics">
+        <span class="profile-history-metric">${escapeHtml(`${item.node_count || 0} nodes`)}</span>
+        <span class="profile-history-metric">${escapeHtml(`${item.ready_count || 0} ready`)}</span>
+        <span class="profile-history-metric">${escapeHtml(`${item.action_count || 0} actions`)}</span>
+      </div>
+      <button class="ghost-button profile-view-button" type="button">View Structure</button>
+    `;
+    card.querySelector(".profile-view-button")?.addEventListener("click", () => openProfileItem(item.filename));
+    profileHistoryList.appendChild(card);
+  });
+}
+
+async function openProfileItem(filename) {
+  try {
+    const response = await fetch(`/api/problem-framings/${encodeURIComponent(filename)}`);
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to open this saved framing.");
+    }
+    profileItemModalTitle.textContent = payload.problem_name || payload.problem || "Saved Problem Framing";
+    profileItemModalBody.innerHTML = `
+      <section class="summary-modal-section">
+        <h4>Saved Metadata</h4>
+        <p>${escapeHtml(`Saved on: ${formatSavedDate(payload.saved_at)}`)}</p>
+        <p>${escapeHtml(`Priority: ${payload.priority || "Medium"}`)}</p>
+        <p>${escapeHtml(`Problem type: ${payload.problem_type || "Not set"}`)}</p>
+      </section>
+      <section class="summary-modal-section">
+        <h4>Problem Detail</h4>
+        <p>${escapeHtml(payload.problem_name || "No custom problem name saved.")}</p>
+        <p>${escapeHtml(payload.problem || "No problem captured.")}</p>
+        <p>${escapeHtml(payload.problem_details || "No detailed bucket added.")}</p>
+      </section>
+      <section class="summary-modal-section">
+        <h4>Assessment</h4>
+        <p>${escapeHtml(payload.assessment_title || "No assessment saved.")}</p>
+        <p>${escapeHtml(payload.assessment_recap || "No recap saved.")}</p>
+      </section>
+      <section class="summary-modal-section">
+        <h4>Structure Summary</h4>
+        <p>${escapeHtml(`${payload.node_count || 0} nodes | ${payload.ready_count || 0} ready | ${payload.action_count || 0} actions`)}</p>
+      </section>
+    `;
+    profileItemModal.hidden = false;
+    document.body.style.overflow = "hidden";
+  } catch (error) {
+    window.alert(error.message);
+  }
+}
+
 async function exportWorkflow(format, button, idleText) {
   const payload = buildExportPayload(format);
   button.disabled = true;
@@ -1005,7 +1208,10 @@ function showPanel(name) {
   Object.entries(panels).forEach(([key, panel]) => {
     panel.classList.toggle("active", key === name);
   });
-  const activeNav = name === "summary" ? "review" : "problems";
+  if (name !== "profile") {
+    state.activeProblemPanel = name;
+  }
+  const activeNav = name === "profile" ? "profile" : "problems";
   sidebarNavItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === activeNav);
   });
@@ -1100,6 +1306,73 @@ function setAnalysisStatus(keys, active, text = "") {
       element.hidden = true;
     }
   });
+}
+
+function closeProfileItemModal() {
+  profileItemModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function openSaveProblemModal() {
+  saveProblemNameInput.value = "";
+  saveProblemDateInput.value = new Date().toISOString().slice(0, 10);
+  saveProblemPriorityInput.value = "Medium";
+  saveProblemModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSaveProblemModal() {
+  saveProblemModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function showAppToast(message, eyebrow = "Saved locally") {
+  if (!appToast || !appToastMessage || !appToastEyebrow) {
+    return;
+  }
+  if (appToastTimer) {
+    window.clearTimeout(appToastTimer);
+  }
+  appToastEyebrow.textContent = eyebrow;
+  appToastMessage.textContent = message;
+  appToast.hidden = false;
+  appToastTimer = window.setTimeout(() => {
+    hideAppToast();
+  }, 3200);
+}
+
+function hideAppToast() {
+  if (!appToast) {
+    return;
+  }
+  if (appToastTimer) {
+    window.clearTimeout(appToastTimer);
+    appToastTimer = null;
+  }
+  appToast.hidden = true;
+}
+
+function priorityClassName(priority) {
+  const value = String(priority || "").toLowerCase();
+  if (value === "high") {
+    return "priority-chip-high";
+  }
+  if (value === "low") {
+    return "priority-chip-low";
+  }
+  return "priority-chip-medium";
+}
+
+function formatSavedDate(value) {
+  if (!value) {
+    return "Saved date not available";
+  }
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
 }
 
 function escapeHtml(text) {
