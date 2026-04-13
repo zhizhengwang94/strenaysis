@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socketserver
 import webbrowser
 from http import HTTPStatus
@@ -182,17 +183,21 @@ class ReusableTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
 
-def run(host: str = "127.0.0.1", port: int = 8000) -> None:
+def run(host: str | None = None, port: int | None = None) -> None:
+    resolved_host = host or os.getenv("HOST", "0.0.0.0")
+    resolved_port = port or int(os.getenv("PORT", "8000"))
     with resources.as_file(resources.files("strenaysis").joinpath("web")) as web_root:
         handler = type("StrenaysisHandler", (AppHandler,), {"web_root": Path(web_root)})
-        with ReusableTCPServer((host, port), handler) as httpd:
-            url = f"http://{host}:{port}"
+        with ReusableTCPServer((resolved_host, resolved_port), handler) as httpd:
+            public_host = "127.0.0.1" if resolved_host == "0.0.0.0" else resolved_host
+            url = f"http://{public_host}:{resolved_port}"
             print(f"Strenaysis is running at {url}")
             print("Press Ctrl+C to stop.")
-            try:
-                webbrowser.open(url)
-            except Exception:
-                pass
+            if os.getenv("STRENAYSIS_OPEN_BROWSER", "1") == "1" and resolved_host in {"127.0.0.1", "localhost"}:
+                try:
+                    webbrowser.open(url)
+                except Exception:
+                    pass
             try:
                 httpd.serve_forever()
             except KeyboardInterrupt:

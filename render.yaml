@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: strenaysis
+    runtime: python
+    plan: free
+    autoDeploy: true
+    buildCommand: python -m pip install --upgrade pip && pip install .
+    startCommand: python -m strenaysis
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: STRENAYSIS_OPEN_BROWSER
+        value: "0"
+      - key: OPENAI_API_KEY
+        sync: false
