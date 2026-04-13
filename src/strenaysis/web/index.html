@@ -74,7 +74,13 @@
                   Capture the business ask in plain language, then add any supporting context that will make the AI-generated framework sharper.
                 </p>
               </div>
-              <div class="board-hero-badge">Main Question</div>
+              <div class="section-heading-actions">
+                <span id="start-roadmap-status" class="analysis-status" hidden>
+                  <span class="analysis-status-spinner" aria-hidden="true"></span>
+                  <span class="analysis-status-text">Analyzing question</span>
+                </span>
+                <div class="board-hero-badge">Main Question</div>
+              </div>
             </div>
             <div class="problem-layout">
               <section class="board-card board-card-emphasis">
@@ -137,6 +143,10 @@
                   </p>
                 </div>
                 <div class="glossary-heading-actions">
+                  <span id="glossary-status" class="analysis-status" hidden>
+                    <span class="analysis-status-spinner" aria-hidden="true"></span>
+                    <span class="analysis-status-text">Refreshing glossary</span>
+                  </span>
                   <span id="roadmap-source" class="status-chip"></span>
                   <button id="refresh-question" class="secondary-button">Refresh Question</button>
                 </div>
@@ -177,6 +187,10 @@
                       Identify the problem type, see the reasoning behind it, and keep the roadmap aligned with that framing.
                     </p>
                   </div>
+                  <span id="assessment-status" class="analysis-status" hidden>
+                    <span class="analysis-status-spinner" aria-hidden="true"></span>
+                    <span class="analysis-status-text">Reviewing problem type</span>
+                  </span>
                 </div>
                 <div class="assessment-card">
                   <div class="assessment-type-wrap">
@@ -238,6 +252,10 @@
                   </p>
                 </div>
                 <div class="roadmap-confirm-wrap">
+                  <span id="framework-status" class="analysis-status" hidden>
+                    <span class="analysis-status-spinner" aria-hidden="true"></span>
+                    <span class="analysis-status-text">Building approach</span>
+                  </span>
                   <button id="confirm-roadmap" class="primary-button roadmap-confirm-button">Confirm This Is the Roadmap</button>
                 </div>
               </div>
@@ -258,6 +276,10 @@
                     Extend the default framework with a custom step, polish it, and then add it into the sequence.
                   </p>
                 </div>
+                <span id="custom-node-status" class="analysis-status" hidden>
+                  <span class="analysis-status-spinner" aria-hidden="true"></span>
+                  <span class="analysis-status-text">Polishing node</span>
+                </span>
                 <label class="field-label" for="new-node-draft">What should this new step cover?</label>
                 <textarea
                   id="new-node-draft"
@@ -291,6 +313,10 @@
                 <p class="section-copy" id="detail-subtitle"></p>
               </div>
               <div class="detail-hero-actions">
+                <span id="detail-build-status" class="analysis-status" hidden>
+                  <span class="analysis-status-spinner" aria-hidden="true"></span>
+                  <span class="analysis-status-text">Preparing node</span>
+                </span>
                 <span id="detail-progress" class="status-chip"></span>
                 <button id="refresh-node-build" class="secondary-button" type="button">Refresh Node Draft</button>
               </div>
@@ -397,6 +423,10 @@
                       </p>
                     </div>
                     <div class="section-heading-actions">
+                      <span id="output-status" class="analysis-status" hidden>
+                        <span class="analysis-status-spinner" aria-hidden="true"></span>
+                        <span class="analysis-status-text">Synthesizing output</span>
+                      </span>
                       <button id="synthesize-output" class="secondary-button" type="button">Synthesize Output</button>
                       <button class="ghost-button section-toggle" type="button" data-target="output">Collapse</button>
                     </div>

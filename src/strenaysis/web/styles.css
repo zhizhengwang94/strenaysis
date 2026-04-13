@@ -235,6 +235,42 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.analysis-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 87, 122, 0.14);
+  background: rgba(236, 243, 249, 0.92);
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.analysis-status-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(34, 87, 122, 0.18);
+  border-top-color: var(--primary);
+  animation: analysis-spin 0.8s linear infinite;
+}
+
+.analysis-status-text {
+  line-height: 1;
+}
+
+@keyframes analysis-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .collapsible-heading {
   align-items: flex-start;
 }

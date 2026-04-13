@@ -132,10 +132,27 @@ const summaryProblemModal = document.getElementById("summary-problem-modal");
 const summaryProblemModalBackdrop = document.getElementById("summary-problem-modal-backdrop");
 const closeSummaryProblemModalButton = document.getElementById("close-summary-problem-modal");
 const summaryProblemModalBody = document.getElementById("summary-problem-modal-body");
+const startRoadmapStatus = document.getElementById("start-roadmap-status");
+const glossaryStatus = document.getElementById("glossary-status");
+const assessmentStatus = document.getElementById("assessment-status");
+const frameworkStatus = document.getElementById("framework-status");
+const customNodeStatus = document.getElementById("custom-node-status");
+const detailBuildStatus = document.getElementById("detail-build-status");
+const outputStatus = document.getElementById("output-status");
 const sidebarNavItems = Array.from(document.querySelectorAll(".nav-item"));
 const sectionToggles = Array.from(document.querySelectorAll(".section-toggle"));
 const contextHelpButtons = Array.from(document.querySelectorAll(".context-help-button"));
 const NO_ADDITIONAL_SUGGESTED_ITEM = "No Additional Suggested Item";
+
+const analysisStatusMap = {
+  startRoadmap: startRoadmapStatus,
+  glossary: glossaryStatus,
+  assessment: assessmentStatus,
+  framework: frameworkStatus,
+  customNode: customNodeStatus,
+  detailBuild: detailBuildStatus,
+  output: outputStatus,
+};
 
 let detailsModalTarget = "problem";
 
@@ -193,6 +210,7 @@ synthesizeOutputButton.addEventListener("click", async () => {
   if (!currentNode) {
     return;
   }
+  setAnalysisStatus(["output"], true, "Synthesizing output");
   synthesizeOutputButton.disabled = true;
   synthesizeOutputButton.textContent = "Synthesizing...";
   try {
@@ -219,6 +237,7 @@ synthesizeOutputButton.addEventListener("click", async () => {
   } catch (error) {
     window.alert(error.message);
   } finally {
+    setAnalysisStatus(["output"], false);
     synthesizeOutputButton.disabled = false;
     synthesizeOutputButton.textContent = "Synthesize Output";
   }
@@ -251,6 +270,8 @@ startRoadmapButton.addEventListener("click", async () => {
     button: startRoadmapButton,
     loadingText: "Building...",
     idleText: "Start to Build the Structure",
+    statusKeys: ["startRoadmap"],
+    statusText: "Analyzing question",
     resetNotes: true,
     showRoadmap: true,
   });
@@ -270,6 +291,8 @@ refreshQuestionButton.addEventListener("click", async () => {
     button: refreshQuestionButton,
     loadingText: "Refreshing...",
     idleText: "Refresh Question",
+    statusKeys: ["glossary", "assessment", "framework"],
+    statusText: "Refreshing question",
     resetNotes: false,
     showRoadmap: false,
   });
@@ -286,6 +309,8 @@ updateRoadbuildButton.addEventListener("click", async () => {
     button: updateRoadbuildButton,
     loadingText: "Updating...",
     idleText: "Update Roadbuild",
+    statusKeys: ["assessment", "framework"],
+    statusText: "Updating approach",
     resetNotes: false,
     showRoadmap: false,
   });
@@ -417,6 +442,7 @@ polishNodeButton.addEventListener("click", async () => {
 
   polishNodeButton.disabled = true;
   polishNodeButton.textContent = "Polishing...";
+  setAnalysisStatus(["customNode"], true, "Polishing node");
   try {
     const response = await fetch("/api/polish-node", {
       method: "POST",
@@ -444,6 +470,7 @@ polishNodeButton.addEventListener("click", async () => {
   } catch (error) {
     window.alert(error.message);
   } finally {
+    setAnalysisStatus(["customNode"], false);
     polishNodeButton.disabled = false;
     polishNodeButton.textContent = "Polish";
   }
@@ -683,6 +710,7 @@ async function loadNodeBuild(node, forceRefresh) {
     return;
   }
 
+  setAnalysisStatus(["detailBuild"], true, forceRefresh ? "Refreshing node analysis" : "Preparing node analysis");
   refreshNodeBuildButton.disabled = true;
   refreshNodeBuildButton.textContent = forceRefresh ? "Refreshing..." : "Loading...";
   try {
@@ -720,6 +748,7 @@ async function loadNodeBuild(node, forceRefresh) {
   } catch (error) {
     window.alert(error.message);
   } finally {
+    setAnalysisStatus(["detailBuild"], false);
     refreshNodeBuildButton.disabled = false;
     refreshNodeBuildButton.textContent = "Refresh Node Draft";
   }
@@ -989,6 +1018,7 @@ function showPanel(name) {
 async function generateRoadmap(problem, options) {
   state.problem = problem;
   state.problemDetails = options.problemDetails || "";
+  setAnalysisStatus(options.statusKeys || [], true, options.statusText || "Analyzing");
   if (options.button) {
     options.button.disabled = true;
     options.button.textContent = options.loadingText;
@@ -1043,6 +1073,7 @@ async function generateRoadmap(problem, options) {
   } catch (error) {
     window.alert(error.message);
   } finally {
+    setAnalysisStatus(options.statusKeys || [], false);
     if (options.button) {
       options.button.disabled = false;
       options.button.textContent = options.idleText;
@@ -1051,6 +1082,24 @@ async function generateRoadmap(problem, options) {
       updateRoadbuildButton.disabled = false;
     }
   }
+}
+
+function setAnalysisStatus(keys, active, text = "") {
+  (keys || []).forEach((key) => {
+    const element = analysisStatusMap[key];
+    if (!element) {
+      return;
+    }
+    const textElement = element.querySelector(".analysis-status-text");
+    if (active) {
+      if (textElement && text) {
+        textElement.textContent = text;
+      }
+      element.hidden = false;
+    } else {
+      element.hidden = true;
+    }
+  });
 }
 
 function escapeHtml(text) {
