@@ -1234,12 +1234,6 @@ def _build_followup_coverage_text(problem_details: str, nodes: list[dict[str, An
     for node in nodes:
         if not isinstance(node, dict):
             continue
-        parts.extend([
-            str(node.get("title", "")).strip(),
-            str(node.get("why", "")).strip(),
-            str(node.get("breakdown", "")).strip(),
-            str(node.get("suggested_context", "")).strip(),
-        ])
         build_log = node.get("build_log", {})
         if isinstance(build_log, dict):
             parts.extend([
@@ -1294,26 +1288,14 @@ def _fallback_agent_review_prompt(
         return NO_ADDITIONAL_SUGGESTED_ITEM
     node = roadmap[index] if isinstance(roadmap[index], dict) else {}
     title = str(node.get("title", "")).strip()
-    current_prompt = str(node.get("suggested_context", "")).strip()
     if not title:
-        return NO_ADDITIONAL_SUGGESTED_ITEM
-    if current_prompt.lower() == NO_ADDITIONAL_SUGGESTED_ITEM.lower():
         return NO_ADDITIONAL_SUGGESTED_ITEM
 
     global_context = _build_followup_coverage_text(problem_details, roadmap)
-    node_breakdown = str(node.get("breakdown", "")).strip().lower()
-    coverage = _infer_context_coverage(f"{problem.lower()} {global_context.lower()} {node_breakdown}")
+    coverage = _infer_context_coverage(f"{problem.lower()} {global_context.lower()}")
 
     if title.lower() == "metric":
-        metric_structure_present = all(
-            label in node_breakdown
-            for label in ["business metric", "decision metric", "model metric"]
-        )
-        metric_output_present = any(
-            token in node_breakdown
-            for token in ["scorecard", "dashboard", "baseline", "target", "output:"]
-        )
-        if (metric_structure_present or metric_output_present) and coverage["decision"] and coverage["horizon"] and coverage["success"]:
+        if coverage["metric_family"] and coverage["decision"] and coverage["horizon"] and coverage["success"]:
             return NO_ADDITIONAL_SUGGESTED_ITEM
 
     if title.lower() == "objective":
