@@ -427,7 +427,7 @@ def refresh_roadmap_followups(
     fallback = _fallback_refresh_roadmap_followups(problem, problem_details, roadmap)
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return fallback
+        return _postprocess_followup_prompts(problem, problem_details, roadmap, fallback)
 
     prompt = (
         "You are refreshing node follow-up prompts for a business-to-analytics roadmap. "
@@ -473,10 +473,11 @@ def refresh_roadmap_followups(
         with request.urlopen(req, timeout=45) as response:
             body = json.loads(response.read().decode("utf-8"))
     except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
-        return fallback
+        return _postprocess_followup_prompts(problem, problem_details, roadmap, fallback)
 
     parsed = _extract_refresh_followups(body, len(roadmap))
-    return parsed or fallback
+    base = parsed or fallback
+    return _postprocess_followup_prompts(problem, problem_details, roadmap, base)
 
 def _extract_roadmap_response(body: dict[str, Any]) -> dict[str, Any] | None:
     output = body.get("output", [])
@@ -1208,6 +1209,26 @@ def _fallback_refresh_roadmap_followups(
     return refreshed
 
 
+def _postprocess_followup_prompts(
+    problem: str,
+    problem_details: str,
+    roadmap: list[dict[str, Any]],
+    prompts: list[str],
+) -> list[str]:
+    working_roadmap: list[dict[str, Any]] = []
+    reviewed: list[str] = []
+    for index, raw_node in enumerate(roadmap):
+        node = dict(raw_node) if isinstance(raw_node, dict) else {}
+        proposed = str(prompts[index] if index < len(prompts) else node.get("suggested_context", "")).strip()
+        node["suggested_context"] = proposed or str(node.get("suggested_context", "")).strip() or NO_ADDITIONAL_SUGGESTED_ITEM
+        working_roadmap.append(node)
+        final_prompt = _fallback_agent_review_prompt(problem, problem_details, working_roadmap, index)
+        final_prompt = final_prompt or NO_ADDITIONAL_SUGGESTED_ITEM
+        reviewed.append(final_prompt)
+        working_roadmap[index]["suggested_context"] = final_prompt
+    return reviewed
+
+
 def _build_followup_coverage_text(problem_details: str, nodes: list[dict[str, Any]]) -> str:
     parts = [problem_details or ""]
     for node in nodes:
@@ -1219,6 +1240,29 @@ def _build_followup_coverage_text(problem_details: str, nodes: list[dict[str, An
             str(node.get("breakdown", "")).strip(),
             str(node.get("suggested_context", "")).strip(),
         ])
+        build_log = node.get("build_log", {})
+        if isinstance(build_log, dict):
+            parts.extend([
+                str(build_log.get("execution_summary", "")).strip(),
+                str(build_log.get("key_question", "")).strip(),
+                str(build_log.get("extracted_context", "")).strip(),
+            ])
+            raw_open_questions = build_log.get("open_questions", [])
+            if isinstance(raw_open_questions, list):
+                parts.extend(str(item).strip() for item in raw_open_questions if str(item).strip())
+            raw_workstreams = build_log.get("workstreams", [])
+            if isinstance(raw_workstreams, list):
+                for item in raw_workstreams:
+                    if isinstance(item, dict):
+                        parts.extend([
+                            str(item.get("name", "")).strip(),
+                            str(item.get("purpose", "")).strip(),
+                            str(item.get("completion_criteria", "")).strip(),
+                        ])
+                    else:
+                        text = str(item).strip()
+                        if text:
+                            parts.append(text)
         raw_threads = node.get("follow_up_threads", [])
         if not isinstance(raw_threads, list):
             continue
@@ -1276,6 +1320,18 @@ def _fallback_agent_review_prompt(
         if coverage["decision"] and coverage["horizon"] and coverage["success"]:
             return NO_ADDITIONAL_SUGGESTED_ITEM
 
+    if title.lower() == "segmentation":
+        if coverage["segments"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "drivers":
+        if coverage["drivers"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "data":
+        if coverage["data"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
     if title.lower() == "model":
         model_objective_present = any(
             token in global_context.lower()
@@ -1305,7 +1361,30 @@ def _fallback_agent_review_prompt(
                 "who will respond",
             ]
         )
+        descriptive_no_model = any(
+            token in global_context.lower()
+            for token in [
+                "no model yet",
+                "start descriptively",
+                "before deciding if prediction is needed",
+                "before deciding if a model is needed",
+            ]
+        )
+        if descriptive_no_model:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
         if model_objective_present and model_action_present:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "decision":
+        if coverage["actions"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "result":
+        if coverage["result"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "takeaway":
+        if coverage["takeaway"]:
             return NO_ADDITIONAL_SUGGESTED_ITEM
 
     return _fallback_suggested_context(problem, global_context, title)
@@ -1437,6 +1516,32 @@ def _infer_context_coverage(combined_text: str) -> dict[str, bool]:
         ]),
         "metric_family": any(token in combined_text for token in [
             "business metric", "decision metric", "model metric", "auc", "pr-auc", "pr auc", "recall", "calibration",
+        ]),
+        "segments": any(token in combined_text for token in [
+            "segment", "tenure bucket", "tenure buckets", "arpu tier", "arpu tiers", "geography",
+            "product type", "customer type", "lifecycle", "mid-tenure", "mid tenure",
+        ]),
+        "drivers": any(token in combined_text for token in [
+            "pricing friction", "promo expiration", "promo expiry", "competitor", "under-utilization",
+            "under utilization", "network degradation", "latency", "outages", "customer service friction",
+            "repeat calls", "usage decline", "complaints", "driver", "root cause",
+        ]),
+        "data": any(token in combined_text for token in [
+            "crm", "billing", "network telemetry", "support systems", "support tickets", "product usage",
+            "behavioral data", "value-related data", "historical outcome data", "profile data",
+            "observation", "historical backtest", "time window", "data source",
+        ]),
+        "actions": any(token in combined_text for token in [
+            "intervention options", "discount", "retention offer", "bundle", "service fix", "outreach",
+            "engagement", "targeting logic", "budget", "capacity", "policy rules", "who to target",
+        ]),
+        "result": any(token in combined_text for token in [
+            "expected impact", "roi", "payback", "incremental retained revenue", "result",
+            "cohort retention", "reduction in", "impact expectation", "stakeholder outcome",
+        ]),
+        "takeaway": any(token in combined_text for token in [
+            "executive takeaway", "what the company should do", "next quarter", "recommendation",
+            "audience", "ceo", "cmo", "head of retention", "risks", "trade-offs", "trade offs",
         ]),
     }
 

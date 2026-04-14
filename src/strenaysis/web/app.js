@@ -2113,6 +2113,17 @@ function serializeRoadmapForFollowUpRefresh() {
     breakdown: String(node.breakdown || "").trim(),
     suggested_context: String(node.suggested_context || "").trim(),
     follow_up_threads: normalizeNodeFollowUpThreads(node),
+    build_log: {
+      execution_summary: String(state.nodeBuilds[node.id]?.execution_summary || "").trim(),
+      key_question: String(state.nodeBuilds[node.id]?.key_question || "").trim(),
+      extracted_context: String(state.nodeBuilds[node.id]?.extracted_context || "").trim(),
+      open_questions: Array.isArray(state.nodeBuilds[node.id]?.open_questions)
+        ? state.nodeBuilds[node.id].open_questions
+        : [],
+      workstreams: Array.isArray(state.nodeBuilds[node.id]?.workstreams)
+        ? state.nodeBuilds[node.id].workstreams
+        : [],
+    },
   }));
 }
 
