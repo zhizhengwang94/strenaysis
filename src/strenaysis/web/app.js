@@ -319,7 +319,7 @@ addWorkItemButton.addEventListener("click", () => {
 
 startRoadmapButton.addEventListener("click", async () => {
   const problem = problemInput.value.trim();
-  const problemDetails = problemDetailsInput.value.trim();
+  const problemDetails = problemDetailsInput?.value.trim() || state.problemDetails || "";
   if (!problem) {
     window.alert("Please add a problem to solve first.");
     return;
@@ -546,10 +546,12 @@ confirmRoadmapButton.addEventListener("click", () => {
     return;
   }
 
-  state.problem = updatedProblem;
-  state.problemDetails = updatedProblemDetails;
-  problemInput.value = updatedProblem;
-  problemDetailsInput.value = updatedProblemDetails;
+    state.problem = updatedProblem;
+    state.problemDetails = updatedProblemDetails;
+    problemInput.value = updatedProblem;
+  if (problemDetailsInput) {
+    problemDetailsInput.value = updatedProblemDetails;
+  }
   updateProblemDetailsPreviews();
   state.roadmap = cleaned;
   state.currentIndex = 0;
@@ -671,7 +673,9 @@ restartFlowButton.addEventListener("click", () => {
   state.dragNodeId = null;
   state.activeNodeId = null;
   problemInput.value = "";
-  problemDetailsInput.value = "";
+  if (problemDetailsInput) {
+    problemDetailsInput.value = "";
+  }
   roadmapProblemInput.value = "";
   roadmapProblemDetailsInput.value = "";
   roadmapList.innerHTML = "";
@@ -1623,7 +1627,9 @@ async function generateRoadmap(problem, options) {
       }
     state.nextNodeId = state.roadmap.length + 1;
     problemInput.value = problem;
-    problemDetailsInput.value = state.problemDetails;
+    if (problemDetailsInput) {
+      problemDetailsInput.value = state.problemDetails;
+    }
     roadmapProblemInput.value = problem;
     roadmapProblemDetailsInput.value = state.problemDetails;
     updateAssessmentFields();
@@ -2182,7 +2188,9 @@ function makeNodeId() {
 function openDetailsModal(target) {
   detailsModalTarget = target;
   detailsModalInput.value =
-    target === "roadmap" ? roadmapProblemDetailsInput.value : problemDetailsInput.value;
+    target === "roadmap"
+      ? (roadmapProblemDetailsInput?.value || state.problemDetails || "")
+      : (problemDetailsInput?.value || state.problemDetails || "");
   detailsModal.hidden = false;
   document.body.style.overflow = "hidden";
   detailsModalInput.scrollTop = 0;
@@ -2207,13 +2215,21 @@ function closeAddNodeModal() {
 
 function setProblemDetails(value) {
   state.problemDetails = value;
-  problemDetailsInput.value = value;
-  roadmapProblemDetailsInput.value = value;
+  if (problemDetailsInput) {
+    problemDetailsInput.value = value;
+  }
+  if (roadmapProblemDetailsInput) {
+    roadmapProblemDetailsInput.value = value;
+  }
   updateProblemDetailsPreviews();
 }
 
 function updateProblemDetailsPreviews() {
-  const value = state.problemDetails || problemDetailsInput.value || roadmapProblemDetailsInput.value || "";
+  const value =
+    state.problemDetails ||
+    problemDetailsInput?.value ||
+    roadmapProblemDetailsInput?.value ||
+    "";
   [problemDetailsPreview, roadmapProblemDetailsPreview].filter(Boolean).forEach((preview) => {
     preview.textContent = value
       ? 'Details added. Click "Insert Details" to review or edit.'
