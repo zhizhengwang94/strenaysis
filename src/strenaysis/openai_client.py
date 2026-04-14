@@ -77,7 +77,8 @@ def generate_roadmap(problem: str, problem_details: str = "", forced_problem_typ
         "assessment_title should be a short framing line. assessment_recap should be 3-4 short labeled lines separated by newline characters. "
         "Each roadmap item must contain title, why, breakdown, suggested_context. The roadmap must follow the exact template for the chosen problem type in the exact order. "
         "why should be one sentence. breakdown must be concrete and tailored to the problem, written as 3-5 short labeled lines separated by newline characters. "
-        "Use a consultancy-style, MECE structure. suggested_context must ask what extra problem-statement context would strengthen this node. "
+        "Use a consultancy-style, MECE structure. suggested_context must ask for only the single most important missing context that would strengthen this node. "
+        "Do not create a chain of clever follow-up questions. One practical, sufficient question is enough. "
         f"If enough context already exists, return exactly: '{NO_ADDITIONAL_SUGGESTED_ITEM}'. "
         "For Metric, prefer Business metric / Decision metric / Model metric. For Data, prefer Behavioral / Value-related / Historical outcome / Profile / Contextual buckets.\n\n"
         f"Problem to solve: {problem}\n"
@@ -415,6 +416,66 @@ def synthesize_node_output(
                         }
     return fallback
 
+
+def refresh_roadmap_followups(
+    problem: str,
+    problem_details: str,
+    roadmap: list[dict[str, Any]],
+) -> list[str]:
+    fallback = _fallback_refresh_roadmap_followups(problem, problem_details, roadmap)
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return fallback
+
+    prompt = (
+        "You are refreshing node follow-up prompts for a business-to-analytics roadmap. "
+        "Return JSON with one key: suggested_contexts. "
+        "It must be an array of strings with exactly one entry per roadmap node, in the same order as provided. "
+        "Each entry must be either one practical missing-context question for that node or exactly "
+        f"'{NO_ADDITIONAL_SUGGESTED_ITEM}'. "
+        "Downstream nodes must ingest upstream information. "
+        "If a later node's missing context is already covered by the original problem, the detailed context, or answers already captured in earlier nodes, do not ask it again. "
+        "Do not create chains of endless follow-up questions. Ask only the single most important missing question when it is still needed.\n\n"
+        f"Problem to solve: {problem}\n"
+        f"Problem details: {problem_details or 'None provided.'}\n"
+        f"Roadmap state:\n{json.dumps(roadmap, ensure_ascii=True)}"
+    )
+    payload = {
+        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
+        "input": prompt,
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "refresh_followups_response",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "suggested_contexts": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                    "required": ["suggested_contexts"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    }
+    req = request.Request(
+        "https://api.openai.com/v1/responses",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=45) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
+        return fallback
+
+    parsed = _extract_refresh_followups(body, len(roadmap))
+    return parsed or fallback
+
 def _extract_roadmap_response(body: dict[str, Any]) -> dict[str, Any] | None:
     output = body.get("output", [])
     for item in output:
@@ -528,6 +589,24 @@ def _extract_node_build(body: dict[str, Any]) -> dict[str, Any] | None:
                         "execution_items": cleaned_items,
                         "output": synthesis,
                     }
+    return None
+
+
+def _extract_refresh_followups(body: dict[str, Any], expected_count: int) -> list[str] | None:
+    output = body.get("output", [])
+    for item in output:
+        for content in item.get("content", []):
+            if content.get("type") != "output_text" or "text" not in content:
+                continue
+            try:
+                parsed = json.loads(content["text"])
+            except json.JSONDecodeError:
+                continue
+            suggested_contexts = parsed.get("suggested_contexts")
+            if not isinstance(suggested_contexts, list) or len(suggested_contexts) != expected_count:
+                continue
+            cleaned = [str(value or "").strip() or NO_ADDITIONAL_SUGGESTED_ITEM for value in suggested_contexts]
+            return cleaned
     return None
 
 
@@ -1115,6 +1194,111 @@ def _build_fallback_roadmap(problem: str, problem_details: str, problem_type: st
     } for title in ROADMAP_TEMPLATES.get(problem_type, ROADMAP_TEMPLATES[DEFAULT_PROBLEM_TYPE])]
 
 
+def _fallback_refresh_roadmap_followups(
+    problem: str,
+    problem_details: str,
+    roadmap: list[dict[str, Any]],
+) -> list[str]:
+    refreshed: list[str] = []
+    for index, raw_node in enumerate(roadmap):
+        next_prompt = _fallback_agent_review_prompt(problem, problem_details, roadmap, index)
+        refreshed.append(next_prompt or NO_ADDITIONAL_SUGGESTED_ITEM)
+    return refreshed
+
+
+def _build_followup_coverage_text(problem_details: str, nodes: list[dict[str, Any]]) -> str:
+    parts = [problem_details or ""]
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        raw_threads = node.get("follow_up_threads", [])
+        if not isinstance(raw_threads, list):
+            continue
+        for thread in raw_threads:
+            if not isinstance(thread, dict):
+                continue
+            prompt = str(thread.get("prompt", "")).strip()
+            if prompt:
+                parts.append(prompt)
+            raw_responses = thread.get("responses", [])
+            if not isinstance(raw_responses, list):
+                continue
+            for response in raw_responses:
+                if not isinstance(response, dict):
+                    continue
+                response_text = str(response.get("text", "")).strip()
+                if response_text:
+                    parts.append(response_text)
+    return "\n".join(part for part in parts if str(part).strip())
+
+
+def _fallback_agent_review_prompt(
+    problem: str,
+    problem_details: str,
+    roadmap: list[dict[str, Any]],
+    index: int,
+) -> str:
+    if index < 0 or index >= len(roadmap):
+        return NO_ADDITIONAL_SUGGESTED_ITEM
+    node = roadmap[index] if isinstance(roadmap[index], dict) else {}
+    title = str(node.get("title", "")).strip()
+    current_prompt = str(node.get("suggested_context", "")).strip()
+    if not title:
+        return NO_ADDITIONAL_SUGGESTED_ITEM
+    if current_prompt.lower() == NO_ADDITIONAL_SUGGESTED_ITEM.lower():
+        return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    global_context = _build_followup_coverage_text(problem_details, roadmap)
+    node_breakdown = str(node.get("breakdown", "")).strip().lower()
+    coverage = _infer_context_coverage(f"{problem.lower()} {global_context.lower()} {node_breakdown}")
+
+    if title.lower() == "metric":
+        metric_structure_present = all(
+            label in node_breakdown
+            for label in ["business metric", "decision metric", "model metric"]
+        )
+        if metric_structure_present and coverage["decision"] and coverage["horizon"] and coverage["success"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "objective":
+        if coverage["decision"] and coverage["horizon"] and coverage["success"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    if title.lower() == "model":
+        model_objective_present = any(
+            token in global_context.lower()
+            for token in [
+                "uplift",
+                "ranking",
+                "prediction",
+                "explanation",
+                "uplift modeling",
+                "churn prediction",
+                "risk model",
+            ]
+        )
+        model_action_present = any(
+            token in global_context.lower()
+            for token in [
+                "trigger targeted retention interventions",
+                "targeted retention interventions",
+                "retention interventions",
+                "offers, bundles, outreach",
+                "outreach",
+                "what action will use the model",
+                "action will use the model",
+                "use the model",
+                "target action",
+                "prioritize customers",
+                "who will respond",
+            ]
+        )
+        if model_objective_present and model_action_present:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+
+    return _fallback_suggested_context(problem, global_context, title)
+
+
 def _build_problem_assessment(
     problem: str,
     problem_details: str,
@@ -1149,8 +1333,27 @@ def _classify_problem_type(problem: str, problem_details: str = "") -> str:
 def _fallback_suggested_context(problem: str, problem_details: str, title: str) -> str:
     combined = f"{' '.join(problem.lower().split())} {' '.join(problem_details.lower().split())}".strip()
     audience = _detect_audience(combined)
+    coverage = _infer_context_coverage(combined)
     if _is_context_sufficient(combined, title):
         return NO_ADDITIONAL_SUGGESTED_ITEM
+    if title.lower() == "objective":
+        missing = []
+        if not coverage["decision"]:
+            missing.append("business decision")
+        if not coverage["horizon"]:
+            missing.append("time horizon")
+        if not coverage["success"]:
+            missing.append("success definition")
+        if not missing:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+        return f"What exact {', '.join(missing)} should be added so the objective is unambiguous?"
+    if title.lower() == "metric":
+        if coverage["metric_family"]:
+            return NO_ADDITIONAL_SUGGESTED_ITEM
+        if coverage["horizon"] and coverage["success"]:
+            return "Which business metric, decision metric, and model metric should be tracked separately so the scorecard is explicit?"
+        if coverage["decision"] and (coverage["horizon"] or coverage["success"]):
+            return f"Which business metric, decision metric, and model metric should we define for {audience.lower()} so the metric scorecard is complete?"
     prompts = {
         "objective": "What exact business decision, time horizon, and success definition should be added so the objective is unambiguous?",
         "metric": f"What business goal, target horizon, and success threshold should we add for {audience.lower()} to tighten the metric definition?",
@@ -1167,6 +1370,27 @@ def _fallback_suggested_context(problem: str, problem_details: str, title: str) 
         "takeaway": "What audience, final recommendation style, or executive concern should be added so the takeaway lands more cleanly?",
     }
     return prompts.get(title.lower(), f"What extra context should be added to the problem statement so the {title.lower()} node becomes more precise?")
+
+
+def _infer_context_coverage(combined_text: str) -> dict[str, bool]:
+    return {
+        "decision": any(token in combined_text for token in [
+            "business decision", "decision to support", "whether to invest", "whether to launch",
+            "whether to continue", "targeted retention program", "prioritize", "who to target",
+        ]),
+        "horizon": any(token in combined_text for token in [
+            "time horizon", "target horizon", "next 90 days", "90 days", "6-9 months", "6–9 months",
+            "6-12 months", "6–12 months", "2-3 quarters", "2–3 quarters", "next quarter",
+        ]),
+        "success": any(token in combined_text for token in [
+            "success definition", "success threshold", "reduce monthly churn", "retention by", "improve 90-day retention",
+            "improve 90 day retention", "without materially reducing", "overall arpu", "margin", "unit economics",
+            "roi", "payback",
+        ]),
+        "metric_family": any(token in combined_text for token in [
+            "business metric", "decision metric", "model metric", "auc", "pr-auc", "pr auc", "recall", "calibration",
+        ]),
+    }
 
 
 def _is_context_sufficient(combined_text: str, title: str) -> bool:

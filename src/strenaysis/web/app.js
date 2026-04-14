@@ -34,6 +34,7 @@ const openProblemDetailsButton = document.getElementById("open-problem-details")
 const startRoadmapButton = document.getElementById("start-roadmap");
 const roadmapList = document.getElementById("roadmap-list");
 const confirmRoadmapButton = document.getElementById("confirm-roadmap");
+const openRoadmapLogButton = document.getElementById("open-roadmap-log");
 const editSequenceButton = document.getElementById("edit-sequence");
 const saveSequenceButton = document.getElementById("save-sequence");
 const deleteSequenceZone = document.getElementById("delete-sequence-zone");
@@ -65,27 +66,30 @@ const detailTitle = document.getElementById("detail-title");
 const detailStepTitle = document.getElementById("detail-step-title");
 const detailSubtitle = document.getElementById("detail-subtitle");
 const detailProgress = document.getElementById("detail-progress");
+const detailNodeSwitcher = document.getElementById("detail-node-switcher");
 const detailNodeName = document.getElementById("detail-node-name");
 const detailNodeDescriptionPreview = document.getElementById("detail-node-description-preview");
 const detailNodeBreakdownPreview = document.getElementById("detail-node-breakdown-preview");
 const detailNodeDescription = document.getElementById("detail-node-description");
 const detailNodeBreakdown = document.getElementById("detail-node-breakdown");
+const detailCoverageReview = document.getElementById("detail-coverage-review");
 const refreshNodeBuildButton = document.getElementById("refresh-node-build");
 const openDetailBriefModalButton = document.getElementById("open-detail-brief-modal");
-  const detailExecutionSummary = document.getElementById("detail-execution-summary");
-  const detailExecutionSummaryPreview = document.getElementById("detail-execution-summary-preview");
+const detailExecutionSummary = document.getElementById("detail-execution-summary");
+const detailExecutionSummaryPreview = document.getElementById("detail-execution-summary-preview");
 const detailKeyQuestion = document.getElementById("detail-key-question");
-const detailKeyQuestionPreview = document.getElementById("detail-key-question-preview");
 const detailWorkstreams = document.getElementById("detail-workstreams");
-const detailWorkstreamsPreview = document.getElementById("detail-workstreams-preview");
 const detailExtractedContext = document.getElementById("detail-extracted-context");
-const detailExtractedContextPreview = document.getElementById("detail-extracted-context-preview");
 const detailOpenQuestions = document.getElementById("detail-open-questions");
-const detailOpenQuestionsPreview = document.getElementById("detail-open-questions-preview");
+const detailFollowUpPrompt = document.getElementById("detail-followup-prompt");
+const detailFollowUpSupport = document.getElementById("detail-followup-support");
+const detailFollowUpResponses = document.getElementById("detail-followup-responses");
+const detailFollowUpType = document.getElementById("detail-followup-type");
+const detailFollowUpInput = document.getElementById("detail-followup-input");
+const addFollowUpResponseButton = document.getElementById("add-followup-response");
 const addWorkItemButton = document.getElementById("add-work-item");
 const detailWorkItems = document.getElementById("detail-work-items");
 const executionItemsPreview = document.getElementById("execution-items-preview");
-const synthesizeOutputButton = document.getElementById("synthesize-output");
 const detailOutputFocus = document.getElementById("detail-output-focus");
 const detailOutputWork = document.getElementById("detail-output-work");
 const detailOutputOwners = document.getElementById("detail-output-owners");
@@ -113,6 +117,10 @@ const nodeModalName = document.getElementById("node-modal-name");
 const nodeModalWhy = document.getElementById("node-modal-why");
 const nodeModalBreakdown = document.getElementById("node-modal-breakdown");
 const nodeModalContext = document.getElementById("node-modal-context");
+const nodeModalFollowUpResponses = document.getElementById("node-modal-followup-responses");
+const nodeModalFollowUpType = document.getElementById("node-modal-followup-type");
+const nodeModalFollowUpInput = document.getElementById("node-modal-followup-input");
+const nodeModalAddFollowUpButton = document.getElementById("node-modal-add-followup");
 const detailBriefModal = document.getElementById("detail-brief-modal");
 const detailBriefModalBackdrop = document.getElementById("detail-brief-modal-backdrop");
 const closeDetailBriefModalButton = document.getElementById("close-detail-brief-modal");
@@ -140,6 +148,10 @@ const summaryProblemModal = document.getElementById("summary-problem-modal");
 const summaryProblemModalBackdrop = document.getElementById("summary-problem-modal-backdrop");
 const closeSummaryProblemModalButton = document.getElementById("close-summary-problem-modal");
 const summaryProblemModalBody = document.getElementById("summary-problem-modal-body");
+const roadmapLogModal = document.getElementById("roadmap-log-modal");
+const roadmapLogModalBackdrop = document.getElementById("roadmap-log-modal-backdrop");
+const closeRoadmapLogModalButton = document.getElementById("close-roadmap-log-modal");
+const roadmapLogModalBody = document.getElementById("roadmap-log-modal-body");
 const profileStatus = document.getElementById("profile-status");
 const profileHistoryList = document.getElementById("profile-history-list");
 const actionsStatus = document.getElementById("actions-status");
@@ -179,6 +191,7 @@ const customNodeStatus = document.getElementById("custom-node-status");
 const detailBuildStatus = document.getElementById("detail-build-status");
 const outputStatus = document.getElementById("output-status");
 const sidebarNavItems = Array.from(document.querySelectorAll(".nav-item"));
+const problemSubsteps = Array.from(document.querySelectorAll(".nav-substep"));
 const sectionToggles = Array.from(document.querySelectorAll(".section-toggle"));
 const contextHelpButtons = Array.from(document.querySelectorAll(".context-help-button"));
 const NO_ADDITIONAL_SUGGESTED_ITEM = "No Additional Suggested Item";
@@ -203,10 +216,18 @@ refreshNodeBuildButton.addEventListener("click", async () => {
   await loadNodeBuild(state.roadmap[state.currentIndex], true);
 });
 
-openDetailBriefModalButton.addEventListener("click", openDetailBriefModal);
-closeDetailBriefModalButton.addEventListener("click", closeDetailBriefModal);
-detailBriefModalBackdrop.addEventListener("click", closeDetailBriefModal);
-saveDetailBriefModalButton.addEventListener("click", saveDetailBriefModal);
+if (openDetailBriefModalButton) {
+  openDetailBriefModalButton.addEventListener("click", openDetailBriefModal);
+}
+if (closeDetailBriefModalButton) {
+  closeDetailBriefModalButton.addEventListener("click", closeDetailBriefModal);
+}
+if (detailBriefModalBackdrop) {
+  detailBriefModalBackdrop.addEventListener("click", closeDetailBriefModal);
+}
+if (saveDetailBriefModalButton) {
+  saveDetailBriefModalButton.addEventListener("click", saveDetailBriefModal);
+}
 openExecutionModalButton.addEventListener("click", openExecutionModal);
 closeExecutionModalButton.addEventListener("click", closeExecutionModal);
 executionModalBackdrop.addEventListener("click", closeExecutionModal);
@@ -216,6 +237,9 @@ closeSummaryNodeModalButton.addEventListener("click", closeSummaryNodeModal);
 summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
 closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
 summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
+openRoadmapLogButton.addEventListener("click", openRoadmapLogModal);
+closeRoadmapLogModalButton.addEventListener("click", closeRoadmapLogModal);
+roadmapLogModalBackdrop.addEventListener("click", closeRoadmapLogModal);
   closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
   profileItemModalBackdrop.addEventListener("click", closeProfileItemModal);
   closeSaveProblemModalButton.addEventListener("click", closeSaveProblemModal);
@@ -226,6 +250,27 @@ summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
 appToastCloseButton.addEventListener("click", hideAppToast);
 addActionProblemButton.addEventListener("click", () => {
   showAppToast("Action conversion is the next step. For now, this workspace is a high-level tracker.", "Actions workspace");
+});
+addFollowUpResponseButton.addEventListener("click", () => {
+  const response = detailFollowUpInput.value.trim();
+  if (!response) {
+    window.alert("Please add a response before saving it to the node.");
+    return;
+  }
+  const currentNode = state.roadmap[state.currentIndex];
+  if (!currentNode) {
+    return;
+  }
+  const existingBuild = state.nodeBuilds[currentNode.id] || {};
+  const nextResponses = [...(existingBuild.follow_up_responses || []), {
+    type: detailFollowUpType.value,
+    text: response,
+  }];
+  existingBuild.follow_up_responses = nextResponses;
+  state.nodeBuilds[currentNode.id] = existingBuild;
+  detailFollowUpInput.value = "";
+  renderFollowUpResponses(nextResponses);
+  autoResize(detailFollowUpInput);
 });
 sectionToggles.forEach((button) => {
   button.addEventListener("click", () => {
@@ -257,44 +302,6 @@ contextHelpButtons.forEach((button) => {
       );
     }
   });
-});
-
-synthesizeOutputButton.addEventListener("click", async () => {
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return;
-  }
-  setAnalysisStatus(["output"], true, "Synthesizing output");
-  synthesizeOutputButton.disabled = true;
-  synthesizeOutputButton.textContent = "Synthesizing...";
-  try {
-    const response = await fetch("/api/node-output", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        problem: state.problem,
-        problem_details: state.problemDetails,
-        node_title: detailNodeName.textContent.trim() || currentNode.title,
-        node_description: detailNodeDescription.value.trim(),
-        node_breakdown: detailNodeBreakdown.value.trim(),
-        key_question: detailKeyQuestion.value.trim(),
-        extracted_context: detailExtractedContext.value.trim(),
-        execution_items: collectWorkItems(),
-      }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to synthesize this node output.");
-    }
-    applyStructuredOutput(payload.output || "", payload.output_sections || {});
-    autoResizeAll();
-  } catch (error) {
-    window.alert(error.message);
-  } finally {
-    setAnalysisStatus(["output"], false);
-    synthesizeOutputButton.disabled = false;
-    synthesizeOutputButton.textContent = "Synthesize Output";
-  }
 });
 
 addWorkItemButton.addEventListener("click", () => {
@@ -455,6 +462,9 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !summaryProblemModal.hidden) {
     closeSummaryProblemModal();
   }
+  if (event.key === "Escape" && !roadmapLogModal.hidden) {
+    closeRoadmapLogModal();
+  }
   if (event.key === "Escape" && !profileItemModal.hidden) {
     closeProfileItemModal();
   }
@@ -468,6 +478,47 @@ document.addEventListener("keydown", (event) => {
 closeNodeModalButton.addEventListener("click", closeNodeModal);
 nodeModalBackdrop.addEventListener("click", closeNodeModal);
 saveNodeModalButton.addEventListener("click", saveNodeModal);
+nodeModalAddFollowUpButton.addEventListener("click", async () => {
+  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
+  if (!node) {
+    return;
+  }
+  const nodeIndex = state.roadmap.findIndex((item) => item.id === node.id);
+  const response = nodeModalFollowUpInput.value.trim();
+  if (!response) {
+    window.alert("Please add a response before saving it to the node.");
+    return;
+  }
+  const prompt = nodeModalContext.value.trim();
+  const threads = normalizeNodeFollowUpThreads(node);
+  threads.push({
+    prompt: prompt || "No Additional Suggested Item",
+    responses: [{
+      type: nodeModalFollowUpType.value,
+      text: response,
+    }],
+  });
+  node.follow_up_threads = threads;
+  node.follow_up_responses = [];
+  nodeModalFollowUpInput.value = "";
+  nodeModalFollowUpType.value = "Confirmed fact";
+  renderNodeModalFollowUpResponses(node.follow_up_threads);
+  nodeModalAddFollowUpButton.disabled = true;
+  nodeModalAddFollowUpButton.textContent = "Saving...";
+  try {
+    await refreshRoadmapFollowUps(nodeIndex);
+    const refreshedNode = state.roadmap.find((item) => item.id === node.id);
+    nodeModalContext.value = refreshedNode?.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM;
+  } catch (error) {
+    window.alert(error.message);
+    nodeModalContext.value = getNextNodeFollowUpPrompt(node, threads);
+  } finally {
+    nodeModalAddFollowUpButton.disabled = false;
+    nodeModalAddFollowUpButton.textContent = "Add Response";
+    autoResize(nodeModalFollowUpInput);
+    autoResize(nodeModalContext);
+  }
+});
 
 confirmRoadmapButton.addEventListener("click", () => {
   const cleaned = state.roadmap
@@ -477,6 +528,7 @@ confirmRoadmapButton.addEventListener("click", () => {
       why: node.why.trim(),
       breakdown: node.breakdown.trim(),
       suggested_context: node.suggested_context.trim(),
+      follow_up_threads: normalizeNodeFollowUpThreads(node),
     }))
     .filter((node) => node.title && node.why && node.breakdown && node.suggested_context);
 
@@ -591,16 +643,6 @@ prevNodeButton.addEventListener("click", () => {
 });
 
 nextNodeButton.addEventListener("click", () => {
-  if (
-    !detailOutputFocus.value.trim() ||
-    !detailOutputWork.value.trim() ||
-    !detailOutputOwners.value.trim() ||
-    !detailOutputRisks.value.trim()
-  ) {
-    window.alert("Please complete all structured output boxes before continuing.");
-    detailOutputFocus.focus();
-    return;
-  }
   saveCurrentNote();
   if (state.currentIndex < state.roadmap.length - 1) {
     state.currentIndex += 1;
@@ -642,11 +684,7 @@ restartFlowButton.addEventListener("click", () => {
 });
 
 saveProblemFramingButton.addEventListener("click", async () => {
-  if (!state.problem || !state.roadmap.length) {
-    window.alert("Please finish a problem framing before saving it.");
-    return;
-  }
-  openSaveProblemModal();
+  return;
 });
 
 confirmSaveProblemButton.addEventListener("click", async () => {
@@ -721,6 +759,22 @@ sidebarNavItems.forEach((item) => {
       return;
     }
     showPanel(state.activeProblemPanel || "problem");
+  });
+});
+
+problemSubsteps.forEach((item) => {
+  item.addEventListener("click", () => {
+    const target = item.dataset.problemStep;
+    if (!target || !["problem", "roadmap", "details", "summary"].includes(target)) {
+      return;
+    }
+    showPanel(target);
+    if (target === "details" && state.roadmap.length) {
+      loadDetailStep();
+    }
+    if (target === "summary" && state.roadmap.length) {
+      renderSummary();
+    }
   });
 });
 
@@ -860,6 +914,7 @@ function reorderNodeById(fromId, toId) {
 function loadDetailStep() {
   const currentNode = state.roadmap[state.currentIndex];
   resetDetailSections();
+  renderDetailNodeSwitcher();
   detailTitle.textContent = "Roadmap Buildup";
   if (detailStepTitle) {
     detailStepTitle.textContent = currentNode.title;
@@ -873,6 +928,34 @@ function loadDetailStep() {
   nextNodeButton.textContent =
     state.currentIndex === state.roadmap.length - 1 ? "Finish Workflow" : "Save and Continue";
   loadNodeBuild(currentNode, false);
+}
+
+function renderDetailNodeSwitcher() {
+  if (!detailNodeSwitcher) {
+    return;
+  }
+  detailNodeSwitcher.innerHTML = "";
+  state.roadmap.forEach((node, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "detail-node-switcher-button";
+    if (index === state.currentIndex) {
+      button.classList.add("is-active");
+    }
+    button.innerHTML = `
+      <span class="detail-node-switcher-index">${index + 1}</span>
+      <span>${escapeHtml(node.title || `Node ${index + 1}`)}</span>
+    `;
+    button.addEventListener("click", () => {
+      if (index === state.currentIndex) {
+        return;
+      }
+      saveCurrentNote();
+      state.currentIndex = index;
+      loadDetailStep();
+    });
+    detailNodeSwitcher.appendChild(button);
+  });
 }
 
 async function loadNodeBuild(node, forceRefresh) {
@@ -939,10 +1022,12 @@ function hydrateNodeBuild(build) {
   detailWorkstreams.value = formatWorkstreams(build.workstreams || []);
   detailExtractedContext.value = build.extracted_context || "";
   detailOpenQuestions.value = formatList(build.open_questions || []);
+  renderDetailCoverageReview();
+  renderFollowUpPrompt();
+  renderFollowUpResponses(build.follow_up_responses || []);
   applyStructuredOutput(build.output || "", build.output_sections || parseStructuredOutput(build.output || ""));
   detailWorkItems.innerHTML = "";
   (build.execution_items || []).forEach((item) => renderWorkItemCard(item));
-  refreshContextPreviews();
   refreshExecutionPreview();
   autoResizeAll();
 }
@@ -1022,28 +1107,30 @@ function saveCurrentNote() {
 
   const workItems = collectWorkItems();
 
-  state.nodeBuilds[currentNode.id] = {
-    node_name: detailNodeName.textContent.trim() || currentNode.title,
-    node_description: detailNodeDescription.value.trim(),
-    node_breakdown: detailNodeBreakdown.value.trim(),
-    execution_summary: detailExecutionSummary.value.trim(),
-    key_question: detailKeyQuestion.value.trim(),
-    workstreams: parseWorkstreams(detailWorkstreams.value),
-    extracted_context: detailExtractedContext.value.trim(),
-    open_questions: parseList(detailOpenQuestions.value),
-    execution_items: workItems,
-    output: buildStructuredOutput(),
-    output_sections: normalizeOutputSections({
-      focus: detailOutputFocus.value.trim(),
-      work_to_complete: detailOutputWork.value.trim(),
+    state.nodeBuilds[currentNode.id] = {
+      node_name: detailNodeName.textContent.trim() || currentNode.title,
+      node_description: detailNodeDescription.value.trim(),
+      node_breakdown: detailNodeBreakdown.value.trim(),
+      execution_summary: detailExecutionSummary.value.trim(),
+      key_question: detailKeyQuestion.value.trim(),
+      workstreams: parseWorkstreams(detailWorkstreams.value),
+      extracted_context: detailExtractedContext.value.trim(),
+      open_questions: parseList(detailOpenQuestions.value),
+      follow_up_responses: collectFollowUpResponses(),
+      execution_items: workItems,
+      output: buildStructuredOutput(),
+      output_sections: normalizeOutputSections({
+        focus: detailOutputFocus.value.trim(),
+        work_to_complete: detailOutputWork.value.trim(),
       owners_and_sources: detailOutputOwners.value.trim(),
       risks_and_handoff: detailOutputRisks.value.trim(),
     }),
-  };
-  syncBriefPreviews();
-  refreshContextPreviews();
-  refreshExecutionPreview();
-}
+    };
+    syncBriefPreviews();
+    renderFollowUpPrompt();
+    renderFollowUpResponses(state.nodeBuilds[currentNode.id].follow_up_responses || []);
+    refreshExecutionPreview();
+  }
 
 function renderSummary() {
   summaryContent.innerHTML = "";
@@ -1066,9 +1153,9 @@ function renderSummary() {
       <strong>${allActions.length}</strong>
       <p>Concrete actions captured across the full roadmap buildup.</p>
     </article>
-    <article class="summary-overview-card readiness">
-      <p class="card-label">Readiness</p>
-      <h3>Ready Nodes</h3>
+    <article class="summary-overview-card actions">
+      <p class="card-label">Roadmap Coverage</p>
+      <h3>Nodes Reviewed</h3>
       <strong>${readyCount}/${state.roadmap.length}</strong>
       <p>Nodes that no longer need additional suggested context.</p>
     </article>
@@ -1481,6 +1568,9 @@ function showPanel(name) {
   sidebarNavItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === activeNav);
   });
+  problemSubsteps.forEach((item) => {
+    item.classList.toggle("is-active", item.dataset.problemStep === state.activeProblemPanel);
+  });
   requestAnimationFrame(() => {
     autoResizeAll();
     updateAssessmentFields();
@@ -1795,11 +1885,15 @@ function openNodeModal(nodeId) {
   nodeModalWhy.value = node.why;
   nodeModalBreakdown.value = node.breakdown;
   nodeModalContext.value = node.suggested_context;
+  renderNodeModalFollowUpResponses(node.follow_up_threads || []);
+  nodeModalFollowUpInput.value = "";
+  nodeModalFollowUpType.value = "Confirmed fact";
   nodeModal.hidden = false;
   document.body.style.overflow = "hidden";
   autoResize(nodeModalWhy);
   autoResize(nodeModalBreakdown);
   autoResize(nodeModalContext);
+  autoResize(nodeModalFollowUpInput);
 }
 
 function closeNodeModal() {
@@ -1808,17 +1902,234 @@ function closeNodeModal() {
   document.body.style.overflow = "";
 }
 
-function saveNodeModal() {
+async function saveNodeModal() {
   const node = state.roadmap.find((item) => item.id === state.activeNodeId);
   if (!node) {
     return;
   }
+  const nodeIndex = state.roadmap.findIndex((item) => item.id === node.id);
   node.title = nodeModalName.value.trim();
   node.why = nodeModalWhy.value.trim();
   node.breakdown = nodeModalBreakdown.value.trim();
   node.suggested_context = nodeModalContext.value.trim();
+  persistPendingNodeModalResponse(node);
+  try {
+    await refreshRoadmapFollowUps(0);
+  } catch (error) {
+    window.alert(error.message);
+  }
   renderRoadmapEditor();
   closeNodeModal();
+}
+
+function renderNodeModalFollowUpResponses(items) {
+  if (!nodeModalFollowUpResponses) {
+    return;
+  }
+  const values = normalizeNodeFollowUpThreads({ follow_up_threads: items });
+  if (!values.length) {
+    nodeModalFollowUpResponses.innerHTML = `
+      <article class="followup-response-empty node-followup-empty">
+        Saved responses will appear here as you add them. Keep only the key follow-up context that has already been covered.
+      </article>
+    `;
+    return;
+  }
+  nodeModalFollowUpResponses.innerHTML = "";
+  values.forEach((item, index) => {
+    const card = document.createElement("article");
+    card.className = "followup-response-card node-followup-card";
+    card.innerHTML = `
+      <button class="followup-response-summary" type="button">
+        <div class="followup-response-summary-copy">
+          <span class="followup-response-summary-type">${escapeHtml(compactFollowUpText(String(item.prompt || "Follow-Up Prompt"), 52))}</span>
+          <span class="followup-response-summary-text">${escapeHtml(`${item.responses.length} response${item.responses.length === 1 ? "" : "s"}`)}</span>
+        </div>
+        <span class="followup-response-summary-toggle">Expand</span>
+      </button>
+      <div class="followup-response-body" hidden>
+        <div class="followup-thread-question">${escapeHtml(String(item.prompt || "No prompt recorded."))}</div>
+        <div class="followup-thread-answer-list"></div>
+        <div class="followup-response-actions">
+          <button class="ghost-button followup-response-remove" type="button">Remove</button>
+        </div>
+      </div>
+    `;
+    const summaryButton = card.querySelector(".followup-response-summary");
+    const summaryToggle = card.querySelector(".followup-response-summary-toggle");
+    const body = card.querySelector(".followup-response-body");
+    const answerList = card.querySelector(".followup-thread-answer-list");
+    const removeButton = card.querySelector(".followup-response-remove");
+    answerList.innerHTML = (item.responses || []).map((response, responseIndex) => `
+      <article class="followup-thread-answer">
+        <div class="followup-thread-answer-top">
+          <select class="followup-response-type assessment-type-select" data-response-index="${responseIndex}">
+            ${buildFollowUpTypeOptions(String(response.type || "Confirmed fact"))}
+          </select>
+        </div>
+        <textarea class="followup-response-text" data-response-index="${responseIndex}" rows="3" placeholder="Add the response you want to keep tied to this node."></textarea>
+      </article>
+    `).join("");
+    answerList.querySelectorAll(".followup-response-type").forEach((typeInput) => {
+      const responseIndex = Number(typeInput.dataset.responseIndex || "0");
+      const textInput = answerList.querySelector(`.followup-response-text[data-response-index="${responseIndex}"]`);
+      if (textInput) {
+        textInput.value = String(item.responses?.[responseIndex]?.text || "");
+        autoResize(textInput);
+        typeInput.addEventListener("change", () => updateNodeModalFollowUpResponse(index, responseIndex, { type: typeInput.value, text: textInput.value.trim() }));
+        textInput.addEventListener("input", () => {
+          autoResize(textInput);
+          updateNodeModalFollowUpResponse(index, responseIndex, { type: typeInput.value, text: textInput.value.trim() });
+        });
+      }
+    });
+    summaryButton.addEventListener("click", () => {
+      const willOpen = body.hasAttribute("hidden");
+      nodeModalFollowUpResponses.querySelectorAll(".followup-response-body").forEach((element) => element.setAttribute("hidden", ""));
+      nodeModalFollowUpResponses.querySelectorAll(".followup-response-summary-toggle").forEach((element) => {
+        element.textContent = "Expand";
+      });
+      if (willOpen) {
+        body.removeAttribute("hidden");
+        summaryToggle.textContent = "Collapse";
+      }
+    });
+    removeButton.addEventListener("click", () => removeNodeModalFollowUpResponse(index));
+    nodeModalFollowUpResponses.appendChild(card);
+  });
+}
+
+function compactFollowUpText(text) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "No response text added yet.";
+  }
+  return normalized.length > 96 ? `${normalized.slice(0, 93)}...` : normalized;
+}
+
+function normalizeNodeFollowUpThreads(node) {
+  const raw = Array.isArray(node?.follow_up_threads) ? node.follow_up_threads : [];
+  return raw
+    .map((thread) => ({
+      prompt: String(thread?.prompt || "").trim(),
+      responses: Array.isArray(thread?.responses)
+        ? thread.responses
+            .map((response) => ({
+              type: String(response?.type || "Confirmed fact").trim() || "Confirmed fact",
+              text: String(response?.text || "").trim(),
+            }))
+            .filter((response) => response.text)
+        : [],
+    }))
+    .filter((thread) => thread.prompt || thread.responses.length);
+}
+
+function getNextNodeFollowUpPrompt(node, threads) {
+  const normalizedThreads = normalizeNodeFollowUpThreads({ follow_up_threads: threads });
+  const currentPrompt = String(node?.suggested_context || "").trim();
+  if (isNoAdditionalSuggestedItem(currentPrompt)) {
+    return NO_ADDITIONAL_SUGGESTED_ITEM;
+  }
+  if (!normalizedThreads.length) {
+    return currentPrompt || NO_ADDITIONAL_SUGGESTED_ITEM;
+  }
+  if (normalizedThreads.length === 1) {
+    return "What supporting evidence, owner, or constraint should be attached to that answer so this node can move forward cleanly?";
+  }
+  return NO_ADDITIONAL_SUGGESTED_ITEM;
+}
+
+function persistPendingNodeModalResponse(node) {
+  if (!node) {
+    return;
+  }
+  const response = nodeModalFollowUpInput.value.trim();
+  const prompt = nodeModalContext.value.trim();
+  if (!response || !prompt || isNoAdditionalSuggestedItem(prompt)) {
+    return;
+  }
+  const threads = normalizeNodeFollowUpThreads(node);
+  const existingThread = threads.find((item) => item.prompt === prompt);
+  const nextResponse = {
+    type: nodeModalFollowUpType.value,
+    text: response,
+  };
+  if (existingThread) {
+    existingThread.responses.push(nextResponse);
+  } else {
+    threads.push({
+      prompt,
+      responses: [nextResponse],
+    });
+  }
+  node.follow_up_threads = threads;
+  node.follow_up_responses = [];
+  nodeModalFollowUpInput.value = "";
+  nodeModalFollowUpType.value = "Confirmed fact";
+}
+
+async function refreshRoadmapFollowUps(startIndex = 0) {
+  if (!state.roadmap.length) {
+    return;
+  }
+  const response = await fetch("/api/refresh-followups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      problem: state.problem,
+      problem_details: state.problemDetails,
+      roadmap: serializeRoadmapForFollowUpRefresh(),
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "Unable to refresh node follow-up prompts.");
+  }
+  const prompts = Array.isArray(payload.suggested_contexts) ? payload.suggested_contexts : [];
+  prompts.forEach((prompt, index) => {
+    if (index < startIndex || !state.roadmap[index]) {
+      return;
+    }
+    state.roadmap[index].suggested_context = String(prompt || "").trim() || NO_ADDITIONAL_SUGGESTED_ITEM;
+  });
+  renderRoadmapEditor();
+}
+
+function serializeRoadmapForFollowUpRefresh() {
+  return state.roadmap.map((node) => ({
+    title: String(node.title || "").trim(),
+    why: String(node.why || "").trim(),
+    breakdown: String(node.breakdown || "").trim(),
+    suggested_context: String(node.suggested_context || "").trim(),
+    follow_up_threads: normalizeNodeFollowUpThreads(node),
+  }));
+}
+
+function updateNodeModalFollowUpResponse(index, responseIndex, nextValue) {
+  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
+  if (!node) {
+    return;
+  }
+  const items = normalizeNodeFollowUpThreads(node);
+  if (!items[index] || !items[index].responses?.[responseIndex]) {
+    return;
+  }
+  items[index].responses[responseIndex] = {
+    type: String(nextValue?.type || "Confirmed fact").trim(),
+    text: String(nextValue?.text || "").trim(),
+  };
+  node.follow_up_threads = items;
+}
+
+function removeNodeModalFollowUpResponse(index) {
+  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
+  if (!node) {
+    return;
+  }
+  const items = normalizeNodeFollowUpThreads(node);
+  items.splice(index, 1);
+  node.follow_up_threads = items;
+  renderNodeModalFollowUpResponses(items);
 }
 
 function removeActiveNode() {
@@ -1956,30 +2267,199 @@ function syncBriefPreviews() {
   }
 }
 
-function refreshContextPreviews() {
-  if (detailExecutionSummaryPreview) {
-    detailExecutionSummaryPreview.textContent = detailExecutionSummary.value.trim() || "No execution summary yet.";
+function renderFollowUpPrompt() {
+  if (!detailFollowUpPrompt || !detailFollowUpSupport) {
+    return;
   }
-  if (detailKeyQuestionPreview) {
-    detailKeyQuestionPreview.textContent = detailKeyQuestion.value.trim() || "No guiding question yet.";
+  const currentNode = state.roadmap[state.currentIndex];
+  const prompt = String(currentNode?.suggested_context || "").trim() || "No additional suggested item.";
+  detailFollowUpPrompt.textContent = prompt;
+  const supportParts = [];
+  if (detailExecutionSummary.value.trim()) {
+    supportParts.push(`Agent frame: ${detailExecutionSummary.value.trim()}`);
   }
-  renderPreviewList(detailWorkstreamsPreview, parseWorkstreams(detailWorkstreams.value).map((item) => item.name || item.purpose || ""));
-  renderPreviewList(detailExtractedContextPreview, parseList(detailExtractedContext.value));
-  renderPreviewList(detailOpenQuestionsPreview, parseList(detailOpenQuestions.value));
+  const extracted = parseList(detailExtractedContext.value);
+  if (extracted.length) {
+    supportParts.push(`Already known: ${extracted.slice(0, 2).join(" | ")}`);
+  }
+  detailFollowUpSupport.textContent =
+    supportParts.join(" ") || "Keep the answers concise. Capture only the facts, evidence, assumptions, or exclusions needed to move this node forward.";
+  detailFollowUpSupport.classList.toggle("is-complete", isNoAdditionalSuggestedItem(prompt));
 }
 
-function renderPreviewList(container, items) {
-  if (!container) {
+function renderFollowUpResponses(items) {
+  if (!detailFollowUpResponses) {
     return;
   }
-  const values = (items || []).filter((item) => String(item || "").trim());
+  const values = Array.isArray(items) ? items : [];
   if (!values.length) {
-    container.innerHTML = `<div class="context-preview-item">No items added yet.</div>`;
+    detailFollowUpResponses.innerHTML = `
+      <article class="followup-response-empty">
+        No follow-up answers saved yet. Add only the key context needed for this node.
+      </article>
+    `;
     return;
   }
-  container.innerHTML = values
-    .map((item) => `<div class="context-preview-item">${escapeHtml(String(item))}</div>`)
+  detailFollowUpResponses.innerHTML = "";
+  values.forEach((item, index) => {
+    const card = document.createElement("article");
+    card.className = "followup-response-card";
+    card.innerHTML = `
+      <div class="followup-response-top">
+        <select class="followup-response-type assessment-type-select">
+          ${buildFollowUpTypeOptions(String(item.type || "Confirmed fact"))}
+        </select>
+        <button class="ghost-button followup-response-remove" type="button">Remove</button>
+      </div>
+      <textarea class="followup-response-text" rows="3" placeholder="Add the response you want to keep tied to this node."></textarea>
+    `;
+    const typeInput = card.querySelector(".followup-response-type");
+    const textInput = card.querySelector(".followup-response-text");
+    const removeButton = card.querySelector(".followup-response-remove");
+    textInput.value = String(item.text || "");
+    typeInput.addEventListener("change", () => updateFollowUpResponse(index, { type: typeInput.value, text: textInput.value.trim() }));
+    textInput.addEventListener("input", () => {
+      autoResize(textInput);
+      updateFollowUpResponse(index, { type: typeInput.value, text: textInput.value.trim() });
+    });
+    removeButton.addEventListener("click", () => removeFollowUpResponse(index));
+    detailFollowUpResponses.appendChild(card);
+    autoResize(textInput);
+  });
+}
+
+function renderDetailCoverageReview() {
+  if (!detailCoverageReview) {
+    return;
+  }
+  const currentNode = state.roadmap[state.currentIndex];
+  const threads = normalizeNodeFollowUpThreads(currentNode);
+  if (!threads.length) {
+    detailCoverageReview.innerHTML = `
+      <article class="detail-coverage-empty">
+        No earlier roadmap coverage has been saved for this node yet. Any follow-up captured during roadmap buildup will appear here.
+      </article>
+    `;
+    return;
+  }
+
+  detailCoverageReview.innerHTML = "";
+  threads.forEach((thread, index) => {
+    const card = document.createElement("article");
+    card.className = "detail-coverage-card";
+    const coverageType = deriveCoverageType(thread);
+    card.innerHTML = `
+      <button class="detail-coverage-summary" type="button" aria-expanded="false">
+        <span class="detail-coverage-type">${escapeHtml(coverageType)}</span>
+        <span class="detail-coverage-question">${escapeHtml(thread.prompt || "Untitled coverage item")}</span>
+        <span class="detail-coverage-toggle">Expand</span>
+      </button>
+      <div class="detail-coverage-body" hidden>
+        ${(thread.responses || []).length ? thread.responses.map((response) => `
+          <article class="detail-coverage-answer">
+            <span class="detail-coverage-answer-type">${escapeHtml(response.type || "Coverage")}</span>
+            <div class="detail-coverage-answer-text">${escapeHtml(response.text || "")}</div>
+          </article>
+        `).join("") : `
+          <article class="detail-coverage-answer">
+            <span class="detail-coverage-answer-type">${escapeHtml(coverageType)}</span>
+            <div class="detail-coverage-answer-text">${escapeHtml("No saved answer yet.")}</div>
+          </article>
+        `}
+      </div>
+    `;
+    const summaryButton = card.querySelector(".detail-coverage-summary");
+    const body = card.querySelector(".detail-coverage-body");
+    const toggle = card.querySelector(".detail-coverage-toggle");
+    summaryButton?.addEventListener("click", () => {
+      Array.from(detailCoverageReview.querySelectorAll(".detail-coverage-card")).forEach((otherCard, otherIndex) => {
+        const otherBody = otherCard.querySelector(".detail-coverage-body");
+        const otherButton = otherCard.querySelector(".detail-coverage-summary");
+        const otherToggle = otherCard.querySelector(".detail-coverage-toggle");
+        const isOpen = otherIndex === index ? otherBody?.hidden : false;
+        if (otherBody) {
+          otherBody.hidden = !isOpen;
+        }
+        otherButton?.setAttribute("aria-expanded", String(Boolean(isOpen)));
+        if (otherToggle) {
+          otherToggle.textContent = isOpen ? "Collapse" : "Expand";
+        }
+      });
+      if (body && !body.hidden) {
+        body.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
+    detailCoverageReview.appendChild(card);
+  });
+}
+
+function deriveCoverageType(thread) {
+  const types = Array.isArray(thread?.responses)
+    ? thread.responses
+        .map((response) => String(response?.type || "").trim())
+        .filter(Boolean)
+    : [];
+  if (!types.length) {
+    return "Coverage";
+  }
+  return types.length === 1 ? types[0] : `${types[0]} +${types.length - 1}`;
+}
+
+function buildFollowUpTypeOptions(selectedValue) {
+  return getFollowUpTypes()
+    .map((item) => `<option value="${escapeHtml(item)}"${item === selectedValue ? " selected" : ""}>${escapeHtml(item)}</option>`)
     .join("");
+}
+
+function getFollowUpTypes() {
+  return [
+    "Confirmed fact",
+    "Gathered evidence",
+    "Hypothesis",
+    "Assumption to proceed",
+    "Please do not consider",
+  ];
+}
+
+function collectFollowUpResponses() {
+  const currentNode = state.roadmap[state.currentIndex];
+  if (!currentNode) {
+    return [];
+  }
+  return Array.isArray(state.nodeBuilds[currentNode.id]?.follow_up_responses)
+    ? state.nodeBuilds[currentNode.id].follow_up_responses.filter((item) => String(item?.text || "").trim())
+    : [];
+}
+
+function updateFollowUpResponse(index, nextValue) {
+  const currentNode = state.roadmap[state.currentIndex];
+  if (!currentNode) {
+    return;
+  }
+  const build = state.nodeBuilds[currentNode.id] || {};
+  const items = Array.isArray(build.follow_up_responses) ? [...build.follow_up_responses] : [];
+  if (!items[index]) {
+    return;
+  }
+  items[index] = {
+    type: String(nextValue?.type || "Confirmed fact").trim(),
+    text: String(nextValue?.text || "").trim(),
+  };
+  build.follow_up_responses = items;
+  state.nodeBuilds[currentNode.id] = build;
+}
+
+function removeFollowUpResponse(index) {
+  const currentNode = state.roadmap[state.currentIndex];
+  if (!currentNode) {
+    return;
+  }
+  const build = state.nodeBuilds[currentNode.id] || {};
+  const items = Array.isArray(build.follow_up_responses) ? [...build.follow_up_responses] : [];
+  items.splice(index, 1);
+  build.follow_up_responses = items;
+  state.nodeBuilds[currentNode.id] = build;
+  renderFollowUpResponses(items);
 }
 
 function refreshExecutionPreview() {
@@ -2050,6 +2530,10 @@ function buildStructuredOutput() {
     owners_and_sources: detailOutputOwners.value.trim(),
     risks_and_handoff: detailOutputRisks.value.trim(),
   });
+  if (!sections.focus && !sections.work_to_complete && !sections.owners_and_sources && !sections.risks_and_handoff) {
+    detailOutput.value = "";
+    return "";
+  }
   detailOutput.value = [
     `Focus: ${sections.focus}`,
     `What will be done: ${sections.work_to_complete}`,
@@ -2077,13 +2561,11 @@ function parseWorkstreams(text) {
 }
 
 function openDetailBriefModal() {
-  detailBriefModalName.value = detailNodeName.textContent.trim();
-  detailBriefModalDescription.value = detailNodeDescription.value;
-  detailBriefModalBreakdown.value = detailNodeBreakdown.value;
-  detailBriefModal.hidden = false;
-  document.body.style.overflow = "hidden";
-  autoResize(detailBriefModalDescription);
-  autoResize(detailBriefModalBreakdown);
+  const currentNode = state.roadmap[state.currentIndex];
+  if (!currentNode) {
+    return;
+  }
+  openNodeModal(currentNode.id);
 }
 
 function closeDetailBriefModal() {
@@ -2118,39 +2600,70 @@ function closeAgentNoteModal() {
 }
 
 function openSummaryNodeModal(node, nodeBuild) {
-  const outputSections = normalizeOutputSections(nodeBuild.output_sections || parseStructuredOutput(nodeBuild.output || ""));
-  const workstreams = Array.isArray(nodeBuild.workstreams)
-    ? nodeBuild.workstreams.map((item) => item.name || item.purpose || "").filter(Boolean)
-    : [];
+  const threads = normalizeNodeFollowUpThreads(node);
   const actions = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items : [];
   summaryNodeModalTitle.textContent = node.title;
-  summaryNodeModalCopy.textContent = node.why || "Review the full node synthesis and execution trail.";
+  summaryNodeModalCopy.textContent = "Review how this node moved from roadmap framing into follow-up coverage and execution work.";
   summaryNodeModalBody.className = "modal-body summary-modal-body";
   summaryNodeModalBody.innerHTML = `
     <section class="summary-modal-section">
-      <h4>Node Breakdown</h4>
-      <p>${escapeHtml(node.breakdown || "No node breakdown added yet.")}</p>
+      <h4>Roadmap Framing</h4>
+      <div class="summary-modal-list">
+        <div class="summary-modal-item">
+          <strong>Node Description</strong>
+          <p>${escapeHtml(node.why || "No node description added yet.")}</p>
+        </div>
+        <div class="summary-modal-item">
+          <strong>Node Breakdown</strong>
+          <p>${escapeHtml(node.breakdown || "No node breakdown added yet.")}</p>
+        </div>
+      </div>
     </section>
     <section class="summary-modal-section">
-      <h4>Execution Summary</h4>
-      <p>${escapeHtml(nodeBuild.execution_summary || "No execution summary added yet.")}</p>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Problem Parse</h4>
-      <p>${escapeHtml(nodeBuild.extracted_context || "No extracted context added yet.")}</p>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Workstreams</h4>
+      <h4>Roadmap Follow-Up Coverage</h4>
       <div class="summary-modal-list">
         ${
-          workstreams.length
-            ? workstreams.map((item) => `<div class="summary-modal-item">${escapeHtml(item)}</div>`).join("")
-            : `<div class="summary-modal-item">No workstreams added yet.</div>`
+          threads.length
+            ? threads
+                .map(
+                  (thread) => `
+                    <div class="summary-modal-item">
+                      <p><strong>Question</strong></p>
+                      <p>${escapeHtml(thread.prompt || "No prompt recorded.")}</p>
+                      <p><strong>Answers</strong></p>
+                      ${
+                        (thread.responses || []).length
+                          ? thread.responses
+                              .map(
+                                (response) =>
+                                  `<p>${escapeHtml(`${response.type || "Coverage"}: ${response.text || ""}`)}</p>`,
+                              )
+                              .join("")
+                          : `<p>No answer saved yet.</p>`
+                      }
+                    </div>
+                  `,
+                )
+                .join("")
+            : `<div class="summary-modal-item">No follow-up coverage was captured for this node in roadmap buildup.</div>`
         }
       </div>
     </section>
     <section class="summary-modal-section">
-      <h4>Action Items</h4>
+      <h4>Execution Planning</h4>
+      <div class="summary-modal-list">
+        <div class="summary-modal-item">
+          <strong>Execution Summary</strong>
+          <p>${escapeHtml(nodeBuild.execution_summary || "No execution summary added yet.")}</p>
+        </div>
+        <div class="summary-modal-item">
+          <strong>Problem Parse</strong>
+          <p>${escapeHtml(nodeBuild.extracted_context || "No extracted context added yet.")}</p>
+        </div>
+      </div>
+    </section>
+    <section class="summary-modal-section">
+      <h4>Action Items and Blockers</h4>
       <div class="summary-modal-list">
         ${
           actions.length
@@ -2158,10 +2671,9 @@ function openSummaryNodeModal(node, nodeBuild) {
                 .map(
                   (item) => `
                     <div class="summary-modal-item">
-                      <p>${escapeHtml(item.action || "No action title")}</p>
+                      <p><strong>${escapeHtml(item.action || "No action title")}</strong></p>
                       <p>${escapeHtml(`Owner: ${item.owner || "Not set"} | Collaborator: ${item.collaborator || "Not set"}`)}</p>
-                      <p>${escapeHtml(`Source: ${item.source || "Not set"}`)}</p>
-                      <p>${escapeHtml(`Artifact: ${item.artifact || "Not set"}`)}</p>
+                      <p>${escapeHtml(`Source: ${item.source || "Not set"} | Artifact: ${item.artifact || "Not set"}`)}</p>
                       <p>${escapeHtml(`Approval: ${item.approval || "Not set"} | Blocker: ${item.blockers || "Not set"}`)}</p>
                     </div>
                   `,
@@ -2169,15 +2681,6 @@ function openSummaryNodeModal(node, nodeBuild) {
                 .join("")
             : `<div class="summary-modal-item">No action items added yet.</div>`
         }
-      </div>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Deck Background Context</h4>
-      <div class="summary-modal-list">
-        <div class="summary-modal-item">${escapeHtml(`Focus: ${outputSections.focus || "No focus added yet."}`)}</div>
-        <div class="summary-modal-item">${escapeHtml(`Work to complete: ${outputSections.work_to_complete || "No work summary added yet."}`)}</div>
-        <div class="summary-modal-item">${escapeHtml(`Owners and sources: ${outputSections.owners_and_sources || "No owners or sources added yet."}`)}</div>
-        <div class="summary-modal-item">${escapeHtml(`Risks and handoff: ${outputSections.risks_and_handoff || "No risks or handoff added yet."}`)}</div>
       </div>
     </section>
   `;
@@ -2214,6 +2717,76 @@ function openSummaryProblemModal() {
 function closeSummaryProblemModal() {
   summaryProblemModal.hidden = true;
   document.body.style.overflow = "";
+}
+
+function openRoadmapLogModal() {
+  roadmapLogModalBody.innerHTML = buildRoadmapLogMarkup();
+  roadmapLogModal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeRoadmapLogModal() {
+  roadmapLogModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function buildRoadmapLogMarkup() {
+  const intro = `
+    <section class="summary-modal-section roadmap-log-section">
+      <h4>Main Question</h4>
+      <div class="summary-modal-item">${escapeHtml(state.problem || "No main question captured yet.")}</div>
+      <h4>Detailed Context</h4>
+      <div class="summary-modal-item">${escapeHtml(state.problemDetails || "No additional detailed context captured yet.")}</div>
+    </section>
+  `;
+  const nodeSections = state.roadmap.map((node, index) => {
+    const threads = normalizeNodeFollowUpThreads(node);
+    const threadsMarkup = threads.length
+      ? threads.map((thread) => `
+          <div class="roadmap-log-thread">
+            <div class="roadmap-log-block">
+              <span class="roadmap-log-block-label">Question</span>
+              <div class="roadmap-log-block-copy">${escapeHtml(thread.prompt || "No prompt recorded.")}</div>
+            </div>
+            <div class="roadmap-log-block">
+              <span class="roadmap-log-block-label">Answers</span>
+              <div class="roadmap-log-thread-list">
+                ${(thread.responses || []).map((response) => `
+                  <div class="roadmap-log-response"><strong>${escapeHtml(response.type || "Response")}:</strong> ${escapeHtml(response.text || "")}</div>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+        `).join("")
+      : `<div class="summary-modal-item">No follow-up responses saved for this node yet.</div>`;
+    return `
+      <section class="summary-modal-section roadmap-log-section">
+        <div class="roadmap-log-node">
+          <div class="roadmap-log-node-top">
+            <h4>${escapeHtml(`${index + 1}. ${node.title || "Untitled Node"}`)}</h4>
+            <span class="status-chip">${escapeHtml(node.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM)}</span>
+          </div>
+          <div class="roadmap-log-block">
+            <span class="roadmap-log-block-label">Node Description</span>
+            <div class="roadmap-log-block-copy">${escapeHtml(node.why || "No description yet.")}</div>
+          </div>
+          <div class="roadmap-log-block">
+            <span class="roadmap-log-block-label">Node Breakdown</span>
+            <div class="roadmap-log-block-copy">${escapeHtml(node.breakdown || "No breakdown yet.")}</div>
+          </div>
+          <div class="roadmap-log-block">
+            <span class="roadmap-log-block-label">Current Follow-Up Prompt</span>
+            <div class="roadmap-log-block-copy">${escapeHtml(node.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM)}</div>
+          </div>
+          <div class="roadmap-log-block">
+            <span class="roadmap-log-block-label">Saved Follow-Up Coverage</span>
+            ${threadsMarkup}
+          </div>
+        </div>
+      </section>
+    `;
+  }).join("");
+  return `${intro}${nodeSections || '<section class="summary-modal-section"><div class="summary-modal-item">No roadmap nodes yet.</div></section>'}`;
 }
 
 function saveDetailBriefModal() {

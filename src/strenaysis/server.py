@@ -13,7 +13,14 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .exporter import build_export_bundle
-from .openai_client import DEFAULT_ROADMAP, generate_node_build, generate_roadmap, polish_node, synthesize_node_output
+from .openai_client import (
+    DEFAULT_ROADMAP,
+    generate_node_build,
+    generate_roadmap,
+    polish_node,
+    refresh_roadmap_followups,
+    synthesize_node_output,
+)
 
 
 ACCESS_COOKIE = "strenaysis_access"
@@ -68,6 +75,9 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/node-output" or path.endswith("/api/node-output"):
             self._handle_node_output()
+            return
+        if path == "/api/refresh-followups" or path.endswith("/api/refresh-followups"):
+            self._handle_refresh_followups()
             return
         if path == "/api/export" or path.endswith("/api/export"):
             self._handle_export()
@@ -181,6 +191,25 @@ class AppHandler(SimpleHTTPRequestHandler):
             execution_items=body.get("execution_items", []) if isinstance(body.get("execution_items", []), list) else [],
         )
         self._send_json(result)
+
+    def _handle_refresh_followups(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            body = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        problem = str(body.get("problem", "")).strip()
+        problem_details = str(body.get("problem_details", "")).strip()
+        roadmap = body.get("roadmap", [])
+        if not problem or not isinstance(roadmap, list):
+            self._send_json({"error": "Problem and roadmap are required."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        prompts = refresh_roadmap_followups(problem, problem_details, roadmap)
+        self._send_json({"suggested_contexts": prompts})
 
     def _handle_export(self) -> None:
         content_length = int(self.headers.get("Content-Length", "0"))
