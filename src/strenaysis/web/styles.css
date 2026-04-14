@@ -545,6 +545,10 @@ button:disabled {
   margin-top: 14px;
 }
 
+.problem-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .editor-card {
   padding: 14px;
   border: 1px solid var(--border);

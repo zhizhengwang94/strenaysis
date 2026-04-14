@@ -423,9 +423,11 @@ deleteSequenceZone.addEventListener("drop", (event) => {
   renderRoadmapEditor();
 });
 
-openProblemDetailsButton.addEventListener("click", () => {
-  openDetailsModal("problem");
-});
+if (openProblemDetailsButton) {
+  openProblemDetailsButton.addEventListener("click", () => {
+    openDetailsModal("problem");
+  });
+}
 
 if (openRoadmapProblemDetailsButton) {
   openRoadmapProblemDetailsButton.addEventListener("click", () => {
