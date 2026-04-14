@@ -77,6 +77,8 @@ def generate_roadmap(problem: str, problem_details: str = "", forced_problem_typ
         "assessment_title should be a short framing line. assessment_recap should be 3-4 short labeled lines separated by newline characters. "
         "Each roadmap item must contain title, why, breakdown, suggested_context. The roadmap must follow the exact template for the chosen problem type in the exact order. "
         "why should be one sentence. breakdown must be concrete and tailored to the problem, written as 3-5 short labeled lines separated by newline characters. "
+        "Prefer descriptive_analysis when the main ask is to understand what is happening, why a metric is moving, or what the root causes are, even if the metric is churn, risk, or another predictive outcome. "
+        "Choose predictive_modeling only when the prompt explicitly asks to predict, rank, score, target, prioritize entities for action, or build a model for intervention. "
         "Use a consultancy-style, MECE structure. suggested_context must ask for only the single most important missing context that would strengthen this node. "
         "Do not create a chain of clever follow-up questions. One practical, sufficient question is enough. "
         f"If enough context already exists, return exactly: '{NO_ADDITIONAL_SUGGESTED_ITEM}'. "
@@ -1335,6 +1337,42 @@ def _classify_problem_type(problem: str, problem_details: str = "") -> str:
         return "experiment_causal_question"
     if any(term in combined for term in ["optimize", "allocation", "budget", "capacity", "scheduling", "routing", "inventory", "operations", "resource", "constraint"]):
         return "operational_optimization"
+    descriptive_cues = [
+        "why ",
+        "why is",
+        "why are",
+        "what happened",
+        "understand",
+        "root cause",
+        "root causes",
+        "increase in",
+        "decrease in",
+        "seen a",
+        "has seen a",
+        "especially in",
+        "concerned because",
+        "not translating into",
+    ]
+    predictive_cues = [
+        "predict",
+        "prediction",
+        "forecast",
+        "risk score",
+        "propensity",
+        "uplift",
+        "rank",
+        "ranking",
+        "scoring",
+        "who to target",
+        "target customers",
+        "prioritize customers",
+        "prioritise customers",
+        "who will churn",
+        "which customers",
+        "intervention",
+    ]
+    if any(term in combined for term in descriptive_cues) and not any(term in combined for term in predictive_cues):
+        return "descriptive_analysis"
     if any(term in combined for term in ["predict", "prediction", "forecast", "churn", "risk", "propensity", "uplift", "rank", "ranking", "scoring", "who to target"]):
         return "predictive_modeling"
     return "descriptive_analysis"
@@ -1519,6 +1557,8 @@ def _problem_type_reason(problem: str, problem_details: str, problem_type: str) 
             return "the question is about ranking or predicting who is at risk so the business can target action"
         return "the case is centered on predicting an outcome or prioritizing entities for action"
     if problem_type == "descriptive_analysis":
+        if "churn" in combined:
+            return "the main need is to understand why churn is rising, where it concentrates, and what likely explains the pattern"
         return "the main need is to understand what happened, where it happened, and what likely explains the pattern"
     if problem_type == "experiment_causal_question":
         return "the core ask is whether an intervention caused lift, so causal design matters more than raw prediction"
