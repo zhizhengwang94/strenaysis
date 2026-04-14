@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Any
 from urllib import error, request
@@ -147,16 +148,20 @@ def generate_roadmap(problem: str, problem_details: str = "", forced_problem_typ
     )
 
 
-def polish_node(problem: str, problem_details: str, draft: str) -> dict[str, str]:
+def polish_node(problem: str, problem_details: str, draft: str, existing_titles: list[str] | None = None) -> dict[str, str]:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return _fallback_polish_node(problem, problem_details, draft)
+        return _fallback_polish_node(problem, problem_details, draft, existing_titles or [])
 
+    existing_titles_text = ", ".join(title for title in (existing_titles or []) if title.strip()) or "None"
     prompt = (
-        "You are polishing a roadmap stage for a data science workflow. Return JSON with keys title, why, breakdown, suggested_context. "
+        "You are polishing a roadmap stage for a data science workflow. Return JSON with keys title, why, breakdown, suggested_context, recommendation, advisory. "
         "title must be concise, under 3 words. why must be one sentence. breakdown must be a consultancy-style MECE structure written as 3-5 short labeled lines. "
+        "recommendation must be one of: recommended, caution. "
+        "If the proposed node seems redundant, out of scope, or already substantially covered by an existing roadmap stage, set recommendation to caution and explain why in advisory. "
+        "If the node is a good addition, set recommendation to recommended and use advisory to briefly explain how it strengthens the roadmap. "
         f"suggested_context should ask what extra context would make the node more precise, or exactly '{NO_ADDITIONAL_SUGGESTED_ITEM}' if enough context exists.\n\n"
-        f"Problem to solve: {problem}\nProblem details: {problem_details or 'None provided.'}\nDraft stage request: {draft}"
+        f"Problem to solve: {problem}\nProblem details: {problem_details or 'None provided.'}\nExisting roadmap stages: {existing_titles_text}\nDraft stage request: {draft}"
     )
     payload = {
         "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
@@ -172,8 +177,10 @@ def polish_node(problem: str, problem_details: str, draft: str) -> dict[str, str
                         "why": {"type": "string"},
                         "breakdown": {"type": "string"},
                         "suggested_context": {"type": "string"},
+                        "recommendation": {"type": "string", "enum": ["recommended", "caution"]},
+                        "advisory": {"type": "string"},
                     },
-                    "required": ["title", "why", "breakdown", "suggested_context"],
+                    "required": ["title", "why", "breakdown", "suggested_context", "recommendation", "advisory"],
                     "additionalProperties": False,
                 },
             },
@@ -189,10 +196,10 @@ def polish_node(problem: str, problem_details: str, draft: str) -> dict[str, str
         with request.urlopen(req, timeout=45) as response:
             body = json.loads(response.read().decode("utf-8"))
     except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
-        return _fallback_polish_node(problem, problem_details, draft)
+        return _fallback_polish_node(problem, problem_details, draft, existing_titles or [])
 
     polished = _extract_polished_node(body)
-    return polished or _fallback_polish_node(problem, problem_details, draft)
+    return polished or _fallback_polish_node(problem, problem_details, draft, existing_titles or [])
 
 
 def generate_node_build(
@@ -443,8 +450,17 @@ def _extract_polished_node(body: dict[str, Any]) -> dict[str, str] | None:
                 why = str(parsed.get("why", "")).strip()
                 breakdown = str(parsed.get("breakdown", "")).strip()
                 suggested_context = str(parsed.get("suggested_context", "")).strip()
+                recommendation = str(parsed.get("recommendation", "")).strip() or "recommended"
+                advisory = str(parsed.get("advisory", "")).strip()
                 if title and why and breakdown and suggested_context:
-                    return {"title": title, "why": why, "breakdown": breakdown, "suggested_context": suggested_context}
+                    return {
+                        "title": title,
+                        "why": why,
+                        "breakdown": breakdown,
+                        "suggested_context": suggested_context,
+                        "recommendation": recommendation,
+                        "advisory": advisory,
+                    }
     return None
 
 
@@ -1035,7 +1051,7 @@ def _align_roadmap_to_template(raw_roadmap: list[Any], problem: str, problem_det
     return aligned
 
 
-def _fallback_polish_node(problem: str, problem_details: str, draft: str) -> dict[str, str]:
+def _fallback_polish_node(problem: str, problem_details: str, draft: str, existing_titles: list[str]) -> dict[str, str]:
     normalized = " ".join(str(draft).split()).strip()
     if not normalized:
         return {
@@ -1043,16 +1059,51 @@ def _fallback_polish_node(problem: str, problem_details: str, draft: str) -> dic
             "why": "Adds a custom stage to capture an extra part of the decision process.",
             "breakdown": _fallback_breakdown(problem, problem_details, "New Node"),
             "suggested_context": _fallback_suggested_context(problem, problem_details, "New Node"),
+            "recommendation": "recommended",
+            "advisory": "This looks like a reasonable additional stage if you need to cover something beyond the default framework.",
         }
 
     words = normalized.replace("/", " ").replace("-", " ").split()
     short_title = " ".join(words[:3]).title() if words else "New Node"
+    duplicate_title = _find_existing_title_overlap(short_title, existing_titles)
+    recommendation = "recommended"
+    advisory = "This looks like a useful extension to the roadmap and can be added if you want an explicit extra step."
+    if duplicate_title:
+        recommendation = "caution"
+        advisory = (
+            f"This proposed step appears to overlap with '{duplicate_title}'. "
+            "It may already be covered by the current roadmap, so only add it if you want to separate that work more explicitly."
+        )
+    elif len(words) <= 1 and short_title.lower() not in {"risk", "scope", "ops", "qa"}:
+        recommendation = "caution"
+        advisory = (
+            "This proposed step still feels broad or ambiguous. It may not add a clear new stage to the roadmap yet, "
+            "so refine the intent before creating it."
+        )
     return {
         "title": short_title,
         "why": f"Adds a focused stage for {normalized.lower()} so the roadmap covers that consideration explicitly.",
         "breakdown": _fallback_breakdown(problem, problem_details, short_title),
         "suggested_context": _fallback_suggested_context(problem, problem_details, short_title),
+        "recommendation": recommendation,
+        "advisory": advisory,
     }
+
+
+def _find_existing_title_overlap(candidate: str, existing_titles: list[str]) -> str:
+    candidate_tokens = {token for token in re.split(r"[^a-zA-Z0-9]+", candidate.lower()) if token}
+    for title in existing_titles:
+        existing = str(title).strip()
+        if not existing:
+            continue
+        if existing.lower() == candidate.lower():
+            return existing
+        existing_tokens = {token for token in re.split(r"[^a-zA-Z0-9]+", existing.lower()) if token}
+        if candidate_tokens and existing_tokens and candidate_tokens.issubset(existing_tokens):
+            return existing
+        if candidate_tokens and existing_tokens and existing_tokens.issubset(candidate_tokens):
+            return existing
+    return ""
 
 
 def _build_fallback_roadmap(problem: str, problem_details: str, problem_type: str) -> list[dict[str, str]]:

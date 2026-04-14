@@ -117,11 +117,13 @@ class AppHandler(SimpleHTTPRequestHandler):
         problem = str(body.get("problem", "")).strip()
         problem_details = str(body.get("problem_details", "")).strip()
         draft = str(body.get("draft", "")).strip()
+        roadmap_titles = body.get("roadmap_titles", [])
+        normalized_titles = [str(item).strip() for item in roadmap_titles if str(item).strip()] if isinstance(roadmap_titles, list) else []
         if not draft:
             self._send_json({"error": "A draft node description is required."}, status=HTTPStatus.BAD_REQUEST)
             return
 
-        polished = polish_node(problem, problem_details, draft)
+        polished = polish_node(problem, problem_details, draft, normalized_titles)
         self._send_json(polished)
 
     def _handle_node_build(self) -> None:

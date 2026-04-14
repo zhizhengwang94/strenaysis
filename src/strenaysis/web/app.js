@@ -50,10 +50,13 @@ const assessmentRecap = document.getElementById("assessment-recap");
 const assessmentHighPriority = document.getElementById("assessment-high-priority");
 const assessmentMediumPriority = document.getElementById("assessment-medium-priority");
 const assessmentLowPriority = document.getElementById("assessment-low-priority");
-const newNodeDraft = document.getElementById("new-node-draft");
-const polishNodeButton = document.getElementById("polish-node");
-const confirmAddNodeButton = document.getElementById("confirm-add-node");
+  const newNodeDraft = document.getElementById("new-node-draft");
+  const addNodeCard = document.getElementById("add-node-card");
+  const openAddNodeButton = document.getElementById("open-add-node");
+  const polishNodeButton = document.getElementById("polish-node");
+  const confirmAddNodeButton = document.getElementById("confirm-add-node");
 const newNodePreview = document.getElementById("new-node-preview");
+const newNodeAdvisory = document.getElementById("new-node-advisory");
 const newNodeTitleInput = document.getElementById("new-node-title-input");
 const newNodeWhyInput = document.getElementById("new-node-why-input");
 const newNodeBreakdownInput = document.getElementById("new-node-breakdown-input");
@@ -69,8 +72,8 @@ const detailNodeDescription = document.getElementById("detail-node-description")
 const detailNodeBreakdown = document.getElementById("detail-node-breakdown");
 const refreshNodeBuildButton = document.getElementById("refresh-node-build");
 const openDetailBriefModalButton = document.getElementById("open-detail-brief-modal");
-const detailExecutionSummary = document.getElementById("detail-execution-summary");
-const detailExecutionSummaryPreview = document.getElementById("detail-execution-summary-preview");
+  const detailExecutionSummary = document.getElementById("detail-execution-summary");
+  const detailExecutionSummaryPreview = document.getElementById("detail-execution-summary-preview");
 const detailKeyQuestion = document.getElementById("detail-key-question");
 const detailKeyQuestionPreview = document.getElementById("detail-key-question-preview");
 const detailWorkstreams = document.getElementById("detail-workstreams");
@@ -161,6 +164,9 @@ const confirmSaveProblemButton = document.getElementById("confirm-save-problem")
 const saveProblemNameInput = document.getElementById("save-problem-name");
 const saveProblemDateInput = document.getElementById("save-problem-date");
 const saveProblemPriorityInput = document.getElementById("save-problem-priority");
+const addNodeModal = document.getElementById("add-node-modal");
+const addNodeModalBackdrop = document.getElementById("add-node-modal-backdrop");
+const closeAddNodeModalButton = document.getElementById("close-add-node-modal");
 const appToast = document.getElementById("app-toast");
 const appToastEyebrow = document.getElementById("app-toast-eyebrow");
 const appToastMessage = document.getElementById("app-toast-message");
@@ -210,11 +216,13 @@ closeSummaryNodeModalButton.addEventListener("click", closeSummaryNodeModal);
 summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
 closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
 summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
-closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
-profileItemModalBackdrop.addEventListener("click", closeProfileItemModal);
-closeSaveProblemModalButton.addEventListener("click", closeSaveProblemModal);
-saveProblemModalBackdrop.addEventListener("click", closeSaveProblemModal);
-loadProfileHistoryButton.addEventListener("click", loadProfileHistory);
+  closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
+  profileItemModalBackdrop.addEventListener("click", closeProfileItemModal);
+  closeSaveProblemModalButton.addEventListener("click", closeSaveProblemModal);
+  saveProblemModalBackdrop.addEventListener("click", closeSaveProblemModal);
+  closeAddNodeModalButton.addEventListener("click", closeAddNodeModal);
+  addNodeModalBackdrop.addEventListener("click", closeAddNodeModal);
+  loadProfileHistoryButton.addEventListener("click", loadProfileHistory);
 appToastCloseButton.addEventListener("click", hideAppToast);
 addActionProblemButton.addEventListener("click", () => {
   showAppToast("Action conversion is the next step. For now, this workspace is a high-level tracker.", "Actions workspace");
@@ -362,10 +370,20 @@ updateRoadbuildButton.addEventListener("click", async () => {
   });
 });
 
-editSequenceButton.addEventListener("click", () => {
-  state.sequenceEditMode = true;
-  renderRoadmapEditor();
-});
+  if (openAddNodeButton) {
+    openAddNodeButton.addEventListener("click", () => {
+      if (state.sequenceEditMode) {
+        return;
+      }
+      openAddNodeModal();
+    });
+  }
+
+  editSequenceButton.addEventListener("click", () => {
+    state.sequenceEditMode = true;
+    closeAddNodeModal();
+    renderRoadmapEditor();
+  });
 
 saveSequenceButton.addEventListener("click", () => {
   state.sequenceEditMode = false;
@@ -402,9 +420,11 @@ openProblemDetailsButton.addEventListener("click", () => {
   openDetailsModal("problem");
 });
 
-openRoadmapProblemDetailsButton.addEventListener("click", () => {
-  openDetailsModal("roadmap");
-});
+if (openRoadmapProblemDetailsButton) {
+  openRoadmapProblemDetailsButton.addEventListener("click", () => {
+    openDetailsModal("roadmap");
+  });
+}
 
 closeDetailsModalButton.addEventListener("click", closeDetailsModal);
 detailsModalBackdrop.addEventListener("click", closeDetailsModal);
@@ -440,6 +460,9 @@ document.addEventListener("keydown", (event) => {
   }
   if (event.key === "Escape" && !saveProblemModal.hidden) {
     closeSaveProblemModal();
+  }
+  if (event.key === "Escape" && !addNodeModal.hidden) {
+    closeAddNodeModal();
   }
 });
 closeNodeModalButton.addEventListener("click", closeNodeModal);
@@ -493,13 +516,18 @@ polishNodeButton.addEventListener("click", async () => {
   }
 
   polishNodeButton.disabled = true;
-  polishNodeButton.textContent = "Polishing...";
+    polishNodeButton.textContent = "Generating...";
   setAnalysisStatus(["customNode"], true, "Polishing node");
   try {
     const response = await fetch("/api/polish-node", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problem: state.problem, problem_details: state.problemDetails, draft }),
+      body: JSON.stringify({
+        problem: state.problem,
+        problem_details: state.problemDetails,
+        draft,
+        roadmap_titles: state.roadmap.map((node) => node.title),
+      }),
     });
     const payload = await response.json();
     if (!response.ok) {
@@ -511,26 +539,30 @@ polishNodeButton.addEventListener("click", async () => {
       why: payload.why.trim(),
       breakdown: payload.breakdown.trim(),
       suggested_context: payload.suggested_context.trim(),
+      recommendation: String(payload.recommendation || "recommended").trim(),
+      advisory: String(payload.advisory || "").trim(),
     };
     newNodeTitleInput.value = state.polishedDraft.title;
     newNodeWhyInput.value = state.polishedDraft.why;
     newNodeBreakdownInput.value = state.polishedDraft.breakdown;
     newNodeContextInput.value = state.polishedDraft.suggested_context;
+    renderNewNodeAdvisory(state.polishedDraft);
     newNodePreview.hidden = false;
     confirmAddNodeButton.disabled = false;
-    autoResizeAll();
-  } catch (error) {
-    window.alert(error.message);
-  } finally {
-    setAnalysisStatus(["customNode"], false);
-    polishNodeButton.disabled = false;
-    polishNodeButton.textContent = "Polish";
-  }
-});
+      confirmAddNodeButton.textContent = state.polishedDraft.recommendation === "caution" ? "Add Anyway" : "Confirm Add Node";
+      autoResizeAll();
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      setAnalysisStatus(["customNode"], false);
+      polishNodeButton.disabled = false;
+      polishNodeButton.textContent = "Polish and Generate Node Info";
+    }
+  });
 
-confirmAddNodeButton.addEventListener("click", () => {
-  if (!state.polishedDraft) {
-    return;
+  confirmAddNodeButton.addEventListener("click", () => {
+    if (!state.polishedDraft) {
+      return;
   }
   const cleaned = readCustomNodeDraft();
   if (!cleaned) {
@@ -538,11 +570,15 @@ confirmAddNodeButton.addEventListener("click", () => {
     return;
   }
   state.polishedDraft = { ...state.polishedDraft, ...cleaned };
-  state.roadmap.push(state.polishedDraft);
-  renderRoadmapEditor();
-  resetNewNodeDraft();
-  autoResizeAll();
-});
+  if (!state.polishedDraft.recommendation) {
+    state.polishedDraft.recommendation = "recommended";
+    }
+    state.roadmap.push(state.polishedDraft);
+    renderRoadmapEditor();
+    resetNewNodeDraft();
+    closeAddNodeModal();
+    autoResizeAll();
+  });
 
 prevNodeButton.addEventListener("click", () => {
   saveCurrentNote();
@@ -688,8 +724,8 @@ sidebarNavItems.forEach((item) => {
   });
 });
 
-function renderRoadmapEditor() {
-  roadmapList.innerHTML = "";
+  function renderRoadmapEditor() {
+    roadmapList.innerHTML = "";
   editSequenceButton.hidden = state.roadmap.length === 0 || state.sequenceEditMode;
   saveSequenceButton.hidden = !state.sequenceEditMode;
   deleteSequenceZone.hidden = !state.sequenceEditMode;
@@ -765,11 +801,18 @@ function renderRoadmapEditor() {
       reorderNodeById(fromId, node.id);
     });
 
-    roadmapList.appendChild(row);
-  });
-  refreshRoadmapCompletionState();
-  updateAssessmentPrioritySummary();
-}
+      roadmapList.appendChild(row);
+    });
+    if (addNodeCard) {
+      const nextPosition = getRoadmapPosition(state.roadmap.length);
+      addNodeCard.classList.toggle("is-disabled", state.sequenceEditMode);
+      addNodeCard.style.gridColumn = String(nextPosition.column);
+      addNodeCard.style.gridRowStart = String(nextPosition.row);
+      roadmapList.appendChild(addNodeCard);
+    }
+    refreshRoadmapCompletionState();
+    updateAssessmentPrioritySummary();
+  }
 
 function getRoadmapPosition(index) {
   const row = Math.floor(index / 3) + 1;
@@ -1687,16 +1730,32 @@ function normalizeProblemType(value) {
 
 function updateAssessmentFields() {
   assessmentType.value = state.problemTypeKey || "predictive_modeling";
-  const mismatch =
-    Boolean(state.problemTypeKey) &&
-    Boolean(state.inferredProblemTypeKey) &&
-    state.problemTypeKey !== state.inferredProblemTypeKey;
-  assessmentType.classList.toggle("mismatch", mismatch);
+  const assessmentState = getAssessmentConfidenceState();
+  assessmentType.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
+  assessmentTitle.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
+  assessmentType.classList.add(`assessment-${assessmentState}`);
   assessmentTitle.value = state.assessmentTitle || "No explanation yet.";
-  assessmentTitle.classList.toggle("mismatch", mismatch);
+  assessmentTitle.classList.add(`assessment-${assessmentState}`);
   assessmentRecap.value = state.assessmentRecap || "No interview recap yet.";
   autoResize(assessmentTitle);
   autoResize(assessmentRecap);
+}
+
+function getAssessmentConfidenceState() {
+  const selected = String(state.problemTypeKey || "").trim();
+  const inferred = String(state.inferredProblemTypeKey || "").trim();
+  if (!selected || !inferred || selected === inferred) {
+    return "match";
+  }
+
+  const acceptableMatches = {
+    descriptive_analysis: ["predictive_modeling", "operational_optimization"],
+    predictive_modeling: ["descriptive_analysis", "experiment_causal_question", "operational_optimization"],
+    experiment_causal_question: ["predictive_modeling", "descriptive_analysis"],
+    operational_optimization: ["predictive_modeling", "descriptive_analysis"],
+  };
+
+  return acceptableMatches[inferred]?.includes(selected) ? "caution" : "mismatch";
 }
 
 function updateAssessmentPrioritySummary() {
@@ -1772,16 +1831,36 @@ function makeNodeId() {
   return id;
 }
 
-function resetNewNodeDraft() {
-  state.polishedDraft = null;
+  function resetNewNodeDraft() {
+    state.polishedDraft = null;
   newNodeDraft.value = "";
   newNodePreview.hidden = true;
+  newNodeAdvisory.hidden = true;
+  newNodeAdvisory.textContent = "";
+  newNodeAdvisory.classList.remove("is-caution");
   newNodeTitleInput.value = "";
   newNodeWhyInput.value = "";
   newNodeBreakdownInput.value = "";
   newNodeContextInput.value = "";
-  confirmAddNodeButton.disabled = true;
-  autoResizeAll();
+    confirmAddNodeButton.disabled = true;
+      confirmAddNodeButton.textContent = "Confirm Add Node";
+    autoResizeAll();
+  }
+
+  function renderNewNodeAdvisory(draft) {
+  if (!newNodeAdvisory) {
+    return;
+  }
+  const message = String(draft?.advisory || "").trim();
+  if (!message) {
+    newNodeAdvisory.hidden = true;
+    newNodeAdvisory.textContent = "";
+    newNodeAdvisory.classList.remove("is-caution");
+    return;
+  }
+  newNodeAdvisory.textContent = message;
+  newNodeAdvisory.hidden = false;
+  newNodeAdvisory.classList.toggle("is-caution", String(draft?.recommendation || "") === "caution");
 }
 
 function openDetailsModal(target) {
@@ -1799,6 +1878,17 @@ function closeDetailsModal() {
   document.body.style.overflow = "";
 }
 
+function openAddNodeModal() {
+  addNodeModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  newNodeDraft.focus();
+}
+
+function closeAddNodeModal() {
+  addNodeModal.hidden = true;
+  document.body.style.overflow = "";
+}
+
 function setProblemDetails(value) {
   state.problemDetails = value;
   problemDetailsInput.value = value;
@@ -1808,7 +1898,7 @@ function setProblemDetails(value) {
 
 function updateProblemDetailsPreviews() {
   const value = state.problemDetails || problemDetailsInput.value || roadmapProblemDetailsInput.value || "";
-  [problemDetailsPreview, roadmapProblemDetailsPreview].forEach((preview) => {
+  [problemDetailsPreview, roadmapProblemDetailsPreview].filter(Boolean).forEach((preview) => {
     preview.textContent = value
       ? 'Details added. Click "Insert Details" to review or edit.'
       : "No detailed bucket added yet.";
