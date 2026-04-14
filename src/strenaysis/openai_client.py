@@ -1211,6 +1211,12 @@ def _build_followup_coverage_text(problem_details: str, nodes: list[dict[str, An
     for node in nodes:
         if not isinstance(node, dict):
             continue
+        parts.extend([
+            str(node.get("title", "")).strip(),
+            str(node.get("why", "")).strip(),
+            str(node.get("breakdown", "")).strip(),
+            str(node.get("suggested_context", "")).strip(),
+        ])
         raw_threads = node.get("follow_up_threads", [])
         if not isinstance(raw_threads, list):
             continue
@@ -1257,7 +1263,11 @@ def _fallback_agent_review_prompt(
             label in node_breakdown
             for label in ["business metric", "decision metric", "model metric"]
         )
-        if metric_structure_present and coverage["decision"] and coverage["horizon"] and coverage["success"]:
+        metric_output_present = any(
+            token in node_breakdown
+            for token in ["scorecard", "dashboard", "baseline", "target", "output:"]
+        )
+        if (metric_structure_present or metric_output_present) and coverage["decision"] and coverage["horizon"] and coverage["success"]:
             return NO_ADDITIONAL_SUGGESTED_ITEM
 
     if title.lower() == "objective":

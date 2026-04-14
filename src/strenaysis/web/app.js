@@ -1608,14 +1608,17 @@ async function generateRoadmap(problem, options) {
     state.sequenceEditMode = false;
     state.dragNodeId = null;
     state.activeNodeId = null;
-    state.problemTypeKey = String(payload.problem_type || options.problemType || "").trim();
-    state.inferredProblemTypeKey = String(payload.inferred_problem_type || "").trim();
-    state.problemType = normalizeProblemType(payload.problem_type);
-    state.assessmentTitle = String(payload.assessment_title || "").trim();
-    state.assessmentRecap = String(payload.assessment_recap || "").trim();
-    if (options.resetNotes) {
-      state.nodeBuilds = {};
-    }
+      state.problemTypeKey = String(payload.problem_type || options.problemType || "").trim();
+      state.inferredProblemTypeKey = String(payload.inferred_problem_type || "").trim();
+      state.problemType = normalizeProblemType(payload.problem_type);
+      state.assessmentTitle = String(payload.assessment_title || "").trim();
+      state.assessmentRecap = String(payload.assessment_recap || "").trim();
+      if (assessmentType) {
+        assessmentType.value = state.problemTypeKey || state.inferredProblemTypeKey || "predictive_modeling";
+      }
+      if (options.resetNotes) {
+        state.nodeBuilds = {};
+      }
     state.nextNodeId = state.roadmap.length + 1;
     problemInput.value = problem;
     problemDetailsInput.value = state.problemDetails;
@@ -1819,7 +1822,7 @@ function normalizeProblemType(value) {
 }
 
 function updateAssessmentFields() {
-  assessmentType.value = state.problemTypeKey || "predictive_modeling";
+  assessmentType.value = state.problemTypeKey || state.inferredProblemTypeKey || "predictive_modeling";
   const assessmentState = getAssessmentConfidenceState();
   assessmentType.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
   assessmentTitle.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
