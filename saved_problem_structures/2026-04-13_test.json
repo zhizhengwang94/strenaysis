@@ -1,0 +1,719 @@
+{
+  "problem": "You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles",
+  "problem_name": "Test",
+  "priority": "Medium",
+  "saved_at": "2026-04-13",
+  "problem_type": "Experiment / Causal Question",
+  "assessment_title": "This fits experiment / causal question because the core ask is whether an intervention caused lift, so causal design matters more than raw prediction.",
+  "assessment_recap": "Problem type: Experiment / Causal Question\nDecision lens: Estimate incremental impact credibly before scaling an action.\nInterview recap: We need to understand why churn is moving for subscribers, identify where the risk concentrates, and translate that into a prioritization and intervention plan.\nAgent view: Experiment / Causal Question\nFramework implication: Start with Objective -> Metric -> Hypotheses before adding custom nodes if needed.",
+  "problem_details": "\ud83c\udfaf 1) Objective (Business Decision, Horizon, Success)\nDecision\nWhich subscribers should we target this week, and with which retention action, to maximize incremental profit?\nTime horizon\nWeekly targeting cadence\nPrimary outcome: 60-day churn / retention\nSecondary: 90-day persistence\nSuccess definition\nMaximize incremental retained gross profit vs control\nUnder cost and capacity constraints\n\ud83d\udcca 2) Business Goal & Metric Definition\nGoal\nReduce mid-tenure churn (6\u201318 months) without destroying margin\nTarget horizon\n0\u201390 days: operational impact\n2\u20133 quarters: cohort-level retention improvement\nSuccess thresholds\nChurn \u2193 0.5\u20131.0pp in target segment\nOR 60-day retention \u2191 +3pp\nConstraints:\nRetention cost \u2264 35% of incremental LTV\nROI \u2265 1.5x\nPayback \u2264 3\u20136 months\n\u2699\ufe0f 3) Decision Logic (Interventions, Constraints, Rules)\nInterventions (testable arms)\nPrice incentive (time-bound credit/discount)\nPlan optimization (right-size / bundle)\nService recovery (priority support / tech fix)\nMessaging-only (non-monetary)\nBudget\nFixed quarterly budget (e.g., $5M) with weekly allocation caps\nCapacity\nCall center outreach limits\nField technician slots\nCampaign delivery limits (SMS/email)\nTargeting rules\nAct only if expected incremental LTV \u2212 cost > 0\nPrioritize: ARPU \u00d7 churn risk \u00d7 uplift\nExclude:\nActive collections / severe open tickets\nCustomers already in another campaign\nChronic low-margin \u201cserial churners\u201d\n\ud83e\udde0 4) Problem Type (Explicit)\nPrimary: Uplift (who changes behavior if treated)\nSecondary: Ranking (fallback if no experimental data)\nSupporting: Explanation (drivers for action design)\nModel action\nProduce a prioritized list of subscribers with recommended intervention per user\n\ud83e\uddfe 5) Data Scope (Concrete)\nSystems\nCRM (profile, tenure, plan)\nBilling (charges, discounts, payments)\nUsage logs (mobile/broadband)\nNetwork telemetry (speed, outages)\nSupport (tickets, calls)\nTime windows\nObservation: past 3\u20136 months\nPrediction: next 30\u201360 days\nBacktest: 12\u201318 months\nSegments\nTenure: 0\u20133, 3\u201312, 6\u201318 focus, 18\u201324, 24+\nARPU: low / mid / high\nProduct: mobile / broadband / bundle\nGeography: proxy for network quality\nKnown gaps\nCompetitor pricing (partial)\nOff-platform sentiment\nTrue user-level QoE in real time\n\ud83d\udcb0 6) Impact & ROI Definition\nPrimary metric\nIncremental retained revenue / profit (vs control)\n\nROI\n\n\\frac{\\text{Incremental LTV saved} - \\text{Intervention cost}}{\\text{Intervention cost}}\n]\n\nThresholds\nROI \u2265 1.5x\nPayback \u2264 3\u20136 months\nSecondary outcomes\nHigh-value churn reduction\nCohort retention curve shift\n\ud83e\uddea 7) Experiment Design (Concrete)\nTreatment arms\nDiscount, plan optimization, service recovery, messaging-only\nControl\nTrue business-as-usual (no proactive retention)\nRandomization unit\nBilling account / household (avoid cross-line contamination)\nTiming\nWeekly eligibility & assignment\nTreatment within 72 hours\nMeasure at 60 days (primary), 90 days (secondary)\nGuardrails\nOffer cost per save\nMargin / ARPU erosion\nComplaint & opt-out rate\nDowngrade rate\nCall center / field capacity\n\ud83e\uddd1\u200d\ud83d\udcbc 8) Audience & Delivery\nAudience\nCEO / CMO / Head of Retention\nExecutive concerns\nAre we overspending on retention?\nWhy are valuable users leaving?\nWhat should we do next quarter?\nRecommendation style\nWhere churn is concentrated (segments)\nWhy it happens (drivers)\nWhat to do (top actions with ROI and constraints)\nOutput\nRanked target segments\nChosen interventions per segment\nExpected impact range + risks",
+  "node_count": 8,
+  "ready_count": 8,
+  "action_count": 41,
+  "nodes": [
+    {
+      "title": "Objective",
+      "why": "Defines the business question precisely so the analysis solves the right problem.",
+      "breakdown": "Business ask: reduce avoidable churn while protecting positive unit economics\nDecision to support: decide which customers to prioritize, what action to take, and how success will be judged\nScope: focus on the highest-risk subscribers, the relevant time horizon, and the economic guardrails\nOutput: A crisp problem statement that defines what we are solving and what good looks like.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Objective",
+        "node_description": "Defines the business question precisely so the analysis solves the right problem.",
+        "node_breakdown": "Business ask: reduce avoidable churn while protecting positive unit economics\nDecision to support: decide which customers to prioritize, what action to take, and how success will be judged\nScope: focus on the highest-risk subscribers, the relevant time horizon, and the economic guardrails\nOutput: A crisp problem statement that defines what we are solving and what good looks like.",
+        "execution_summary": "The immediate goal is to translate the objective node into concrete work that can be assigned, executed, and reviewed without ambiguity.",
+        "key_question": "What needs to be true for the objective stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Node Translation: Convert the objective breakdown into concrete tasks, owners, and evidence needs. | Priority: high | Done when: Each major objective bucket is represented by executable work.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Handoff Readiness: Package the objective node so the next stage can start with minimal rework. | Priority: medium | Done when: The node has a clean output, owners, and unresolved questions clearly documented.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Objective should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Defines the business question precisely so the analysis solves the right problem.\nStructured scope: Business ask: reduce avoidable churn while protecting positive unit economics\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which part of the objective node still lacks a named owner or source?"
+        ],
+        "execution_items": [
+          {
+            "action": "Translate business ask into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "reduce avoidable churn while protecting positive unit economics",
+            "artifact": "Business ask working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current business ask scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate decision to support into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "decide which customers to prioritize, what action to take, and how success will be judged",
+            "artifact": "Decision to support working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current decision to support scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate scope into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "focus on the highest-risk subscribers, the relevant time horizon, and the economic guardrails",
+            "artifact": "Scope working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current scope scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate output into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "A crisp problem statement that defines what we are solving and what good looks like.",
+            "artifact": "Output working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current output scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Synthesize the objective work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": "Completed objective workstreams",
+            "artifact": "Objective handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work."
+          }
+        ],
+        "output": "Focus: What needs to be true for the objective stage to support the final decision cleanly?\nWhat will be done: Translate business ask into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate decision to support into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate scope into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.\nWho and where: Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use reduce avoidable churn while protecting positive unit economics; decide which customers to prioritize, what action to take, and how success will be judged.\nDeliverable and risk: Create Business ask working note with owners, inputs, and next-step decision, Decision to support working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current business ask scope is still too broad to assign cleanly.",
+        "output_sections": {
+          "focus": "What needs to be true for the objective stage to support the final decision cleanly?",
+          "work_to_complete": "Translate business ask into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate decision to support into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate scope into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use reduce avoidable churn while protecting positive unit economics; decide which customers to prioritize, what action to take, and how success will be judged.",
+          "risks_and_handoff": "Create Business ask working note with owners, inputs, and next-step decision, Decision to support working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current business ask scope is still too broad to assign cleanly."
+        }
+      }
+    },
+    {
+      "title": "Metric",
+      "why": "Defines success and guardrails so every later trade-off stays grounded.",
+      "breakdown": "Business metric: retained revenue, retained subscribers, churn rate, and expected lifetime value preserved\nDecision metric: who to target among subscribers, what risk threshold to use, and whether to prioritize high-value cases\nModel metric: AUC or PR-AUC for ranking, Recall if missing churners is costly, and calibration for action thresholds\nOutput: A clear scorecard for 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles' that aligns business impact, targeting, and model quality.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Metric",
+        "node_description": "Defines success and guardrails so every later trade-off stays grounded.",
+        "node_breakdown": "Business metric: retained revenue, retained subscribers, churn rate, and expected lifetime value preserved\nDecision metric: who to target among subscribers, what risk threshold to use, and whether to prioritize high-value cases\nModel metric: AUC or PR-AUC for ranking, Recall if missing churners is costly, and calibration for action thresholds\nOutput: A clear scorecard for 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles' that aligns business impact, targeting, and model quality.",
+        "execution_summary": "The metric node should lock the exact success measures, tie them to a baseline, and produce a review-ready scorecard for the rest of the roadmap.",
+        "key_question": "What needs to be true for the metric stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Metric Definition: Lock the formulas, windows, and business meaning of each metric bucket. | Priority: high | Done when: Business, decision, and technical metrics are clearly defined and non-conflicting.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Baseline Alignment: Anchor the chosen metrics to current-state performance and target thresholds. | Priority: high | Done when: A baseline and target range exists for the core metrics.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Reporting Setup: Show how the metrics will be reviewed once the analysis starts. | Priority: medium | Done when: A review-ready scorecard or dashboard mock exists.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Metric should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Defines success and guardrails so every later trade-off stays grounded.\nStructured scope: Business metric: retained revenue, retained subscribers, churn rate, and expected lifetime value preserved\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which metric should drive the final business decision if the business and technical metrics disagree?",
+          "What target threshold or improvement level would count as success for leadership?"
+        ],
+        "execution_items": [
+          {
+            "action": "Define the exact business metric to use, including formula, time window, baseline, and decision relevance.",
+            "owner": "Analytics lead",
+            "collaborator": "Business owner",
+            "source": "Problem statement, finance definitions, and existing reporting logic",
+            "artifact": "Business metric definition sheet with formula and business interpretation",
+            "approval": "Business owner sign-off",
+            "blockers": "The team has not aligned on what success means for the business metric yet."
+          },
+          {
+            "action": "Define the exact decision metric to use, including formula, time window, baseline, and decision relevance.",
+            "owner": "Analytics lead",
+            "collaborator": "Business owner",
+            "source": "Problem statement, finance definitions, and existing reporting logic",
+            "artifact": "Decision metric definition sheet with formula and business interpretation",
+            "approval": "Business owner sign-off",
+            "blockers": "The team has not aligned on what success means for the decision metric yet."
+          },
+          {
+            "action": "Define the exact model metric to use, including formula, time window, baseline, and decision relevance.",
+            "owner": "Analytics lead",
+            "collaborator": "Business owner",
+            "source": "Problem statement, finance definitions, and existing reporting logic",
+            "artifact": "Model metric definition sheet with formula and business interpretation",
+            "approval": "No approval needed",
+            "blockers": "The team has not aligned on what success means for the model metric yet."
+          },
+          {
+            "action": "Define the exact output to use, including formula, time window, baseline, and decision relevance.",
+            "owner": "Analytics lead",
+            "collaborator": "Business owner",
+            "source": "Problem statement, finance definitions, and existing reporting logic",
+            "artifact": "Output definition sheet with formula and business interpretation",
+            "approval": "No approval needed",
+            "blockers": "The team has not aligned on what success means for the output yet."
+          },
+          {
+            "action": "Build a lightweight scorecard or dashboard mock so stakeholders can see how the chosen metrics will be reviewed during execution.",
+            "owner": "Data analyst",
+            "collaborator": "BI or analytics engineering",
+            "source": "Agreed metric definitions and historical baseline cuts",
+            "artifact": "Metric scorecard mockup with baseline and target view",
+            "approval": "No approval needed",
+            "blockers": "Historical baselines are inconsistent across reports."
+          }
+        ],
+        "output": "Focus: What needs to be true for the metric stage to support the final decision cleanly?\nWhat will be done: Define the exact business metric to use, including formula, time window, baseline, and decision relevance; Define the exact decision metric to use, including formula, time window, baseline, and decision relevance; Define the exact model metric to use, including formula, time window, baseline, and decision relevance.\nWho and where: Involve Analytics lead, Data analyst, Business owner, BI or analytics engineering and use Problem statement, finance definitions, and existing reporting logic; Agreed metric definitions and historical baseline cuts.\nDeliverable and risk: Create Business metric definition sheet with formula and business interpretation, Decision metric definition sheet with formula and business interpretation; approvals: Business owner sign-off, No approval needed; main risk: The team has not aligned on what success means for the business metric yet.",
+        "output_sections": {
+          "focus": "What needs to be true for the metric stage to support the final decision cleanly?",
+          "work_to_complete": "Define the exact business metric to use, including formula, time window, baseline, and decision relevance; Define the exact decision metric to use, including formula, time window, baseline, and decision relevance; Define the exact model metric to use, including formula, time window, baseline, and decision relevance.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Business owner, BI or analytics engineering and use Problem statement, finance definitions, and existing reporting logic; Agreed metric definitions and historical baseline cuts.",
+          "risks_and_handoff": "Create Business metric definition sheet with formula and business interpretation, Decision metric definition sheet with formula and business interpretation; approvals: Business owner sign-off, No approval needed; main risk: The team has not aligned on what success means for the business metric yet."
+        }
+      }
+    },
+    {
+      "title": "Hypotheses",
+      "why": "Frames the causal stories worth testing before jumping into intervention design.",
+      "breakdown": "Behavior hypothesis: behavior change among subscribers signals whether the outcome is driven by engagement, habit, or usage deterioration\nCommercial hypothesis: pricing, promotion expiry, or competitive offers may explain the observed deterioration\nExperience hypothesis: service friction, fulfillment issues, or experience gaps may be causing the measured outcome\nOutput: A short testable hypothesis set that can be validated with causal evidence.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Hypotheses",
+        "node_description": "Frames the causal stories worth testing before jumping into intervention design.",
+        "node_breakdown": "Behavior hypothesis: behavior change among subscribers signals whether the outcome is driven by engagement, habit, or usage deterioration\nCommercial hypothesis: pricing, promotion expiry, or competitive offers may explain the observed deterioration\nExperience hypothesis: service friction, fulfillment issues, or experience gaps may be causing the measured outcome\nOutput: A short testable hypothesis set that can be validated with causal evidence.",
+        "execution_summary": "The immediate goal is to translate the hypotheses node into concrete work that can be assigned, executed, and reviewed without ambiguity.",
+        "key_question": "What needs to be true for the hypotheses stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Node Translation: Convert the hypotheses breakdown into concrete tasks, owners, and evidence needs. | Priority: high | Done when: Each major hypotheses bucket is represented by executable work.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Handoff Readiness: Package the hypotheses node so the next stage can start with minimal rework. | Priority: medium | Done when: The node has a clean output, owners, and unresolved questions clearly documented.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Hypotheses should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Frames the causal stories worth testing before jumping into intervention design.\nStructured scope: Behavior hypothesis: behavior change among subscribers signals whether the outcome is driven by engagement, habit, or usage deterioration\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which part of the hypotheses node still lacks a named owner or source?"
+        ],
+        "execution_items": [
+          {
+            "action": "Translate behavior hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "behavior change among subscribers signals whether the outcome is driven by engagement, habit, or usage deterioration",
+            "artifact": "Behavior hypothesis working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current behavior hypothesis scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate commercial hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "pricing, promotion expiry, or competitive offers may explain the observed deterioration",
+            "artifact": "Commercial hypothesis working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current commercial hypothesis scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate experience hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "service friction, fulfillment issues, or experience gaps may be causing the measured outcome",
+            "artifact": "Experience hypothesis working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current experience hypothesis scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate output into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "A short testable hypothesis set that can be validated with causal evidence.",
+            "artifact": "Output working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current output scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Synthesize the hypotheses work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": "Completed hypotheses workstreams",
+            "artifact": "Hypotheses handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work."
+          }
+        ],
+        "output": "Focus: What needs to be true for the hypotheses stage to support the final decision cleanly?\nWhat will be done: Translate behavior hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate commercial hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate experience hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.\nWho and where: Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use behavior change among subscribers signals whether the outcome is driven by engagement, habit, or usage deterioration; pricing, promotion expiry, or competitive offers may explain the observed deterioration.\nDeliverable and risk: Create Behavior hypothesis working note with owners, inputs, and next-step decision, Commercial hypothesis working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current behavior hypothesis scope is still too broad to assign cleanly.",
+        "output_sections": {
+          "focus": "What needs to be true for the hypotheses stage to support the final decision cleanly?",
+          "work_to_complete": "Translate behavior hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate commercial hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate experience hypothesis into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use behavior change among subscribers signals whether the outcome is driven by engagement, habit, or usage deterioration; pricing, promotion expiry, or competitive offers may explain the observed deterioration.",
+          "risks_and_handoff": "Create Behavior hypothesis working note with owners, inputs, and next-step decision, Commercial hypothesis working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current behavior hypothesis scope is still too broad to assign cleanly."
+        }
+      }
+    },
+    {
+      "title": "Data",
+      "why": "Clarifies what evidence exists, what is missing, and what can credibly answer the question.",
+      "breakdown": "Behavioral data: usage patterns, transactions, engagement frequency, recency, and trends over time for subscribers\nValue-related data: revenue, spend, balances, order size, and lifetime value for subscribers\nHistorical outcome data: past churn, defaults, delays, prior interventions, and repeated behavior patterns\nProfile data: customer type, geography, tenure, demographics, and segment markers for subscribers\nContextual / structural data: pricing changes, product updates, service interactions, channels, campaigns, and external events",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Data",
+        "node_description": "Clarifies what evidence exists, what is missing, and what can credibly answer the question.",
+        "node_breakdown": "Behavioral data: usage patterns, transactions, engagement frequency, recency, and trends over time for subscribers\nValue-related data: revenue, spend, balances, order size, and lifetime value for subscribers\nHistorical outcome data: past churn, defaults, delays, prior interventions, and repeated behavior patterns\nProfile data: customer type, geography, tenure, demographics, and segment markers for subscribers\nContextual / structural data: pricing changes, product updates, service interactions, channels, campaigns, and external events",
+        "execution_summary": "The data node should translate the roadmap buckets into a concrete source plan, validate data readiness, and produce a first-pass dataset request that the analyst team can execute without ambiguity.",
+        "key_question": "What needs to be true for the data stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Data Scope Translation: Turn each data bucket in the roadmap into a concrete request with fields, systems, and owners. | Priority: high | Done when: Each required data bucket is mapped to a source, owner, and join path.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Data Readiness Validation: Pressure-test whether the shortlisted sources are reliable enough for the intended analysis. | Priority: high | Done when: The team has a profiling view of completeness, freshness, and key data risks.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Decision-Ready Dataset Plan: Narrow the data pull to what the business decision actually needs now. | Priority: high | Done when: A prioritized dataset plan is approved for the first analysis pass.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Data should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Clarifies what evidence exists, what is missing, and what can credibly answer the question.\nStructured scope: Behavioral data: usage patterns, transactions, engagement frequency, recency, and trends over time for subscribers\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "What is the official outcome definition and look-forward window for this case?",
+          "Which systems contain the most reliable identifier for linking subscribers across sources?",
+          "Which contextual sources are available immediately and which require separate access or engineering work?"
+        ],
+        "execution_items": [
+          {
+            "action": "Define the required fields for behavioral data and map them to the best available source for subscribers.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": "CRM, billing, telemetry, usage logs",
+            "artifact": "Behavioral data source map with required fields and join keys",
+            "approval": "Data access approval",
+            "blockers": "Field definitions for behavioral data are unclear or the source owner has not confirmed availability."
+          },
+          {
+            "action": "Define the required fields for value-related data and map them to the best available source for subscribers.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": "CRM, billing, telemetry, usage logs",
+            "artifact": "Value-related data source map with required fields and join keys",
+            "approval": "Data access approval",
+            "blockers": "Field definitions for value-related data are unclear or the source owner has not confirmed availability."
+          },
+          {
+            "action": "Define the required fields for historical outcome data and map them to the best available source for subscribers.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": "CRM, billing, telemetry, usage logs",
+            "artifact": "Historical outcome data source map with required fields and join keys",
+            "approval": "Data access approval",
+            "blockers": "Field definitions for historical outcome data are unclear or the source owner has not confirmed availability."
+          },
+          {
+            "action": "Define the required fields for profile data and map them to the best available source for subscribers.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": "CRM, billing, telemetry, usage logs",
+            "artifact": "Profile data source map with required fields and join keys",
+            "approval": "Data access approval",
+            "blockers": "Field definitions for profile data are unclear or the source owner has not confirmed availability."
+          },
+          {
+            "action": "Define the required fields for contextual / structural data and map them to the best available source for subscribers.",
+            "owner": "Data analyst",
+            "collaborator": "Data engineering or system owner",
+            "source": "CRM, billing, telemetry, usage logs",
+            "artifact": "Contextual / structural data source map with required fields and join keys",
+            "approval": "Data access approval",
+            "blockers": "Field definitions for contextual / structural data are unclear or the source owner has not confirmed availability."
+          },
+          {
+            "action": "Run data profiling on the shortlisted sources to validate completeness, freshness, segment coverage, and joinability before building the first analysis dataset.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics engineering",
+            "source": "CRM, billing, telemetry, usage logs",
+            "artifact": "Data profiling report with quality risks and recommended fixes",
+            "approval": "No approval needed",
+            "blockers": "Join keys are inconsistent across systems or the history window is too short for the target analysis."
+          }
+        ],
+        "output": "Focus: What needs to be true for the data stage to support the final decision cleanly?\nWhat will be done: Define the required fields for behavioral data and map them to the best available source for subscribers; Define the required fields for value-related data and map them to the best available source for subscribers; Define the required fields for historical outcome data and map them to the best available source for subscribers.\nWho and where: Involve Data analyst, Data engineering or system owner, Analytics engineering and use CRM, billing, telemetry, usage logs.\nDeliverable and risk: Create Behavioral data source map with required fields and join keys, Value-related data source map with required fields and join keys; approvals: Data access approval, No approval needed; main risk: Field definitions for behavioral data are unclear or the source owner has not confirmed availability.",
+        "output_sections": {
+          "focus": "What needs to be true for the data stage to support the final decision cleanly?",
+          "work_to_complete": "Define the required fields for behavioral data and map them to the best available source for subscribers; Define the required fields for value-related data and map them to the best available source for subscribers; Define the required fields for historical outcome data and map them to the best available source for subscribers.",
+          "owners_and_sources": "Involve Data analyst, Data engineering or system owner, Analytics engineering and use CRM, billing, telemetry, usage logs.",
+          "risks_and_handoff": "Create Behavioral data source map with required fields and join keys, Value-related data source map with required fields and join keys; approvals: Data access approval, No approval needed; main risk: Field definitions for behavioral data are unclear or the source owner has not confirmed availability."
+        }
+      }
+    },
+    {
+      "title": "Experiment Design",
+      "why": "Specifies how to estimate causal impact cleanly and credibly.",
+      "breakdown": "Treatment setup: define the treatment, control, eligibility, and randomization unit before measuring lift\nMeasurement plan: set primary metric, guardrails, measurement window, and minimum detectable effect\nValidity guardrails: check contamination risk, selection bias, operational feasibility, and fairness or policy concerns\nOutput: A credible design for estimating incremental impact, not just correlation.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Experiment Design",
+        "node_description": "Specifies how to estimate causal impact cleanly and credibly.",
+        "node_breakdown": "Treatment setup: define the treatment, control, eligibility, and randomization unit before measuring lift\nMeasurement plan: set primary metric, guardrails, measurement window, and minimum detectable effect\nValidity guardrails: check contamination risk, selection bias, operational feasibility, and fairness or policy concerns\nOutput: A credible design for estimating incremental impact, not just correlation.",
+        "execution_summary": "The immediate goal is to translate the experiment design node into concrete work that can be assigned, executed, and reviewed without ambiguity.",
+        "key_question": "What needs to be true for the experiment design stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Node Translation: Convert the experiment design breakdown into concrete tasks, owners, and evidence needs. | Priority: high | Done when: Each major experiment design bucket is represented by executable work.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Handoff Readiness: Package the experiment design node so the next stage can start with minimal rework. | Priority: medium | Done when: The node has a clean output, owners, and unresolved questions clearly documented.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Experiment Design should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Specifies how to estimate causal impact cleanly and credibly.\nStructured scope: Treatment setup: define the treatment, control, eligibility, and randomization unit before measuring lift\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which part of the experiment design node still lacks a named owner or source?"
+        ],
+        "execution_items": [
+          {
+            "action": "Translate treatment setup into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "define the treatment, control, eligibility, and randomization unit before measuring lift",
+            "artifact": "Treatment setup working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current treatment setup scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate measurement plan into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "set primary metric, guardrails, measurement window, and minimum detectable effect",
+            "artifact": "Measurement plan working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current measurement plan scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate validity guardrails into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "check contamination risk, selection bias, operational feasibility, and fairness or policy concerns",
+            "artifact": "Validity guardrails working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current validity guardrails scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate output into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "A credible design for estimating incremental impact, not just correlation.",
+            "artifact": "Output working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current output scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Synthesize the experiment design work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": "Completed experiment design workstreams",
+            "artifact": "Experiment Design handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work."
+          }
+        ],
+        "output": "Focus: What needs to be true for the experiment design stage to support the final decision cleanly?\nWhat will be done: Translate treatment setup into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate measurement plan into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate validity guardrails into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.\nWho and where: Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use define the treatment, control, eligibility, and randomization unit before measuring lift; set primary metric, guardrails, measurement window, and minimum detectable effect.\nDeliverable and risk: Create Treatment setup working note with owners, inputs, and next-step decision, Measurement plan working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current treatment setup scope is still too broad to assign cleanly.",
+        "output_sections": {
+          "focus": "What needs to be true for the experiment design stage to support the final decision cleanly?",
+          "work_to_complete": "Translate treatment setup into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate measurement plan into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate validity guardrails into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use define the treatment, control, eligibility, and randomization unit before measuring lift; set primary metric, guardrails, measurement window, and minimum detectable effect.",
+          "risks_and_handoff": "Create Treatment setup working note with owners, inputs, and next-step decision, Measurement plan working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current treatment setup scope is still too broad to assign cleanly."
+        }
+      }
+    },
+    {
+      "title": "Decision",
+      "why": "Translates the analysis into a concrete business action, threshold, or targeting rule.",
+      "breakdown": "Targeting rule: choose which subscribers enter the intervention pool based on risk and value\nPrioritization: prioritize high-value and high-risk users when intervention capacity is limited\nAction rule: decide which subscribers receive retention outreach, what offer they get, and how aggressive the intervention should be\nGovernance: Define thresholds, ownership, and guardrails before rollout.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Decision",
+        "node_description": "Translates the analysis into a concrete business action, threshold, or targeting rule.",
+        "node_breakdown": "Targeting rule: choose which subscribers enter the intervention pool based on risk and value\nPrioritization: prioritize high-value and high-risk users when intervention capacity is limited\nAction rule: decide which subscribers receive retention outreach, what offer they get, and how aggressive the intervention should be\nGovernance: Define thresholds, ownership, and guardrails before rollout.",
+        "execution_summary": "The immediate goal is to translate the decision node into concrete work that can be assigned, executed, and reviewed without ambiguity.",
+        "key_question": "What needs to be true for the decision stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Node Translation: Convert the decision breakdown into concrete tasks, owners, and evidence needs. | Priority: high | Done when: Each major decision bucket is represented by executable work.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Handoff Readiness: Package the decision node so the next stage can start with minimal rework. | Priority: medium | Done when: The node has a clean output, owners, and unresolved questions clearly documented.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Decision should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Translates the analysis into a concrete business action, threshold, or targeting rule.\nStructured scope: Targeting rule: choose which subscribers enter the intervention pool based on risk and value\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which part of the decision node still lacks a named owner or source?"
+        ],
+        "execution_items": [
+          {
+            "action": "Translate targeting rule into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "choose which subscribers enter the intervention pool based on risk and value",
+            "artifact": "Targeting rule working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current targeting rule scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate prioritization into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "prioritize high-value and high-risk users when intervention capacity is limited",
+            "artifact": "Prioritization working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current prioritization scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate action rule into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "decide which subscribers receive retention outreach, what offer they get, and how aggressive the intervention should be",
+            "artifact": "Action rule working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current action rule scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate governance into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "Define thresholds, ownership, and guardrails before rollout.",
+            "artifact": "Governance working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current governance scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Synthesize the decision work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": "Completed decision workstreams",
+            "artifact": "Decision handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work."
+          }
+        ],
+        "output": "Focus: What needs to be true for the decision stage to support the final decision cleanly?\nWhat will be done: Translate targeting rule into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate prioritization into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate action rule into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.\nWho and where: Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use choose which subscribers enter the intervention pool based on risk and value; prioritize high-value and high-risk users when intervention capacity is limited.\nDeliverable and risk: Create Targeting rule working note with owners, inputs, and next-step decision, Prioritization working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current targeting rule scope is still too broad to assign cleanly.",
+        "output_sections": {
+          "focus": "What needs to be true for the decision stage to support the final decision cleanly?",
+          "work_to_complete": "Translate targeting rule into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate prioritization into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate action rule into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use choose which subscribers enter the intervention pool based on risk and value; prioritize high-value and high-risk users when intervention capacity is limited.",
+          "risks_and_handoff": "Create Targeting rule working note with owners, inputs, and next-step decision, Prioritization working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current targeting rule scope is still too broad to assign cleanly."
+        }
+      }
+    },
+    {
+      "title": "Result",
+      "why": "Summarizes the expected or observed performance so the recommendation is evidence-backed.",
+      "breakdown": "Business impact: retention lift, revenue saved, intervention cost, and performance by high-value segment\nSegment view: compare lift across high-value subscribers, moderate-risk users, and low-priority segments\nUncertainty: Show downside risk, confidence level, and major sensitivity assumptions.\nOutput: A concise results page linking expected lift to the decision recommendation.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Result",
+        "node_description": "Summarizes the expected or observed performance so the recommendation is evidence-backed.",
+        "node_breakdown": "Business impact: retention lift, revenue saved, intervention cost, and performance by high-value segment\nSegment view: compare lift across high-value subscribers, moderate-risk users, and low-priority segments\nUncertainty: Show downside risk, confidence level, and major sensitivity assumptions.\nOutput: A concise results page linking expected lift to the decision recommendation.",
+        "execution_summary": "The immediate goal is to translate the result node into concrete work that can be assigned, executed, and reviewed without ambiguity.",
+        "key_question": "What needs to be true for the result stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Node Translation: Convert the result breakdown into concrete tasks, owners, and evidence needs. | Priority: high | Done when: Each major result bucket is represented by executable work.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Handoff Readiness: Package the result node so the next stage can start with minimal rework. | Priority: medium | Done when: The node has a clean output, owners, and unresolved questions clearly documented.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Result should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Summarizes the expected or observed performance so the recommendation is evidence-backed.\nStructured scope: Business impact: retention lift, revenue saved, intervention cost, and performance by high-value segment\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which part of the result node still lacks a named owner or source?"
+        ],
+        "execution_items": [
+          {
+            "action": "Translate business impact into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "retention lift, revenue saved, intervention cost, and performance by high-value segment",
+            "artifact": "Business impact working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current business impact scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate segment view into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "compare lift across high-value subscribers, moderate-risk users, and low-priority segments",
+            "artifact": "Segment view working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current segment view scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate uncertainty into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "Show downside risk, confidence level, and major sensitivity assumptions.",
+            "artifact": "Uncertainty working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current uncertainty scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate output into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "A concise results page linking expected lift to the decision recommendation.",
+            "artifact": "Output working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current output scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Synthesize the result work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": "Completed result workstreams",
+            "artifact": "Result handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work."
+          }
+        ],
+        "output": "Focus: What needs to be true for the result stage to support the final decision cleanly?\nWhat will be done: Translate business impact into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate segment view into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate uncertainty into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.\nWho and where: Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use retention lift, revenue saved, intervention cost, and performance by high-value segment; compare lift across high-value subscribers, moderate-risk users, and low-priority segments.\nDeliverable and risk: Create Business impact working note with owners, inputs, and next-step decision, Segment view working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current business impact scope is still too broad to assign cleanly.",
+        "output_sections": {
+          "focus": "What needs to be true for the result stage to support the final decision cleanly?",
+          "work_to_complete": "Translate business impact into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate segment view into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate uncertainty into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use retention lift, revenue saved, intervention cost, and performance by high-value segment; compare lift across high-value subscribers, moderate-risk users, and low-priority segments.",
+          "risks_and_handoff": "Create Business impact working note with owners, inputs, and next-step decision, Segment view working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current business impact scope is still too broad to assign cleanly."
+        }
+      }
+    },
+    {
+      "title": "Takeaway",
+      "why": "Packages the final message into the clearest recommendation, caveats, and next steps.",
+      "breakdown": "Bottom line: Summarize the best path forward for subscribers.\nRecommendation: State the clearest action and why it wins versus alternatives.\nCaveats: State the biggest assumptions, blind spots, and operational risks.\nNext step: Name the immediate decision or experiment to run.",
+      "suggested_context": "No Additional Suggested Item",
+      "build": {
+        "node_name": "Takeaway",
+        "node_description": "Packages the final message into the clearest recommendation, caveats, and next steps.",
+        "node_breakdown": "Bottom line: Summarize the best path forward for subscribers.\nRecommendation: State the clearest action and why it wins versus alternatives.\nCaveats: State the biggest assumptions, blind spots, and operational risks.\nNext step: Name the immediate decision or experiment to run.",
+        "execution_summary": "The immediate goal is to translate the takeaway node into concrete work that can be assigned, executed, and reviewed without ambiguity.",
+        "key_question": "What needs to be true for the takeaway stage to support the final decision cleanly?",
+        "workstreams": [
+          {
+            "name": "Node Translation: Convert the takeaway breakdown into concrete tasks, owners, and evidence needs. | Priority: high | Done when: Each major takeaway bucket is represented by executable work.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          },
+          {
+            "name": "Handoff Readiness: Package the takeaway node so the next stage can start with minimal rework. | Priority: medium | Done when: The node has a clean output, owners, and unresolved questions clearly documented.",
+            "purpose": "",
+            "priority": "",
+            "completion_criteria": ""
+          }
+        ],
+        "extracted_context": "Problem link: Takeaway should support the core question 'You are working with a telecom company (mobile + broadband) with ~8M subscribers across multiple regions. Over the past 6 months, the company has seen a 2\u20133% increase in monthly churn, especially in mid-tenure customers (6\u201318 months).\n\nThe CEO is concerned because:\n\nCustomer acquisition cost (CAC) is rising\nNetwork investment is ongoing but not translating into retention\nCompetitors are offering aggressive pricing bundles'.\nNode role: Packages the final message into the clearest recommendation, caveats, and next steps.\nStructured scope: Bottom line: Summarize the best path forward for subscribers.\nProblem type lens: Experiment / Causal Question.",
+        "open_questions": [
+          "Which part of the takeaway node still lacks a named owner or source?"
+        ],
+        "execution_items": [
+          {
+            "action": "Translate bottom line into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "Summarize the best path forward for subscribers.",
+            "artifact": "Bottom line working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current bottom line scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate recommendation into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "State the clearest action and why it wins versus alternatives.",
+            "artifact": "Recommendation working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current recommendation scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate caveats into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "State the biggest assumptions, blind spots, and operational risks.",
+            "artifact": "Caveats working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current caveats scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Translate next step into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+            "owner": "Analytics lead",
+            "collaborator": "Relevant business owner",
+            "source": "Name the immediate decision or experiment to run.",
+            "artifact": "Next step working note with owners, inputs, and next-step decision",
+            "approval": "No approval needed",
+            "blockers": "The current next step scope is still too broad to assign cleanly."
+          },
+          {
+            "action": "Synthesize the takeaway work into one handoff that the next roadmap stage can use without repeating discovery work.",
+            "owner": "Data analyst",
+            "collaborator": "Analytics lead",
+            "source": "Completed takeaway workstreams",
+            "artifact": "Takeaway handoff brief",
+            "approval": "No approval needed",
+            "blockers": "The node output is still phrased as summary rather than executable work."
+          }
+        ],
+        "output": "Focus: What needs to be true for the takeaway stage to support the final decision cleanly?\nWhat will be done: Translate bottom line into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate recommendation into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate caveats into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.\nWho and where: Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use Summarize the best path forward for subscribers.; State the clearest action and why it wins versus alternatives..\nDeliverable and risk: Create Bottom line working note with owners, inputs, and next-step decision, Recommendation working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current bottom line scope is still too broad to assign cleanly.",
+        "output_sections": {
+          "focus": "What needs to be true for the takeaway stage to support the final decision cleanly?",
+          "work_to_complete": "Translate bottom line into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate recommendation into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed; Translate caveats into a concrete workstream by clarifying what must be reviewed, who should be involved, and what evidence is needed.",
+          "owners_and_sources": "Involve Analytics lead, Data analyst, Relevant business owner, Analytics lead and use Summarize the best path forward for subscribers.; State the clearest action and why it wins versus alternatives..",
+          "risks_and_handoff": "Create Bottom line working note with owners, inputs, and next-step decision, Recommendation working note with owners, inputs, and next-step decision; approvals: No approval needed; main risk: The current bottom line scope is still too broad to assign cleanly."
+        }
+      }
+    }
+  ]
+}
