@@ -66,10 +66,10 @@
         <header class="workspace-header">
           <div>
             <p class="eyebrow">Agentic Business-to-Analytics Translator</p>
-            <h2 class="workspace-title">Clarify the problem, build the roadmap, then operationalize the work.</h2>
+            <h2 class="workspace-title">Translate ambiguous business asks into a structured analytical workflow.</h2>
             <p class="workspace-copy">
-              This workspace helps business teams and analytics teams align on what the question really is,
-              what context is missing, and how the analysis should be structured.
+              Start with the real question in plain language, pressure-test the framing, and turn it into a roadmap
+              the analytics team can actually execute.
             </p>
           </div>
           <div class="workspace-status">
@@ -86,139 +86,232 @@
 
         <main class="workspace-board">
           <section id="step-problem" class="step-panel active">
-            <div class="board-hero">
-              <div>
-                <div class="step-label">Step 1</div>
-                <h2>Start With the Main Question</h2>
-                <p class="section-copy">
-                  Capture the business ask in plain language, then add any supporting context that will make the AI-generated framework sharper.
+            <div class="step-home-shell">
+              <div class="step-home-copy">
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Frame the question</p>
+                <h2 class="step-home-title">What business question are you actually trying to answer?</h2>
+                <p class="step-home-lede">
+                  Write it the way a colleague would say it out loud. Keep it plain, concrete, and close to the real business ask.
+                  Strenaysis will turn it into a roadmap in the next step.
                 </p>
               </div>
-              <div class="section-heading-actions">
-                <span id="start-roadmap-status" class="analysis-status" hidden>
-                  <span class="analysis-status-spinner" aria-hidden="true"></span>
-                  <span class="analysis-status-text">Analyzing question</span>
-                </span>
-                <div class="board-hero-badge">Main Question</div>
-              </div>
-            </div>
-            <div class="problem-layout problem-layout-single">
-              <section class="board-card board-card-emphasis">
-                <div class="card-heading">
+
+              <div class="step-home-grid">
+                <section class="board-card board-card-emphasis step-composer-card" aria-label="Main Question Composer">
                   <div>
-                    <p class="card-label">Primary Input</p>
-                    <h3>Core Question</h3>
+                    <p class="card-label">Main Question</p>
+                    <h3>Frame the ask in business language</h3>
+                    <p class="section-copy step-composer-copy">
+                      Keep this to the single core question. We will classify the problem type and build the roadmap after this step.
+                    </p>
                   </div>
+                  <label class="field-label composer-label" for="problem-input">
+                    Problem to Solve
+                    <span class="composer-required">Required</span>
+                  </label>
+                  <textarea
+                    id="problem-input"
+                    class="step-composer-input"
+                    rows="5"
+                    maxlength="600"
+                    placeholder="Example: How should we evaluate whether launching a premium recommendation feature will improve subscription revenue?"
+                  ></textarea>
+                  <div class="step-example-row" aria-label="Example prompts">
+                    <button class="step-example" type="button" data-problem-example="How should we evaluate whether launching a premium recommendation feature will improve subscription revenue?">Subscription revenue</button>
+                    <button class="step-example" type="button" data-problem-example="Which early-tenure customer cohort is driving our recent churn increase, and why?">Churn diagnosis</button>
+                    <button class="step-example" type="button" data-problem-example="Why is onboarding completion lower on mobile than on web, and which changes are most likely to improve it?">Onboarding gap</button>
+                  </div>
+                  <div class="step-composer-footer">
+                    <div class="step-composer-meta">
+                      <span id="problem-char-counter" class="composer-counter">Type a question to continue</span>
+                      <span class="composer-shortcut">Ctrl + Enter to continue</span>
+                    </div>
+                    <div class="section-heading-actions">
+                      <span id="start-roadmap-status" class="analysis-status" hidden>
+                        <span class="analysis-status-spinner" aria-hidden="true"></span>
+                        <span class="analysis-status-text">Analyzing question</span>
+                      </span>
+                      <button id="start-roadmap" class="primary-button" type="button">Start to Build the Structure</button>
+                    </div>
+                  </div>
+                </section>
+
+                <aside class="step-home-rail">
+                  <section class="board-card step-home-rail-card">
+                    <p class="card-label">What Happens Next</p>
+                    <h3>From question to workflow</h3>
+                    <div class="step-home-checklist">
+                      <article class="step-home-check">
+                        <span class="step-home-check-index">1</span>
+                        <div>
+                          <strong>Classify the problem</strong>
+                          <p>We place the question into the right analysis mode before proposing methods.</p>
+                        </div>
+                      </article>
+                      <article class="step-home-check">
+                        <span class="step-home-check-index">2</span>
+                        <div>
+                          <strong>Build the roadmap</strong>
+                          <p>You review, edit, and confirm the framework sequence before going deeper.</p>
+                        </div>
+                      </article>
+                      <article class="step-home-check">
+                        <span class="step-home-check-index">3</span>
+                        <div>
+                          <strong>Turn it into execution</strong>
+                          <p>Each node becomes action items, blockers, ownership, and next-step planning.</p>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                </aside>
+              </div>
+
+              <section class="board-card step-recent-card" aria-label="Recent Local Framings">
+                <div class="step-recent-head">
+                  <div>
+                    <p class="card-label">Recent Local Framings</p>
+                    <h3>Continue from earlier work</h3>
+                  </div>
+                  <span id="problem-recent-count" class="status-chip">Loading...</span>
                 </div>
-                <label class="field-label" for="problem-input">Problem to Solve</label>
-                <textarea
-                  id="problem-input"
-                  rows="5"
-                  placeholder="Example: How should we evaluate whether launching a premium recommendation feature will improve subscription revenue?"
-                ></textarea>
+                <div id="problem-recent-list" class="step-recent-list">
+                  <article class="step-recent-empty">
+                    Loading saved problem structures...
+                  </article>
+                </div>
               </section>
-            </div>
-            <div class="action-row">
-              <button id="start-roadmap" class="primary-button">Start to Build the Structure</button>
             </div>
           </section>
 
           <section id="step-roadmap" class="step-panel">
-            <div class="board-hero">
-              <div>
-                <div class="step-label">Step 2</div>
-                <h2>Roadmap Workspace</h2>
-                <p class="section-copy">
-                  Keep the question editable, review the recommended analysis type, and shape the roadmap before moving into the deeper build.
+            <div class="roadmap-header">
+              <div class="roadmap-header-copy">
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 2 of 4 - Shape the roadmap</p>
+                <h2 class="roadmap-header-title">Review the question, choose the framing, and work through the nodes that still need context.</h2>
+                <p class="roadmap-header-lede">
+                  Keep the question editable, pressure-test the problem type, then open any roadmap node to capture the follow-up memory that should guide the next build step.
                 </p>
               </div>
-              <div class="board-hero-badge">Roadmap Buildup</div>
+              <div class="roadmap-header-status">
+                <span id="roadmap-source" class="status-chip"></span>
+                <div class="board-hero-badge">Roadmap Workspace</div>
+              </div>
             </div>
 
             <div class="roadmap-stack">
-              <section class="board-card board-section">
-                <div class="section-heading">
-                  <div>
-                    <p class="card-label">Question Glossary</p>
-                    <h3>Main Question</h3>
-                    <p class="section-copy">
-                      Keep the question editable here so the framework stays grounded in the business problem.
-                    </p>
+              <div class="roadmap-top-grid">
+                <section class="board-card board-section roadmap-question-panel">
+                  <div class="section-heading">
+                    <div>
+                      <p class="card-label">Current Question</p>
+                      <h3>Tighten the business ask</h3>
+                      <p class="section-copy">
+                        The roadmap references the latest version of the question below, so keep it grounded in the real business decision.
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div class="section-toolbar section-toolbar-left">
-                  <span id="glossary-status" class="analysis-status" hidden>
-                    <span class="analysis-status-spinner" aria-hidden="true"></span>
-                    <span class="analysis-status-text">Refreshing glossary</span>
-                  </span>
-                  <span id="roadmap-source" class="status-chip"></span>
-                  <button id="refresh-question" class="secondary-button">Refresh Question</button>
-                </div>
-                <div class="roadmap-card-body">
-                  <div class="editor-card roadmap-main-question-card">
-                    <label class="field-label" for="roadmap-problem-input">Core Question</label>
-                    <textarea
-                      id="roadmap-problem-input"
-                      rows="6"
-                      placeholder="Refine the question here before confirming the roadmap."
-                    ></textarea>
+                  <div class="section-toolbar section-toolbar-left roadmap-question-toolbar">
+                    <span id="glossary-status" class="analysis-status" hidden>
+                      <span class="analysis-status-spinner" aria-hidden="true"></span>
+                      <span class="analysis-status-text">Refreshing glossary</span>
+                    </span>
+                    <button id="refresh-question" class="secondary-button" type="button">Refresh Question</button>
                   </div>
-                </div>
-                <textarea
-                  id="roadmap-problem-details-input"
-                  class="visually-hidden"
-                  rows="4"
-                  placeholder="Add more context for this problem so the roadmap can be more precise."
-                ></textarea>
-                <div id="roadmap-problem-details-preview" class="visually-hidden"></div>
-                <button id="open-roadmap-problem-details" class="visually-hidden" type="button">Insert Details</button>
-              </section>
-              <section class="board-card board-section">
-                <div class="section-heading">
-                  <div>
-                    <p class="card-label">Review &amp; Assessment</p>
-                    <h3>Problem Assessment</h3>
-                    <p class="section-copy">
-                      Identify the problem type, see the reasoning behind it, and keep the roadmap aligned with that framing before you confirm the sequence.
-                    </p>
+                  <div class="roadmap-card-body">
+                    <div class="editor-card roadmap-main-question-card">
+                      <label class="field-label" for="roadmap-problem-input">Main Question</label>
+                      <textarea
+                        id="roadmap-problem-input"
+                        rows="6"
+                        placeholder="Refine the question here before confirming the roadmap."
+                      ></textarea>
+                    </div>
                   </div>
-                </div>
-                <div class="section-toolbar section-toolbar-left">
-                  <span id="assessment-status" class="analysis-status" hidden>
-                    <span class="analysis-status-spinner" aria-hidden="true"></span>
-                    <span class="analysis-status-text">Reviewing problem type</span>
-                  </span>
-                </div>
-                <div class="roadmap-card-body">
+                  <textarea
+                    id="roadmap-problem-details-input"
+                    class="visually-hidden"
+                    rows="4"
+                    placeholder="Add more context for this problem so the roadmap can be more precise."
+                  ></textarea>
+                  <div id="roadmap-problem-details-preview" class="visually-hidden"></div>
+                  <button id="open-roadmap-problem-details" class="visually-hidden" type="button">Insert Details</button>
+                </section>
+
+                <section class="board-card board-section roadmap-assessment-panel">
+                  <div class="section-heading">
+                    <div>
+                      <p class="card-label">Problem Assessment</p>
+                      <h3>Choose the analytical framing</h3>
+                      <p class="section-copy">
+                        Keep the roadmap aligned with the kind of question you are actually trying to answer.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="section-toolbar section-toolbar-left">
+                    <span id="assessment-status" class="analysis-status" hidden>
+                      <span class="analysis-status-spinner" aria-hidden="true"></span>
+                      <span class="analysis-status-text">Reviewing problem type</span>
+                    </span>
+                  </div>
                   <div class="assessment-card">
-                    <div class="assessment-type-wrap">
-                      <div class="assessment-label">Problem Type</div>
-                      <select id="assessment-type" class="assessment-type-select">
-                        <option value="descriptive_analysis">Descriptive Analysis</option>
-                        <option value="predictive_modeling">Predictive Modeling</option>
-                        <option value="experiment_causal_question">Experiment / Causal Question</option>
-                        <option value="operational_optimization">Operational Optimization</option>
-                      </select>
-                      <button id="update-roadbuild" class="secondary-button" type="button">Update Roadbuild</button>
+                    <div class="assessment-choice-stack" role="radiogroup" aria-label="Problem Type">
+                      <button class="assessment-choice-card" type="button" data-problem-type-option="descriptive_analysis">
+                        <span class="assessment-choice-radio" aria-hidden="true"></span>
+                        <span class="assessment-choice-copy">
+                          <strong>Descriptive Analysis</strong>
+                          <span>Clarify what is happening, where it is happening, and which business factors appear to explain it.</span>
+                        </span>
+                      </button>
+                      <button class="assessment-choice-card" type="button" data-problem-type-option="predictive_modeling">
+                        <span class="assessment-choice-radio" aria-hidden="true"></span>
+                        <span class="assessment-choice-copy">
+                          <strong>Predictive Modeling</strong>
+                          <span>Estimate future outcomes or identify which cases are most likely to require attention next.</span>
+                        </span>
+                      </button>
+                      <button class="assessment-choice-card" type="button" data-problem-type-option="experiment_causal_question">
+                        <span class="assessment-choice-radio" aria-hidden="true"></span>
+                        <span class="assessment-choice-copy">
+                          <strong>Experiment / Causal Question</strong>
+                          <span>Test whether an action, feature, or intervention actually causes business results to move.</span>
+                        </span>
+                      </button>
+                      <button class="assessment-choice-card" type="button" data-problem-type-option="operational_optimization">
+                        <span class="assessment-choice-radio" aria-hidden="true"></span>
+                        <span class="assessment-choice-copy">
+                          <strong>Operational Optimization</strong>
+                          <span>Choose the best allocation, sequencing, or operational policy under real constraints and tradeoffs.</span>
+                        </span>
+                      </button>
                     </div>
                     <div class="assessment-copy">
-                      <label class="field-label" for="assessment-title">Explanation</label>
+                      <div class="assessment-copy-top">
+                        <label class="field-label" for="assessment-title">Why This Framing Fits</label>
+                        <button id="update-roadbuild" class="secondary-button" type="button">Update Roadbuild</button>
+                      </div>
                       <textarea id="assessment-title" rows="3" readonly></textarea>
                       <label class="field-label" for="assessment-recap">Interview Recap</label>
                       <textarea id="assessment-recap" rows="6" readonly></textarea>
                     </div>
+                    <select id="assessment-type" class="visually-hidden">
+                      <option value="descriptive_analysis">Descriptive Analysis</option>
+                      <option value="predictive_modeling">Predictive Modeling</option>
+                      <option value="experiment_causal_question">Experiment / Causal Question</option>
+                      <option value="operational_optimization">Operational Optimization</option>
+                    </select>
                   </div>
-                </div>
-              </section>
+                </section>
+              </div>
             </div>
 
-            <section class="board-card board-section">
-              <div class="section-heading">
+            <section class="board-card board-section roadmap-sequence-panel">
+              <div class="section-heading roadmap-sequence-heading">
                 <div>
                   <p class="card-label">Roadmap Buildup</p>
                   <h3>Framework Sequence</h3>
                   <p class="section-copy">
-                    Review the recommended sequence, open any node to edit its contents, and only confirm once the structure feels right.
+                    Review the proposed sequence, open any node to capture follow-up coverage, and only confirm once the structure feels right.
                   </p>
                 </div>
                 <div class="roadmap-confirm-wrap">
@@ -230,10 +323,15 @@
                   <button id="confirm-roadmap" class="primary-button roadmap-confirm-button">Confirm This Is the Roadmap</button>
                 </div>
               </div>
-              <div class="roadmap-toolbar">
-                <button id="edit-sequence" class="secondary-button" type="button">Edit the Sequence</button>
-                <button id="save-sequence" class="primary-button" type="button" hidden>Save Sequence</button>
-                <div id="delete-sequence-zone" class="delete-sequence-zone" hidden>Drop Here to Remove</div>
+              <div class="roadmap-toolbar-wrap">
+                <div class="roadmap-toolbar">
+                  <button id="edit-sequence" class="secondary-button" type="button">Edit the Sequence</button>
+                  <button id="save-sequence" class="primary-button" type="button" hidden>Save Sequence</button>
+                  <div id="delete-sequence-zone" class="delete-sequence-zone" hidden>Drop Here to Remove</div>
+                </div>
+                <div class="roadmap-progress-inline">
+                  <span id="roadmap-progress-copy" class="roadmap-progress-copy">No roadmap yet.</span>
+                </div>
               </div>
               <div id="roadmap-list" class="roadmap-list"></div>
               <div id="add-node-card" class="add-node-card add-node-card-inline">
@@ -582,6 +680,10 @@
               <div class="node-title-row">
                 <h3 class="node-title-text"></h3>
                 <span class="node-state-chip"></span>
+              </div>
+              <p class="node-summary-copy"></p>
+              <div class="node-summary-meta">
+                <span class="node-followup-chip"></span>
               </div>
             </div>
             <div class="node-header-actions">

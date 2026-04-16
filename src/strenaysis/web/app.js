@@ -32,6 +32,9 @@ const problemDetailsInput = document.getElementById("problem-details-input");
 const problemDetailsPreview = document.getElementById("problem-details-preview");
 const openProblemDetailsButton = document.getElementById("open-problem-details");
 const startRoadmapButton = document.getElementById("start-roadmap");
+const problemCharCounter = document.getElementById("problem-char-counter");
+const problemRecentCount = document.getElementById("problem-recent-count");
+const problemRecentList = document.getElementById("problem-recent-list");
 const roadmapList = document.getElementById("roadmap-list");
 const confirmRoadmapButton = document.getElementById("confirm-roadmap");
 const openRoadmapLogButton = document.getElementById("open-roadmap-log");
@@ -39,6 +42,7 @@ const editSequenceButton = document.getElementById("edit-sequence");
 const saveSequenceButton = document.getElementById("save-sequence");
 const deleteSequenceZone = document.getElementById("delete-sequence-zone");
 const roadmapSource = document.getElementById("roadmap-source");
+const roadmapProgressCopy = document.getElementById("roadmap-progress-copy");
 const roadmapProblemInput = document.getElementById("roadmap-problem-input");
 const roadmapProblemDetailsInput = document.getElementById("roadmap-problem-details-input");
 const roadmapProblemDetailsPreview = document.getElementById("roadmap-problem-details-preview");
@@ -51,6 +55,7 @@ const assessmentRecap = document.getElementById("assessment-recap");
 const assessmentHighPriority = document.getElementById("assessment-high-priority");
 const assessmentMediumPriority = document.getElementById("assessment-medium-priority");
 const assessmentLowPriority = document.getElementById("assessment-low-priority");
+const assessmentChoiceButtons = Array.from(document.querySelectorAll(".assessment-choice-card"));
   const newNodeDraft = document.getElementById("new-node-draft");
   const addNodeCard = document.getElementById("add-node-card");
   const openAddNodeButton = document.getElementById("open-add-node");
@@ -192,9 +197,11 @@ const detailBuildStatus = document.getElementById("detail-build-status");
 const outputStatus = document.getElementById("output-status");
 const sidebarNavItems = Array.from(document.querySelectorAll(".nav-item"));
 const problemSubsteps = Array.from(document.querySelectorAll(".nav-substep"));
+const stepExampleButtons = Array.from(document.querySelectorAll(".step-example"));
 const sectionToggles = Array.from(document.querySelectorAll(".section-toggle"));
 const contextHelpButtons = Array.from(document.querySelectorAll(".context-help-button"));
 const NO_ADDITIONAL_SUGGESTED_ITEM = "No Additional Suggested Item";
+const STEP_ONE_MAX_CHARS = 600;
 
 const analysisStatusMap = {
   startRoadmap: startRoadmapStatus,
@@ -317,11 +324,41 @@ addWorkItemButton.addEventListener("click", () => {
   autoResizeAll();
 });
 
+if (problemInput) {
+  problemInput.addEventListener("input", updateStepOneComposerState);
+}
+
+stepExampleButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const example = button.dataset.problemExample || "";
+    problemInput.value = example;
+    updateStepOneComposerState();
+    problemInput.focus();
+  });
+});
+
+assessmentChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const value = button.dataset.problemTypeOption;
+    if (!value || !assessmentType) {
+      return;
+    }
+    assessmentType.value = value;
+    state.problemTypeKey = value;
+    updateAssessmentFields();
+  });
+});
+
 startRoadmapButton.addEventListener("click", async () => {
   const problem = problemInput.value.trim();
+  const rawLength = problemInput.value.length;
   const problemDetails = problemDetailsInput?.value.trim() || state.problemDetails || "";
   if (!problem) {
     window.alert("Please add a problem to solve first.");
+    return;
+  }
+  if (rawLength > STEP_ONE_MAX_CHARS) {
+    window.alert(`Please keep the main question under ${STEP_ONE_MAX_CHARS} characters before continuing.`);
     return;
   }
 
@@ -443,6 +480,13 @@ saveDetailsModalButton.addEventListener("click", () => {
   closeDetailsModal();
 });
 document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && state.activeProblemPanel === "problem") {
+    if (!startRoadmapButton.disabled) {
+      event.preventDefault();
+      startRoadmapButton.click();
+      return;
+    }
+  }
   if (event.key === "Escape" && !detailsModal.hidden) {
     closeDetailsModal();
   }
@@ -796,24 +840,29 @@ problemSubsteps.forEach((item) => {
     const shell = fragment.querySelector(".roadmap-node-shell");
     const order = fragment.querySelector(".node-order");
     const titleText = fragment.querySelector(".node-title-text");
+    const summaryCopy = fragment.querySelector(".node-summary-copy");
+    const followupChip = fragment.querySelector(".node-followup-chip");
     const stateChip = fragment.querySelector(".node-state-chip");
     const openNode = fragment.querySelector(".open-node");
-    const position = getRoadmapPosition(index);
-    const connector = getRoadmapConnector(index, state.roadmap.length);
 
     const isComplete = isNoAdditionalSuggestedItem(node.suggested_context || "");
+    const followUpCount = normalizeNodeFollowUpThreads(node).reduce(
+      (total, thread) => total + (Array.isArray(thread.responses) ? thread.responses.length : 0),
+      0,
+    );
     row.classList.toggle("is-draggable", state.sequenceEditMode);
     row.draggable = state.sequenceEditMode;
     row.dataset.nodeId = node.id;
-    row.style.gridColumnStart = String(position.column);
-    row.style.gridRowStart = String(position.row);
-    row.classList.toggle("connector-right", connector === "right");
-    row.classList.toggle("connector-left", connector === "left");
-    row.classList.toggle("connector-down", connector === "down");
     shell.classList.toggle("is-complete", isComplete);
     shell.classList.toggle("needs-attention", !isComplete);
     order.textContent = `${index + 1}`;
     titleText.textContent = node.title;
+    summaryCopy.textContent = compactFollowUpText(node.why || "Open this node to review its framing and saved follow-up coverage.", 132);
+    followupChip.textContent = isComplete
+      ? `${followUpCount || 0} saved responses`
+      : (node.suggested_context || "Needs follow-up context");
+    followupChip.classList.toggle("is-complete", isComplete);
+    followupChip.classList.toggle("needs-attention", !isComplete);
     stateChip.textContent = isComplete ? "Ready" : "Needs Context";
     stateChip.classList.toggle("is-complete", isComplete);
     stateChip.classList.toggle("needs-attention", !isComplete);
@@ -864,11 +913,15 @@ problemSubsteps.forEach((item) => {
       roadmapList.appendChild(row);
     });
     if (addNodeCard) {
-      const nextPosition = getRoadmapPosition(state.roadmap.length);
       addNodeCard.classList.toggle("is-disabled", state.sequenceEditMode);
-      addNodeCard.style.gridColumn = String(nextPosition.column);
-      addNodeCard.style.gridRowStart = String(nextPosition.row);
       roadmapList.appendChild(addNodeCard);
+    }
+    if (roadmapProgressCopy) {
+      const total = state.roadmap.length;
+      const ready = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
+      roadmapProgressCopy.textContent = total
+        ? `${ready} of ${total} nodes currently settled.`
+        : "No roadmap yet.";
     }
     refreshRoadmapCompletionState();
     updateAssessmentPrioritySummary();
@@ -1231,6 +1284,67 @@ async function loadProfileHistory() {
   }
 }
 
+async function loadStepOneRecentProblems() {
+  if (!problemRecentList || !problemRecentCount) {
+    return;
+  }
+  problemRecentCount.textContent = "Loading...";
+  problemRecentList.innerHTML = `
+    <article class="step-recent-empty">
+      Loading saved problem structures...
+    </article>
+  `;
+  try {
+    const response = await fetch("/api/problem-framings");
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Unable to load saved problem structures.");
+    }
+    renderStepOneRecentProblems(payload.items || []);
+  } catch (error) {
+    problemRecentCount.textContent = "Unavailable";
+    problemRecentList.innerHTML = `
+      <article class="step-recent-empty">${escapeHtml(error.message)}</article>
+    `;
+  }
+}
+
+function renderStepOneRecentProblems(items) {
+  if (!problemRecentList || !problemRecentCount) {
+    return;
+  }
+  const recentItems = items.slice(0, 4);
+  problemRecentCount.textContent = items.length ? `${items.length} saved` : "No saved items";
+  if (!recentItems.length) {
+    problemRecentList.innerHTML = `
+      <article class="step-recent-empty">
+        No saved problem structures yet. Once you save a framing locally, it will show up here.
+      </article>
+    `;
+    return;
+  }
+
+  problemRecentList.innerHTML = "";
+  recentItems.forEach((item) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "step-recent-row";
+    row.innerHTML = `
+      <span class="step-recent-status" aria-hidden="true"></span>
+      <span class="step-recent-main">
+        <span class="step-recent-title">${escapeHtml(item.problem_name || item.problem || "Untitled problem framing")}</span>
+        <span class="step-recent-meta">
+          <span class="step-recent-tag">${escapeHtml(item.problem_type || "Not set")}</span>
+          <span class="step-recent-tag">${escapeHtml(item.priority || "Medium")}</span>
+        </span>
+      </span>
+      <span class="step-recent-date">${escapeHtml(formatSavedDate(item.saved_at))}</span>
+    `;
+    row.addEventListener("click", () => openProfileItem(item.filename));
+    problemRecentList.appendChild(row);
+  });
+}
+
 async function loadActionProblems() {
   setAnalysisStatus(["actions"], true, "Loading action workspace");
   actionsOverview.innerHTML = "";
@@ -1577,9 +1691,13 @@ function showPanel(name) {
   problemSubsteps.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.problemStep === state.activeProblemPanel);
   });
+  if (name === "problem") {
+    loadStepOneRecentProblems();
+  }
   requestAnimationFrame(() => {
     autoResizeAll();
     updateAssessmentFields();
+    updateStepOneComposerState();
   });
 }
 
@@ -1634,6 +1752,7 @@ async function generateRoadmap(problem, options) {
     roadmapProblemDetailsInput.value = state.problemDetails;
     updateAssessmentFields();
     updateProblemDetailsPreviews();
+    updateStepOneComposerState();
     resetNewNodeDraft();
     renderRoadmapEditor();
     roadmapSource.textContent =
@@ -1835,6 +1954,14 @@ function updateAssessmentFields() {
   assessmentType.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
   assessmentTitle.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
   assessmentType.classList.add(`assessment-${assessmentState}`);
+  assessmentChoiceButtons.forEach((button) => {
+    const value = button.dataset.problemTypeOption || "";
+    const isSelected = value === assessmentType.value;
+    const isRecommended = value === (state.inferredProblemTypeKey || "");
+    button.classList.toggle("is-selected", isSelected);
+    button.classList.toggle("is-recommended", isRecommended);
+    button.setAttribute("aria-pressed", String(isSelected));
+  });
   assessmentTitle.value = state.assessmentTitle || "No explanation yet.";
   assessmentTitle.classList.add(`assessment-${assessmentState}`);
   assessmentRecap.value = state.assessmentRecap || "No interview recap yet.";
@@ -2248,6 +2375,24 @@ function updateProblemDetailsPreviews() {
     preview.classList.toggle("empty", !value);
     preview.classList.toggle("has-content", Boolean(value));
   });
+}
+
+function updateStepOneComposerState() {
+  if (!problemInput || !startRoadmapButton || !problemCharCounter) {
+    return;
+  }
+  const rawLength = problemInput.value.length;
+  const trimmedLength = problemInput.value.trim().length;
+  const isOverLimit = rawLength > STEP_ONE_MAX_CHARS;
+  if (!trimmedLength) {
+    problemCharCounter.textContent = "Type a question to continue";
+  } else if (isOverLimit) {
+    problemCharCounter.textContent = `${rawLength} / ${STEP_ONE_MAX_CHARS} - over the limit`;
+  } else {
+    problemCharCounter.textContent = `${rawLength} / ${STEP_ONE_MAX_CHARS}`;
+  }
+  problemCharCounter.classList.toggle("is-over-limit", isOverLimit);
+  startRoadmapButton.disabled = !trimmedLength || isOverLimit;
 }
 
 function collectWorkItems() {
@@ -2919,3 +3064,5 @@ updateAssessmentFields();
 updateProblemDetailsPreviews();
 refreshRoadmapCompletionState();
 updateAssessmentPrioritySummary();
+updateStepOneComposerState();
+loadStepOneRecentProblems();
