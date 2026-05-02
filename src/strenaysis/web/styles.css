@@ -1140,7 +1140,6 @@ button:disabled {
   position: sticky;
   top: 12px;
   z-index: 24;
-  align-items: flex-start;
   margin-bottom: 18px;
   padding: 10px 0 14px;
   background:
@@ -2202,21 +2201,33 @@ body {
   padding: 20px 22px 28px;
 }
 
-.workspace-shell[data-active-problem-panel="problem"] {
+.workspace-shell[data-active-problem-panel="problem"],
+.workspace-shell[data-active-problem-panel="roadmap"],
+.workspace-shell[data-active-problem-panel="details"],
+.workspace-shell[data-active-problem-panel="summary"] {
   padding-top: 10px;
 }
 
-.app-shell[data-active-problem-panel="problem"] .sidebar {
+.app-shell[data-active-problem-panel="problem"] .sidebar,
+.app-shell[data-active-problem-panel="roadmap"] .sidebar,
+.app-shell[data-active-problem-panel="details"] .sidebar,
+.app-shell[data-active-problem-panel="summary"] .sidebar {
   gap: 20px;
   padding: 28px 16px 20px;
   background: #ffffff;
 }
 
-.app-shell[data-active-problem-panel="problem"] .sidebar-brand {
+.app-shell[data-active-problem-panel="problem"] .sidebar-brand,
+.app-shell[data-active-problem-panel="roadmap"] .sidebar-brand,
+.app-shell[data-active-problem-panel="details"] .sidebar-brand,
+.app-shell[data-active-problem-panel="summary"] .sidebar-brand {
   align-items: flex-start;
 }
 
-.app-shell[data-active-problem-panel="problem"] .brand-mark {
+.app-shell[data-active-problem-panel="problem"] .brand-mark,
+.app-shell[data-active-problem-panel="roadmap"] .brand-mark,
+.app-shell[data-active-problem-panel="details"] .brand-mark,
+.app-shell[data-active-problem-panel="summary"] .brand-mark {
   width: 36px;
   height: 36px;
   border-radius: 11px;
@@ -2224,13 +2235,19 @@ body {
   font-size: 1rem;
 }
 
-.app-shell[data-active-problem-panel="problem"] .sidebar-label {
+.app-shell[data-active-problem-panel="problem"] .sidebar-label,
+.app-shell[data-active-problem-panel="roadmap"] .sidebar-label,
+.app-shell[data-active-problem-panel="details"] .sidebar-label,
+.app-shell[data-active-problem-panel="summary"] .sidebar-label {
   font-size: 0.72rem;
   letter-spacing: 0;
   text-transform: none;
 }
 
-.app-shell[data-active-problem-panel="problem"] .sidebar-title {
+.app-shell[data-active-problem-panel="problem"] .sidebar-title,
+.app-shell[data-active-problem-panel="roadmap"] .sidebar-title,
+.app-shell[data-active-problem-panel="details"] .sidebar-title,
+.app-shell[data-active-problem-panel="summary"] .sidebar-title {
   margin: 0;
   font-size: 0.88rem;
   font-weight: 500;
@@ -2241,9 +2258,61 @@ body {
   display: none;
 }
 
-.app-shell[data-active-problem-panel="problem"] .step1-sidebar-shell {
+.app-shell[data-active-problem-panel="problem"] .step1-sidebar-shell,
+.app-shell[data-active-problem-panel="roadmap"] .step1-sidebar-shell,
+.app-shell[data-active-problem-panel="details"] .step1-sidebar-shell,
+.app-shell[data-active-problem-panel="summary"] .step1-sidebar-shell {
   display: grid;
   gap: 26px;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .sidebar-nav,
+.app-shell[data-active-problem-panel="details"] .sidebar-nav,
+.app-shell[data-active-problem-panel="summary"] .sidebar-nav {
+  display: grid;
+  gap: 18px;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .step1-sidebar-shell,
+.app-shell[data-active-problem-panel="details"] .step1-sidebar-shell,
+.app-shell[data-active-problem-panel="summary"] .step1-sidebar-shell {
+  display: none;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .nav-group,
+.app-shell[data-active-problem-panel="details"] .nav-group,
+.app-shell[data-active-problem-panel="summary"] .nav-group {
+  gap: 12px;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .nav-item[data-nav="problems"],
+.app-shell[data-active-problem-panel="details"] .nav-item[data-nav="problems"],
+.app-shell[data-active-problem-panel="summary"] .nav-item[data-nav="problems"] {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 253, 0.94));
+  border: 1px solid rgba(34, 87, 122, 0.1);
+  box-shadow: none;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .nav-substeps,
+.app-shell[data-active-problem-panel="details"] .nav-substeps,
+.app-shell[data-active-problem-panel="summary"] .nav-substeps {
+  gap: 8px;
+  padding: 0;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .nav-substep,
+.app-shell[data-active-problem-panel="details"] .nav-substep,
+.app-shell[data-active-problem-panel="summary"] .nav-substep {
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.app-shell[data-active-problem-panel="roadmap"] .nav-item.nav-item-disabled,
+.app-shell[data-active-problem-panel="details"] .nav-item.nav-item-disabled,
+.app-shell[data-active-problem-panel="summary"] .nav-item.nav-item-disabled {
+  display: none;
 }
 
 .step1-sidebar-section {
@@ -2304,6 +2373,17 @@ body {
   color: #f8fbff;
 }
 
+.step1-sidebar-link.is-disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.step1-sidebar-link.is-disabled .step1-sidebar-link-icon,
+.step1-sidebar-link.is-disabled .step1-sidebar-badge {
+  color: #a8b3c1;
+}
+
 .step1-sidebar-badge {
   padding: 2px 7px;
   border-radius: 5px;
@@ -2342,7 +2422,10 @@ body {
   line-height: 1.5;
 }
 
-.app-shell[data-active-problem-panel="problem"] .sidebar-footer {
+.app-shell[data-active-problem-panel="problem"] .sidebar-footer,
+.app-shell[data-active-problem-panel="roadmap"] .sidebar-footer,
+.app-shell[data-active-problem-panel="details"] .sidebar-footer,
+.app-shell[data-active-problem-panel="summary"] .sidebar-footer {
   border-top: 1px solid rgba(39, 61, 82, 0.08);
   padding-top: 14px;
 }
@@ -2355,8 +2438,58 @@ body {
   margin-bottom: 18px;
 }
 
-.workspace-shell[data-active-problem-panel="problem"] .workspace-header {
+.workspace-shell[data-active-problem-panel="problem"] .workspace-header,
+.workspace-shell[data-active-problem-panel="roadmap"] .workspace-header,
+.workspace-shell[data-active-problem-panel="details"] .workspace-header,
+.workspace-shell[data-active-problem-panel="summary"] .workspace-header {
   display: none;
+}
+
+.problem-flow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.problem-flow-copy {
+  display: grid;
+  gap: 6px;
+  max-width: 920px;
+}
+
+.problem-flow-title {
+  margin: 0;
+  max-width: 920px;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #132436;
+}
+
+.problem-flow-lede {
+  margin: 0;
+  max-width: 820px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.problem-flow-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.problem-flow-status .board-hero-badge,
+.problem-flow-status .status-chip,
+.detail-hero-actions .status-chip {
+  background: rgba(236, 243, 249, 0.92);
+  border: 1px solid rgba(34, 87, 122, 0.12);
+  color: #2f4b68;
+  box-shadow: none;
 }
 
 .step-home-topbar {
@@ -2785,42 +2918,20 @@ body {
   display: none;
 }
 
-.roadmap-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-  margin-bottom: 20px;
-}
-
 .roadmap-header-copy {
-  display: grid;
-  gap: 12px;
-  max-width: 900px;
+  max-width: 920px;
 }
 
 .roadmap-header-title {
-  margin: 0;
-  max-width: 880px;
-  font-size: clamp(1.7rem, 3vw, 2.6rem);
-  line-height: 1.08;
-  letter-spacing: -0.035em;
-  color: #132436;
+  max-width: 920px;
 }
 
 .roadmap-header-lede {
-  margin: 0;
-  max-width: 760px;
-  color: var(--muted);
-  font-size: 0.98rem;
-  line-height: 1.65;
+  max-width: 820px;
 }
 
 .roadmap-header-status {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-self: flex-start;
 }
 
 .roadmap-top-grid {
@@ -4745,10 +4856,12 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .problem-flow-header,
   .roadmap-header {
     flex-direction: column;
   }
 
+  .problem-flow-status,
   .roadmap-header-status {
     align-items: flex-start;
   }
@@ -4787,6 +4900,10 @@ body {
 
   .board-hero {
     flex-direction: column;
+  }
+
+  .problem-flow-title {
+    font-size: clamp(1.8rem, 9vw, 2.4rem);
   }
 
   .step-home-title {

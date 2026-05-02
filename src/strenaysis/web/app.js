@@ -3353,5 +3353,4 @@ updateAssessmentFields();
 updateProblemDetailsPreviews();
 refreshRoadmapCompletionState();
 updateAssessmentPrioritySummary();
-updateStepOneComposerState();
-loadStepOneRecentProblems();
+showPanel(state.activeProblemPanel || "problem");

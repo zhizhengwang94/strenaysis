@@ -31,21 +31,21 @@
                 </span>
                 <span class="step1-sidebar-badge">N</span>
               </button>
-              <button id="step1-sidebar-history" class="step1-sidebar-link" type="button">
+              <button id="step1-sidebar-history" class="step1-sidebar-link is-disabled" type="button" disabled aria-disabled="true">
                 <span class="step1-sidebar-link-main">
                   <span class="step1-sidebar-link-icon">◱</span>
                   <span>History</span>
                 </span>
                 <span class="step1-sidebar-badge">12</span>
               </button>
-              <button id="step1-sidebar-actions" class="step1-sidebar-link" type="button">
+              <button id="step1-sidebar-actions" class="step1-sidebar-link is-disabled" type="button" disabled aria-disabled="true">
                 <span class="step1-sidebar-link-main">
                   <span class="step1-sidebar-link-icon">◉</span>
                   <span>Actions</span>
                 </span>
                 <span class="step1-sidebar-badge">3</span>
               </button>
-              <button id="step1-sidebar-portfolio" class="step1-sidebar-link" type="button">
+              <button id="step1-sidebar-portfolio" class="step1-sidebar-link is-disabled" type="button" disabled aria-disabled="true">
                 <span class="step1-sidebar-link-main">
                   <span class="step1-sidebar-link-icon">△</span>
                   <span>Portfolio</span>
@@ -208,15 +208,20 @@
           </section>
 
           <section id="step-roadmap" class="step-panel">
-            <div class="roadmap-header">
-              <div class="roadmap-header-copy">
+            <div class="roadmap-header problem-flow-header">
+              <div class="roadmap-header-copy problem-flow-copy">
+                <div class="step-home-topbar" aria-label="Breadcrumb">
+                  <span>Workspace</span>
+                  <span class="step-home-topbar-sep">/</span>
+                  <span class="is-active">Roadmap workspace</span>
+                </div>
                 <p class="step-home-kicker"><span class="step-home-dot"></span> Step 2 of 4 - Shape the roadmap</p>
-                <h2 class="roadmap-header-title">Review the question, choose the framing, and work through the nodes that still need context.</h2>
-                <p class="roadmap-header-lede">
+                <h2 class="roadmap-header-title problem-flow-title">Review the question, choose the framing, and work through the nodes that still need context.</h2>
+                <p class="roadmap-header-lede problem-flow-lede">
                   Keep the question editable, pressure-test the problem type, then open any roadmap node to capture the follow-up memory that should guide the next build step.
                 </p>
               </div>
-              <div class="roadmap-header-status">
+              <div class="roadmap-header-status problem-flow-status">
                 <span id="roadmap-source" class="status-chip"></span>
                 <div class="board-hero-badge">Roadmap Workspace</div>
               </div>
@@ -435,13 +440,18 @@
           </section>
 
           <section id="step-details" class="step-panel">
-            <div class="board-hero detail-hero">
-              <div>
-                <div class="step-label">Step 3</div>
-                <h2 id="detail-title">Roadmap Buildup</h2>
-                <p class="section-copy" id="detail-subtitle"></p>
+            <div class="board-hero detail-hero problem-flow-header">
+              <div class="problem-flow-copy">
+                <div class="step-home-topbar" aria-label="Breadcrumb">
+                  <span>Workspace</span>
+                  <span class="step-home-topbar-sep">/</span>
+                  <span class="is-active">Roadmap buildup</span>
+                </div>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 3 of 4 - Build the workspace</p>
+                <h2 id="detail-title" class="problem-flow-title">Roadmap Buildup</h2>
+                <p class="section-copy problem-flow-lede" id="detail-subtitle"></p>
               </div>
-              <div class="detail-hero-actions">
+              <div class="detail-hero-actions problem-flow-status">
                 <span id="detail-build-status" class="analysis-status" hidden>
                   <span class="analysis-status-spinner" aria-hidden="true"></span>
                   <span class="analysis-status-text">Preparing node</span>
@@ -569,11 +579,16 @@
           </section>
 
           <section id="step-summary" class="step-panel">
-            <div class="board-hero summary-hero">
-              <div>
-                <div class="step-label">Complete</div>
-                <h2>Executive Summary and Work Plan</h2>
-                <p class="section-copy">
+            <div class="board-hero summary-hero problem-flow-header">
+              <div class="problem-flow-copy">
+                <div class="step-home-topbar" aria-label="Breadcrumb">
+                  <span>Workspace</span>
+                  <span class="step-home-topbar-sep">/</span>
+                  <span class="is-active">Workflow summary</span>
+                </div>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 4 of 4 - Review the summary</p>
+                <h2 class="problem-flow-title">Executive Summary and Work Plan</h2>
+                <p class="section-copy problem-flow-lede">
                   Review the final readout first, then move through each node breakdown and the consolidated work plan.
                 </p>
               </div>

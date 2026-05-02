@@ -48,7 +48,7 @@ Problem flow:
 ## What Changed Most Recently
 
 Latest pushed commit before this handoff refresh:
-- `5b290f3` - `Refine workflow UI across steps`
+- `beb4e99` - `Add updated project handoff`
 
 What was updated:
 - `src/strenaysis/web/index.html`
@@ -62,6 +62,7 @@ Summary of the recent frontend work:
   - a recent/local history area with shortened synthesized problem titles instead of full problem statements
   - an unsaved draft row that can resume the in-progress workspace, including unfinished detail work
   - `Ctrl + Enter` continue behavior and draft-aware “pick up where you left off” behavior
+  - `History`, `Actions`, and `Portfolio` in the Step 1 sidebar are intentionally unavailable again
 - Step 2 was substantially reworked toward the prototype roadmap workspace
 - Step 2 now has:
   - a forced `45% / 10% / 45%` top layout for `Current Question` and `Problem Assessment`
@@ -77,6 +78,7 @@ Summary of the recent frontend work:
   - a consolidated `Work Plan` table at the bottom
   - no duplicate per-node action tables anymore
   - sticky summary actions for `Save This Problem Framing`, `Download Word`, and `Download PowerPoint`
+  - later `Problems` pages now inherit the newer Step 1-style shell and title treatment instead of the older generic workspace framing
 
 ## Current UX Direction
 
@@ -86,6 +88,7 @@ Current intent:
 - keep Step 1 focused on the single main question
 - keep the main composer compact and calm rather than spacious/form-heavy
 - allow users to quickly resume unfinished work from the recent section
+- keep non-active directional areas in the Step 1 sidebar unavailable unless product direction changes
 - make the entry feel editorial, deliberate, and product-led rather than form-heavy
 
 ### Step 2
@@ -95,6 +98,7 @@ Current intent:
 - make the problem type legible and opinionated
 - keep the top question/assessment panels tightly aligned and compact
 - keep roadmap nodes compact and scannable
+- keep the later `Problems` steps visually aligned with the upgraded Step 1 shell
 - preserve the wide node modal pattern
 - preserve shared roadmap memory and follow-up thread behavior
 
@@ -173,15 +177,19 @@ Current local worktree state after the last push:
 - modified:
   - `src/strenaysis.egg-info/PKG-INFO`
   - `src/strenaysis.egg-info/SOURCES.txt`
-- untracked:
+- modified or newly updated for the next push:
   - `HANDOFF.md`
+  - `src/strenaysis/web/app.js`
+  - `src/strenaysis/web/index.html`
+  - `src/strenaysis/web/styles.css`
+- untracked:
   - `external/`
   - `.tmp-edge-codex/`
   - `src/strenaysis.egg-info/requires.txt`
 
 Interpretation:
-- the live frontend work is already pushed through commit `5b290f3`
-- this handoff file may still need its own commit depending on when you read this
+- the last pushed state is through commit `beb4e99`
+- the active local frontend diff currently includes the newer problem-flow shell alignment and the restored disabled Step 1 sidebar items
 - the remaining dirty files are local/generated/reference artifacts, not part of the pushed UI change
 
 ## Suggested Next Steps
