@@ -2,6 +2,7 @@ const state = {
   problem: "",
   problemDetails: "",
   problemTypeKey: "",
+  appliedProblemTypeKey: "",
   inferredProblemTypeKey: "",
   problemType: "",
   assessmentTitle: "",
@@ -26,6 +27,8 @@ const panels = {
   review: document.getElementById("step-review"),
   profile: document.getElementById("step-profile"),
 };
+const workspaceShell = document.querySelector(".workspace-shell");
+const appShell = document.querySelector(".app-shell");
 
 const problemInput = document.getElementById("problem-input");
 const problemDetailsInput = document.getElementById("problem-details-input");
@@ -35,9 +38,17 @@ const startRoadmapButton = document.getElementById("start-roadmap");
 const problemCharCounter = document.getElementById("problem-char-counter");
 const problemRecentCount = document.getElementById("problem-recent-count");
 const problemRecentList = document.getElementById("problem-recent-list");
+const step1SidebarRecent = document.getElementById("step1-sidebar-recent");
+const step1SidebarNewProblemButton = document.getElementById("step1-sidebar-new-problem");
+const step1SidebarHistoryButton = document.getElementById("step1-sidebar-history");
+const step1SidebarActionsButton = document.getElementById("step1-sidebar-actions");
+const step1SidebarPortfolioButton = document.getElementById("step1-sidebar-portfolio");
+const problemViewHistoryButton = document.getElementById("problem-view-history");
 const roadmapList = document.getElementById("roadmap-list");
 const confirmRoadmapButton = document.getElementById("confirm-roadmap");
 const openRoadmapLogButton = document.getElementById("open-roadmap-log");
+const confirmRoadmapBottomButton = document.getElementById("confirm-roadmap-bottom");
+const openRoadmapLogBottomButton = document.getElementById("open-roadmap-log-bottom");
 const editSequenceButton = document.getElementById("edit-sequence");
 const saveSequenceButton = document.getElementById("save-sequence");
 const deleteSequenceZone = document.getElementById("delete-sequence-zone");
@@ -50,8 +61,10 @@ const openRoadmapProblemDetailsButton = document.getElementById("open-roadmap-pr
 const refreshQuestionButton = document.getElementById("refresh-question");
 const assessmentType = document.getElementById("assessment-type");
 const updateRoadbuildButton = document.getElementById("update-roadbuild");
+const assessmentRecommendationNote = document.getElementById("assessment-recommendation-note");
 const assessmentTitle = document.getElementById("assessment-title");
 const assessmentRecap = document.getElementById("assessment-recap");
+const assessmentRecapPopoverCopy = document.getElementById("assessment-recap-popover-copy");
 const assessmentHighPriority = document.getElementById("assessment-high-priority");
 const assessmentMediumPriority = document.getElementById("assessment-medium-priority");
 const assessmentLowPriority = document.getElementById("assessment-low-priority");
@@ -244,7 +257,8 @@ closeSummaryNodeModalButton.addEventListener("click", closeSummaryNodeModal);
 summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
 closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
 summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
-openRoadmapLogButton.addEventListener("click", openRoadmapLogModal);
+openRoadmapLogButton?.addEventListener("click", openRoadmapLogModal);
+openRoadmapLogBottomButton?.addEventListener("click", openRoadmapLogModal);
 closeRoadmapLogModalButton.addEventListener("click", closeRoadmapLogModal);
 roadmapLogModalBackdrop.addEventListener("click", closeRoadmapLogModal);
   closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
@@ -337,6 +351,28 @@ stepExampleButtons.forEach((button) => {
   });
 });
 
+if (problemViewHistoryButton) {
+  problemViewHistoryButton.addEventListener("click", () => {
+    showPanel("profile");
+  });
+}
+
+if (step1SidebarNewProblemButton) {
+  step1SidebarNewProblemButton.addEventListener("click", () => showPanel("problem"));
+}
+
+if (step1SidebarHistoryButton) {
+  step1SidebarHistoryButton.addEventListener("click", () => showPanel("profile"));
+}
+
+if (step1SidebarActionsButton) {
+  step1SidebarActionsButton.addEventListener("click", () => showPanel("actions"));
+}
+
+if (step1SidebarPortfolioButton) {
+  step1SidebarPortfolioButton.addEventListener("click", () => showPanel("review"));
+}
+
 assessmentChoiceButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const value = button.dataset.problemTypeOption;
@@ -406,7 +442,7 @@ updateRoadbuildButton.addEventListener("click", async () => {
     problemType: assessmentType.value,
     button: updateRoadbuildButton,
     loadingText: "Updating...",
-    idleText: "Update Roadbuild",
+    idleText: "Update Analysis Path",
     statusKeys: ["assessment", "framework"],
     statusText: "Updating approach",
     resetNotes: false,
@@ -566,7 +602,7 @@ nodeModalAddFollowUpButton.addEventListener("click", async () => {
   }
 });
 
-confirmRoadmapButton.addEventListener("click", () => {
+function handleConfirmRoadmap() {
   const cleaned = state.roadmap
     .map((node) => ({
       id: node.id ?? makeNodeId(),
@@ -606,7 +642,10 @@ confirmRoadmapButton.addEventListener("click", () => {
   }
   showPanel("details");
   loadDetailStep();
-});
+}
+
+confirmRoadmapButton?.addEventListener("click", handleConfirmRoadmap);
+confirmRoadmapBottomButton?.addEventListener("click", handleConfirmRoadmap);
 
 polishNodeButton.addEventListener("click", async () => {
   const draft = buildPolishDraft();
@@ -705,6 +744,7 @@ restartFlowButton.addEventListener("click", () => {
   state.problem = "";
   state.problemDetails = "";
   state.problemTypeKey = "";
+  state.appliedProblemTypeKey = "";
   state.inferredProblemTypeKey = "";
   state.problemType = "";
   state.assessmentTitle = "";
@@ -850,23 +890,26 @@ problemSubsteps.forEach((item) => {
       (total, thread) => total + (Array.isArray(thread.responses) ? thread.responses.length : 0),
       0,
     );
+    const isInProgress = !isComplete && followUpCount > 0;
+    const stateLabel = isComplete ? "Settled" : (isInProgress ? "In Progress" : "Not Started");
+    const actionLabel = state.sequenceEditMode
+      ? "Reorder"
+      : (isComplete ? "Review →" : (isInProgress ? "Continue →" : "Start →"));
     row.classList.toggle("is-draggable", state.sequenceEditMode);
     row.draggable = state.sequenceEditMode;
     row.dataset.nodeId = node.id;
     shell.classList.toggle("is-complete", isComplete);
-    shell.classList.toggle("needs-attention", !isComplete);
+    shell.classList.toggle("in-progress", isInProgress);
+    shell.classList.toggle("needs-attention", !isComplete && !isInProgress);
     order.textContent = `${index + 1}`;
     titleText.textContent = node.title;
     summaryCopy.textContent = compactFollowUpText(node.why || "Open this node to review its framing and saved follow-up coverage.", 132);
-    followupChip.textContent = isComplete
-      ? `${followUpCount || 0} saved responses`
-      : (node.suggested_context || "Needs follow-up context");
-    followupChip.classList.toggle("is-complete", isComplete);
-    followupChip.classList.toggle("needs-attention", !isComplete);
-    stateChip.textContent = isComplete ? "Ready" : "Needs Context";
+    followupChip.hidden = true;
+    stateChip.textContent = stateLabel;
     stateChip.classList.toggle("is-complete", isComplete);
-    stateChip.classList.toggle("needs-attention", !isComplete);
-    openNode.textContent = state.sequenceEditMode ? "Reorder" : "Details";
+    stateChip.classList.toggle("in-progress", isInProgress);
+    stateChip.classList.toggle("needs-attention", !isComplete && !isInProgress);
+    openNode.textContent = actionLabel;
     openNode.disabled = state.sequenceEditMode;
     openNode.addEventListener("click", () => openNodeModal(node.id));
     shell.addEventListener("click", (event) => {
@@ -919,8 +962,15 @@ problemSubsteps.forEach((item) => {
     if (roadmapProgressCopy) {
       const total = state.roadmap.length;
       const ready = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
+      const inProgress = state.roadmap.filter((node) => {
+        const responses = normalizeNodeFollowUpThreads(node).reduce(
+          (total, thread) => total + (Array.isArray(thread.responses) ? thread.responses.length : 0),
+          0,
+        );
+        return !isNoAdditionalSuggestedItem(node.suggested_context || "") && responses > 0;
+      }).length;
       roadmapProgressCopy.textContent = total
-        ? `${ready} of ${total} nodes currently settled.`
+        ? `${ready} of ${total} nodes settled${inProgress ? ` · ${inProgress} in progress` : ""}.`
         : "No roadmap yet.";
     }
     refreshRoadmapCompletionState();
@@ -1193,78 +1243,175 @@ function saveCurrentNote() {
 
 function renderSummary() {
   summaryContent.innerHTML = "";
-  const allActions = state.roadmap.flatMap((node) =>
-    ((state.nodeBuilds[node.id]?.execution_items || []).map((item) => ({ ...item, node: node.title }))),
-  );
   const readyCount = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
-  const overview = document.createElement("section");
-  overview.className = "summary-overview-grid";
-  overview.innerHTML = `
-    <article class="summary-overview-card problem">
-      <p class="card-label">Problem Review</p>
-      <h3>Main Question</h3>
-      <p>${escapeHtml(state.problem)}</p>
-      <button class="ghost-button summary-problem-button" type="button">Review Detail</button>
+  const allActions = state.roadmap.flatMap((node) =>
+    ((state.nodeBuilds[node.id]?.execution_items || []).map((item, index) => ({
+      ...item,
+      node_id: node.id,
+      node_title: node.title,
+      order: index + 1,
+    }))),
+  );
+  const unansweredCount = state.roadmap.reduce((total, node) => {
+    const threads = normalizeNodeFollowUpThreads(node);
+    return total + threads.filter((thread) => !(thread.responses || []).length).length;
+  }, 0);
+  const metaStrip = document.createElement("section");
+  metaStrip.className = "summary-meta-strip";
+  metaStrip.innerHTML = `
+    <article class="summary-meta-card">
+      <p class="summary-meta-label">Problem</p>
+      <p class="summary-meta-value">${escapeHtml(summarizeProblemTitle("", state.problem || "", "Current problem"))}</p>
     </article>
-    <article class="summary-overview-card actions">
-      <p class="card-label">Action Coverage</p>
-      <h3>Actionable Items</h3>
-      <strong>${allActions.length}</strong>
-      <p>Concrete actions captured across the full roadmap buildup.</p>
+    <article class="summary-meta-card">
+      <p class="summary-meta-label">Nodes Reviewed</p>
+      <p class="summary-meta-value">${readyCount}/${state.roadmap.length || 0}</p>
     </article>
-    <article class="summary-overview-card actions">
-      <p class="card-label">Roadmap Coverage</p>
-      <h3>Nodes Reviewed</h3>
-      <strong>${readyCount}/${state.roadmap.length}</strong>
-      <p>Nodes that no longer need additional suggested context.</p>
+    <article class="summary-meta-card">
+      <p class="summary-meta-label">Work Plan Items</p>
+      <p class="summary-meta-value">${allActions.length}</p>
+    </article>
+    <article class="summary-meta-card">
+      <p class="summary-meta-label">Open Questions</p>
+      <p class="summary-meta-value">${unansweredCount}</p>
     </article>
   `;
-  summaryContent.appendChild(overview);
-  overview.querySelector(".summary-problem-button")?.addEventListener("click", openSummaryProblemModal);
+  summaryContent.appendChild(metaStrip);
 
-  const nodesSection = document.createElement("section");
-  nodesSection.className = "summary-section-card";
-  nodesSection.innerHTML = `
-    <div class="summary-section-header">
-      <div>
-        <p class="card-label">Node Review</p>
-        <h3>Roadmap Build Summary</h3>
-        <p class="section-copy">Review the framework node by node, then open any node to inspect the execution items behind it.</p>
-      </div>
-      <span class="status-chip">${state.roadmap.length} nodes</span>
-    </div>
+  const executiveSummary = document.createElement("section");
+  executiveSummary.className = "summary-executive";
+  const leadNodeTitles = state.roadmap.slice(0, 3).map((node) => node.title).filter(Boolean).join(", ");
+  const executiveCopy = [
+    state.problem
+      ? `This workflow frames the question "${state.problem}" into ${state.roadmap.length || 0} analytical node${state.roadmap.length === 1 ? "" : "s"}.`
+      : `This workflow is organized into ${state.roadmap.length || 0} analytical nodes.`,
+    readyCount
+      ? `${readyCount} node${readyCount === 1 ? "" : "s"} are already settled enough to move forward.`
+      : "The roadmap still needs more coverage before it is fully settled.",
+    leadNodeTitles
+      ? `The structure currently centers on ${leadNodeTitles}.`
+      : "",
+    allActions.length
+      ? `${allActions.length} concrete work plan item${allActions.length === 1 ? "" : "s"} have already been captured.`
+      : "No concrete work plan items have been captured yet.",
+  ].filter(Boolean).join(" ");
+  executiveSummary.innerHTML = `
+    <p class="summary-executive-label">Executive Summary</p>
+    <p class="summary-executive-text">${escapeHtml(executiveCopy)}</p>
   `;
-  const nodeGrid = document.createElement("div");
-  nodeGrid.className = "summary-node-grid";
-  state.roadmap.forEach((node) => {
+  summaryContent.appendChild(executiveSummary);
+
+  const nodeReports = document.createElement("section");
+  nodeReports.className = "summary-node-reports";
+  state.roadmap.forEach((node, index) => {
     const nodeBuild = state.nodeBuilds[node.id] || {};
     const outputSections = normalizeOutputSections(nodeBuild.output_sections || parseStructuredOutput(nodeBuild.output || ""));
-    const actionCount = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items.length : 0;
+    const threads = normalizeNodeFollowUpThreads(node);
+    const actions = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items : [];
     const isReady = isNoAdditionalSuggestedItem(node.suggested_context || "");
-    const card = document.createElement("article");
-    card.className = `summary-node-card ${isReady ? "ready" : "needs-attention"}`;
-    card.innerHTML = `
-      <div class="summary-node-top">
-        <div>
-          <h4>${escapeHtml(node.title)}</h4>
-          <p>${escapeHtml(node.why)}</p>
+    const report = document.createElement("article");
+    report.className = "summary-node-report";
+    const qaMarkup = threads.length
+      ? threads
+          .map((thread) => {
+            const responseMarkup = (thread.responses || []).length
+              ? thread.responses
+                  .map(
+                    (response) => `
+                      <div class="summary-node-qa-item">
+                        <span class="summary-node-qa-tag type-${escapeHtml(String(response.type || "confirmed").toLowerCase())}">${escapeHtml(response.type || "confirmed")}</span>
+                        <p>${escapeHtml(response.text || "No response captured.")}</p>
+                      </div>
+                    `,
+                  )
+                  .join("")
+              : `<div class="summary-node-qa-item unanswered"><p>No answer captured yet.</p></div>`;
+            return `
+              <details class="summary-node-thread">
+                <summary>${escapeHtml(thread.prompt || "Follow-up prompt")}</summary>
+                <div class="summary-node-thread-body">${responseMarkup}</div>
+              </details>
+            `;
+          })
+          .join("")
+      : `<p class="summary-node-empty">No follow-up discussion captured for this node yet.</p>`;
+    report.innerHTML = `
+      <div class="summary-node-report-head">
+        <span class="summary-node-report-num">Node ${index + 1}</span>
+        <h3>${escapeHtml(node.title)}</h3>
+        <span class="status-chip">${escapeHtml(isReady ? "Settled" : "Needs Context")}</span>
+      </div>
+      <p class="summary-node-report-copy">${escapeHtml(nodeBuild.execution_summary || node.why || "No node summary written yet.")}</p>
+      <div class="summary-node-report-grid">
+        <div class="summary-node-report-block">
+          <h4>Node Breakdown</h4>
+          <p>${escapeHtml(node.breakdown || "No node breakdown added yet.")}</p>
         </div>
-        <span class="status-chip">${isReady ? "Ready" : "Needs Context"}</span>
+        <div class="summary-node-report-block">
+          <h4>Focus</h4>
+          <p>${escapeHtml(outputSections.focus || "No focus captured yet.")}</p>
+        </div>
+        <div class="summary-node-report-block">
+          <h4>What Will Be Done</h4>
+          <p>${escapeHtml(outputSections.work_to_complete || "No work plan summary captured yet.")}</p>
+        </div>
+        <div class="summary-node-report-block">
+          <h4>Owners and Sources</h4>
+          <p>${escapeHtml(outputSections.owners_and_sources || "No ownership or source summary captured yet.")}</p>
+        </div>
       </div>
-      <div class="summary-node-copy">
-        <p>${escapeHtml(nodeBuild.execution_summary || "No execution summary added yet.")}</p>
-        <p>${escapeHtml(outputSections.focus || "No focus added yet.")}</p>
-      </div>
-      <div class="summary-section-header">
-        <span class="status-chip">${actionCount} actions</span>
-        <button class="ghost-button summary-review-button" type="button">Review Node</button>
+      <div class="summary-node-report-section">
+        <div class="summary-node-report-section-head">
+          <h4>Follow-Up Coverage</h4>
+          <button class="ghost-button summary-review-button" type="button">Review Node</button>
+        </div>
+        <div class="summary-node-thread-list">${qaMarkup}</div>
       </div>
     `;
-    card.querySelector(".summary-review-button")?.addEventListener("click", () => openSummaryNodeModal(node, nodeBuild));
-    nodeGrid.appendChild(card);
+    report.querySelector(".summary-review-button")?.addEventListener("click", () => openSummaryNodeModal(node, nodeBuild));
+    nodeReports.appendChild(report);
   });
-  nodesSection.appendChild(nodeGrid);
-  summaryContent.appendChild(nodesSection);
+  summaryContent.appendChild(nodeReports);
+
+  const workplanSection = document.createElement("section");
+  workplanSection.className = "summary-workplan";
+  const workplanRows = allActions.length
+    ? `
+      <table class="summary-workplan-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Node</th>
+            <th>Action</th>
+            <th>Owner</th>
+            <th>Approval</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allActions
+            .map(
+              (item, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${escapeHtml(item.node_title || "Unknown node")}</td>
+                  <td>${escapeHtml(item.action || "No action title")}</td>
+                  <td>${escapeHtml(item.owner || "Unassigned")}</td>
+                  <td>${escapeHtml(item.approval || "Not set")}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `
+    : `<p class="summary-node-empty">No work plan items have been collected yet.</p>`;
+  workplanSection.innerHTML = `
+    <p class="summary-executive-label">Work Plan</p>
+    <h3>Consolidated Next Steps</h3>
+    <p class="section-copy">A single list of actions pulled from across the node breakdowns, organized for execution handoff.</p>
+    ${workplanRows}
+  `;
+  summaryContent.appendChild(workplanSection);
 }
 
 async function loadProfileHistory() {
@@ -1313,35 +1460,87 @@ function renderStepOneRecentProblems(items) {
   if (!problemRecentList || !problemRecentCount) {
     return;
   }
-  const recentItems = items.slice(0, 4);
-  problemRecentCount.textContent = items.length ? `${items.length} saved` : "No saved items";
-  if (!recentItems.length) {
+  const draftProblem = (state.problem || problemInput?.value || "").trim();
+  const hasDraft = Boolean(draftProblem);
+  const recentItems = items.slice(0, 3);
+  const inProgressCount = items.filter((item) => String(item.status || "").trim().toLowerCase() !== "complete").length;
+  problemRecentCount.textContent = inProgressCount ? `${inProgressCount} in progress` : (items.length ? `${items.length} saved` : "No saved items");
+  if (!recentItems.length && !hasDraft) {
     problemRecentList.innerHTML = `
       <article class="step-recent-empty">
         No saved problem structures yet. Once you save a framing locally, it will show up here.
       </article>
     `;
+    if (step1SidebarRecent) {
+      step1SidebarRecent.innerHTML = `<div class="step1-sidebar-recent-empty">No recent problem framings yet.</div>`;
+    }
     return;
   }
 
   problemRecentList.innerHTML = "";
+  if (step1SidebarRecent) {
+    step1SidebarRecent.innerHTML = "";
+  }
+  if (hasDraft) {
+    const draftTitle = summarizeProblemTitle("", draftProblem, "Current workspace");
+    const draftRow = document.createElement("button");
+    draftRow.type = "button";
+    draftRow.className = "step-recent-row is-draft";
+    draftRow.innerHTML = `
+      <span class="step-recent-status is-draft" aria-hidden="true"></span>
+      <span class="step-recent-main">
+        <span class="step-recent-title">${escapeHtml(draftTitle)}</span>
+        <span class="step-recent-meta">
+          <span class="step-recent-tag is-draft">Current workspace</span>
+          <span class="step-recent-tag is-draft">Unsaved</span>
+        </span>
+      </span>
+      <span class="step-recent-step">Not saved yet</span>
+      <span class="step-recent-date">Resume draft</span>
+    `;
+    draftRow.addEventListener("click", resumeDraftWorkspace);
+    problemRecentList.appendChild(draftRow);
+
+    if (step1SidebarRecent) {
+      const draftLink = document.createElement("button");
+      draftLink.type = "button";
+      draftLink.className = "step1-sidebar-recent-link is-active";
+      draftLink.textContent = draftTitle;
+      draftLink.addEventListener("click", resumeDraftWorkspace);
+      step1SidebarRecent.appendChild(draftLink);
+    }
+  }
   recentItems.forEach((item) => {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "step-recent-row";
+    const problemType = escapeHtml(item.problem_type || "Not set");
+    const priority = escapeHtml(item.priority || "Medium");
+    const isComplete = String(item.status || "").trim().toLowerCase() === "complete";
+    const itemTitle = summarizeProblemTitle(item.problem_name, item.problem);
     row.innerHTML = `
-      <span class="step-recent-status" aria-hidden="true"></span>
+      <span class="step-recent-status${isComplete ? " is-complete" : ""}" aria-hidden="true"></span>
       <span class="step-recent-main">
-        <span class="step-recent-title">${escapeHtml(item.problem_name || item.problem || "Untitled problem framing")}</span>
+        <span class="step-recent-title">${escapeHtml(itemTitle)}</span>
         <span class="step-recent-meta">
-          <span class="step-recent-tag">${escapeHtml(item.problem_type || "Not set")}</span>
-          <span class="step-recent-tag">${escapeHtml(item.priority || "Medium")}</span>
+          <span class="step-recent-tag">${problemType}</span>
+          <span class="step-recent-tag">${priority}</span>
         </span>
       </span>
+      <span class="step-recent-step">${escapeHtml(isComplete ? "Complete" : "Saved framing")}</span>
       <span class="step-recent-date">${escapeHtml(formatSavedDate(item.saved_at))}</span>
     `;
     row.addEventListener("click", () => openProfileItem(item.filename));
     problemRecentList.appendChild(row);
+
+    if (step1SidebarRecent) {
+      const recentLink = document.createElement("button");
+      recentLink.type = "button";
+      recentLink.className = `step1-sidebar-recent-link${!isComplete && step1SidebarRecent.children.length === 0 ? " is-active" : ""}`;
+      recentLink.textContent = itemTitle;
+      recentLink.addEventListener("click", () => openProfileItem(item.filename));
+      step1SidebarRecent.appendChild(recentLink);
+    }
   });
 }
 
@@ -1684,6 +1883,12 @@ function showPanel(name) {
   if (!["profile", "actions", "review"].includes(name)) {
     state.activeProblemPanel = name;
   }
+  if (workspaceShell) {
+    workspaceShell.dataset.activeProblemPanel = state.activeProblemPanel;
+  }
+  if (appShell) {
+    appShell.dataset.activeProblemPanel = state.activeProblemPanel;
+  }
   const activeNav = ["profile", "actions", "review"].includes(name) ? name : "problems";
   sidebarNavItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === activeNav);
@@ -1733,6 +1938,7 @@ async function generateRoadmap(problem, options) {
     state.dragNodeId = null;
     state.activeNodeId = null;
       state.problemTypeKey = String(payload.problem_type || options.problemType || "").trim();
+      state.appliedProblemTypeKey = state.problemTypeKey;
       state.inferredProblemTypeKey = String(payload.inferred_problem_type || "").trim();
       state.problemType = normalizeProblemType(payload.problem_type);
       state.assessmentTitle = String(payload.assessment_title || "").trim();
@@ -1861,6 +2067,48 @@ function formatSavedDate(value) {
   return parsed.toLocaleString();
 }
 
+function summarizeProblemTitle(problemName, problemText, fallback = "Untitled problem framing") {
+  const explicit = String(problemName || "").trim();
+  if (explicit && explicit.length <= 42) {
+    return explicit;
+  }
+  const raw = String(explicit || problemText || "").replace(/\s+/g, " ").trim();
+  if (!raw) {
+    return fallback;
+  }
+  const candidate =
+    raw
+      .split(/[?.:;\n]/)
+      .map((part) => part.trim())
+      .find((part) => part.split(/\s+/).length >= 3) || raw;
+  const words = candidate.split(/\s+/).filter(Boolean);
+  const compact = words.slice(0, 6).join(" ");
+  return compact.length < candidate.length ? `${compact}…` : compact;
+}
+
+function resumeDraftWorkspace() {
+  const resumePanel =
+    state.activeProblemPanel && state.activeProblemPanel !== "problem"
+      ? state.activeProblemPanel
+      : (state.roadmap.length ? "roadmap" : "problem");
+  showPanel(resumePanel);
+  if (resumePanel === "details") {
+    loadDetailStep();
+    return;
+  }
+  if (resumePanel === "problem") {
+    if (problemInput) {
+      problemInput.value = state.problem || problemInput.value || "";
+      problemInput.focus();
+    }
+    if (problemDetailsInput) {
+      problemDetailsInput.value = state.problemDetails || problemDetailsInput.value || "";
+    }
+    updateProblemDetailsPreviews();
+    updateStepOneComposerState();
+  }
+}
+
 function escapeHtml(text) {
   return String(text)
     .replaceAll("&", "&amp;")
@@ -1951,6 +2199,11 @@ function normalizeProblemType(value) {
 function updateAssessmentFields() {
   assessmentType.value = state.problemTypeKey || state.inferredProblemTypeKey || "predictive_modeling";
   const assessmentState = getAssessmentConfidenceState();
+  const selected = String(assessmentType.value || "").trim();
+  const applied = String(state.appliedProblemTypeKey || state.problemTypeKey || "").trim();
+  const inferred = String(state.inferredProblemTypeKey || "").trim();
+  const hasRecommended = Boolean(inferred);
+  const hasOverride = Boolean(applied && selected && selected !== applied);
   assessmentType.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
   assessmentTitle.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
   assessmentType.classList.add(`assessment-${assessmentState}`);
@@ -1958,21 +2211,52 @@ function updateAssessmentFields() {
     const value = button.dataset.problemTypeOption || "";
     const isSelected = value === assessmentType.value;
     const isRecommended = value === (state.inferredProblemTypeKey || "");
+    const badge = button.querySelector(".assessment-choice-badge");
     button.classList.toggle("is-selected", isSelected);
     button.classList.toggle("is-recommended", isRecommended);
     button.setAttribute("aria-pressed", String(isSelected));
+    if (badge) {
+      badge.hidden = !isRecommended;
+    }
   });
+  if (updateRoadbuildButton) {
+    updateRoadbuildButton.hidden = !hasOverride;
+  }
+  if (assessmentRecommendationNote) {
+    if (!hasRecommended && !applied) {
+      assessmentRecommendationNote.hidden = true;
+      assessmentRecommendationNote.textContent = "";
+    } else if (hasOverride) {
+      assessmentRecommendationNote.hidden = false;
+      assessmentRecommendationNote.className = "assessment-recommendation-note is-override";
+      assessmentRecommendationNote.textContent =
+        `Current analysis path: ${normalizeProblemType(applied)}. Updating will regenerate the node list for ${normalizeProblemType(selected)} while preserving the saved follow-up coverage where it still fits.`;
+    } else if (hasRecommended && applied && applied !== inferred) {
+      assessmentRecommendationNote.hidden = false;
+      assessmentRecommendationNote.className = "assessment-recommendation-note";
+      assessmentRecommendationNote.textContent =
+        `Current analysis path: ${normalizeProblemType(applied)}. The original system recommendation was ${normalizeProblemType(inferred)}.`;
+    } else {
+      assessmentRecommendationNote.hidden = false;
+      assessmentRecommendationNote.className = "assessment-recommendation-note";
+      assessmentRecommendationNote.textContent =
+        `Recommended framing: ${normalizeProblemType(inferred)}. Keep it if this still matches the real business question, or switch types to regenerate the roadmap around a different analytical path.`;
+    }
+  }
   assessmentTitle.value = state.assessmentTitle || "No explanation yet.";
   assessmentTitle.classList.add(`assessment-${assessmentState}`);
   assessmentRecap.value = state.assessmentRecap || "No interview recap yet.";
+  if (assessmentRecapPopoverCopy) {
+    assessmentRecapPopoverCopy.textContent = assessmentRecap.value;
+  }
   autoResize(assessmentTitle);
   autoResize(assessmentRecap);
 }
 
 function getAssessmentConfidenceState() {
   const selected = String(state.problemTypeKey || "").trim();
-  const inferred = String(state.inferredProblemTypeKey || "").trim();
-  if (!selected || !inferred || selected === inferred) {
+  const applied = String(state.appliedProblemTypeKey || "").trim();
+  if (!selected || !applied || selected === applied) {
     return "match";
   }
 
@@ -1983,7 +2267,7 @@ function getAssessmentConfidenceState() {
     operational_optimization: ["predictive_modeling", "descriptive_analysis"],
   };
 
-  return acceptableMatches[inferred]?.includes(selected) ? "caution" : "mismatch";
+  return acceptableMatches[applied]?.includes(selected) ? "caution" : "mismatch";
 }
 
 function updateAssessmentPrioritySummary() {
@@ -3006,8 +3290,13 @@ function refreshRoadmapCompletionState() {
     state.roadmap.length > 0 &&
     state.roadmap.every((node) => isNoAdditionalSuggestedItem(node.suggested_context || ""));
 
-  confirmRoadmapButton.classList.toggle("ready", allComplete);
-  confirmRoadmapButton.classList.toggle("needs-attention", !allComplete);
+  [confirmRoadmapButton, confirmRoadmapBottomButton].forEach((button) => {
+    if (!button) {
+      return;
+    }
+    button.classList.toggle("ready", allComplete);
+    button.classList.toggle("needs-attention", !allComplete);
+  });
 }
 
 function buildPolishDraft() {
@@ -3040,7 +3329,7 @@ function autoResize(element) {
   if (!element || element.tagName !== "TEXTAREA") {
     return;
   }
-  if (element.id === "details-modal-input") {
+  if (["details-modal-input", "roadmap-problem-input", "assessment-title", "assessment-recap"].includes(element.id)) {
     return;
   }
   element.style.height = "auto";

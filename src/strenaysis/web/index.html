@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Strenaysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -14,6 +17,50 @@
           <div>
             <p class="sidebar-label">Strenaysis</p>
             <h1 class="sidebar-title">Decision Workspace</h1>
+          </div>
+        </div>
+
+        <div class="step1-sidebar-shell" aria-label="Step 1 sidebar">
+          <div class="step1-sidebar-section">
+            <p class="step1-sidebar-label">Workspace</p>
+            <div class="step1-sidebar-links">
+              <button id="step1-sidebar-new-problem" class="step1-sidebar-link is-active" type="button">
+                <span class="step1-sidebar-link-main">
+                  <span class="step1-sidebar-link-icon">✎</span>
+                  <span>New problem</span>
+                </span>
+                <span class="step1-sidebar-badge">N</span>
+              </button>
+              <button id="step1-sidebar-history" class="step1-sidebar-link" type="button">
+                <span class="step1-sidebar-link-main">
+                  <span class="step1-sidebar-link-icon">◱</span>
+                  <span>History</span>
+                </span>
+                <span class="step1-sidebar-badge">12</span>
+              </button>
+              <button id="step1-sidebar-actions" class="step1-sidebar-link" type="button">
+                <span class="step1-sidebar-link-main">
+                  <span class="step1-sidebar-link-icon">◉</span>
+                  <span>Actions</span>
+                </span>
+                <span class="step1-sidebar-badge">3</span>
+              </button>
+              <button id="step1-sidebar-portfolio" class="step1-sidebar-link" type="button">
+                <span class="step1-sidebar-link-main">
+                  <span class="step1-sidebar-link-icon">△</span>
+                  <span>Portfolio</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="step1-sidebar-section">
+            <p class="step1-sidebar-label">Recent</p>
+            <div id="step1-sidebar-recent" class="step1-sidebar-recent">
+              <button class="step1-sidebar-recent-link is-active" type="button">Premium reco lift</button>
+              <button class="step1-sidebar-recent-link" type="button">Churn cohort audit</button>
+              <button class="step1-sidebar-recent-link" type="button">Onboarding drop-off</button>
+            </div>
           </div>
         </div>
 
@@ -88,92 +135,68 @@
           <section id="step-problem" class="step-panel active">
             <div class="step-home-shell">
               <div class="step-home-copy">
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Frame the question</p>
-                <h2 class="step-home-title">What business question are you actually trying to answer?</h2>
+                <div class="step-home-topbar" aria-label="Breadcrumb">
+                  <span>Workspace</span>
+                  <span class="step-home-topbar-sep">/</span>
+                  <span class="is-active">New problem</span>
+                </div>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Start with a question</p>
+                <h2 class="step-home-title">What business question are you trying to answer?</h2>
                 <p class="step-home-lede">
-                  Write it the way a colleague would say it out loud. Keep it plain, concrete, and close to the real business ask.
-                  Strenaysis will turn it into a roadmap in the next step.
+                  Write it the way a colleague would ask you over coffee - plain language, one sentence, the real thing.
+                  Strenaysis will turn it into a defensible analytical roadmap in the next step.
                 </p>
               </div>
 
-              <div class="step-home-grid">
-                <section class="board-card board-card-emphasis step-composer-card" aria-label="Main Question Composer">
-                  <div>
-                    <p class="card-label">Main Question</p>
-                    <h3>Frame the ask in business language</h3>
-                    <p class="section-copy step-composer-copy">
-                      Keep this to the single core question. We will classify the problem type and build the roadmap after this step.
-                    </p>
-                  </div>
-                  <label class="field-label composer-label" for="problem-input">
-                    Problem to Solve
-                    <span class="composer-required">Required</span>
-                  </label>
+              <section class="board-card board-card-emphasis step-composer-card" aria-label="Main Question Composer">
+                <label class="field-label composer-label" for="problem-input">
+                  Your question
+                  <span class="composer-required">Required</span>
+                </label>
+                <div class="step-composer-frame">
                   <textarea
                     id="problem-input"
                     class="step-composer-input"
                     rows="5"
                     maxlength="600"
-                    placeholder="Example: How should we evaluate whether launching a premium recommendation feature will improve subscription revenue?"
+                    placeholder="e.g. How should we evaluate whether launching a premium recommendation feature will actually move subscription revenue?"
                   ></textarea>
-                  <div class="step-example-row" aria-label="Example prompts">
-                    <button class="step-example" type="button" data-problem-example="How should we evaluate whether launching a premium recommendation feature will improve subscription revenue?">Subscription revenue</button>
-                    <button class="step-example" type="button" data-problem-example="Which early-tenure customer cohort is driving our recent churn increase, and why?">Churn diagnosis</button>
-                    <button class="step-example" type="button" data-problem-example="Why is onboarding completion lower on mobile than on web, and which changes are most likely to improve it?">Onboarding gap</button>
-                  </div>
+
+                  <details class="step-context-details">
+                    <summary>Add context - who's asking and what hangs on the answer</summary>
+                    <textarea
+                      id="problem-details-input"
+                      class="step-context-input"
+                      rows="3"
+                      placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."
+                    ></textarea>
+                  </details>
+
                   <div class="step-composer-footer">
                     <div class="step-composer-meta">
                       <span id="problem-char-counter" class="composer-counter">Type a question to continue</span>
                       <span class="composer-shortcut">Ctrl + Enter to continue</span>
                     </div>
                     <div class="section-heading-actions">
+                      <button class="ghost-button step-draft-button" type="button">Save as draft</button>
                       <span id="start-roadmap-status" class="analysis-status" hidden>
                         <span class="analysis-status-spinner" aria-hidden="true"></span>
                         <span class="analysis-status-text">Analyzing question</span>
                       </span>
-                      <button id="start-roadmap" class="primary-button" type="button">Start to Build the Structure</button>
+                      <button id="start-roadmap" class="primary-button step-start-button" type="button">Structure the problem</button>
                     </div>
                   </div>
-                </section>
-
-                <aside class="step-home-rail">
-                  <section class="board-card step-home-rail-card">
-                    <p class="card-label">What Happens Next</p>
-                    <h3>From question to workflow</h3>
-                    <div class="step-home-checklist">
-                      <article class="step-home-check">
-                        <span class="step-home-check-index">1</span>
-                        <div>
-                          <strong>Classify the problem</strong>
-                          <p>We place the question into the right analysis mode before proposing methods.</p>
-                        </div>
-                      </article>
-                      <article class="step-home-check">
-                        <span class="step-home-check-index">2</span>
-                        <div>
-                          <strong>Build the roadmap</strong>
-                          <p>You review, edit, and confirm the framework sequence before going deeper.</p>
-                        </div>
-                      </article>
-                      <article class="step-home-check">
-                        <span class="step-home-check-index">3</span>
-                        <div>
-                          <strong>Turn it into execution</strong>
-                          <p>Each node becomes action items, blockers, ownership, and next-step planning.</p>
-                        </div>
-                      </article>
-                    </div>
-                  </section>
-                </aside>
-              </div>
+                </div>
+              </section>
 
               <section class="board-card step-recent-card" aria-label="Recent Local Framings">
                 <div class="step-recent-head">
                   <div>
-                    <p class="card-label">Recent Local Framings</p>
-                    <h3>Continue from earlier work</h3>
+                    <h3>Pick up where you left off</h3>
                   </div>
-                  <span id="problem-recent-count" class="status-chip">Loading...</span>
+                  <span id="problem-recent-count" class="step-recent-count">Loading...</span>
+                  <span class="spacer"></span>
+                  <button id="problem-view-history" class="ghost-button step-recent-view" type="button">View history</button>
                 </div>
                 <div id="problem-recent-list" class="step-recent-list">
                   <article class="step-recent-empty">
@@ -200,6 +223,14 @@
             </div>
 
             <div class="roadmap-stack">
+              <div class="roadmap-top-frame">
+              <div class="roadmap-width-guide roadmap-width-guide-top" aria-hidden="true">
+                <div class="roadmap-width-guide-line"></div>
+                <span class="roadmap-width-guide-marker marker-0">0%</span>
+                <span class="roadmap-width-guide-marker marker-45">45%</span>
+                <span class="roadmap-width-guide-marker marker-55">55%</span>
+                <span class="roadmap-width-guide-marker marker-100">100%</span>
+              </div>
               <div class="roadmap-top-grid">
                 <section class="board-card board-section roadmap-question-panel">
                   <div class="section-heading">
@@ -210,22 +241,30 @@
                         The roadmap references the latest version of the question below, so keep it grounded in the real business decision.
                       </p>
                     </div>
-                  </div>
-                  <div class="section-toolbar section-toolbar-left roadmap-question-toolbar">
-                    <span id="glossary-status" class="analysis-status" hidden>
-                      <span class="analysis-status-spinner" aria-hidden="true"></span>
-                      <span class="analysis-status-text">Refreshing glossary</span>
-                    </span>
-                    <button id="refresh-question" class="secondary-button" type="button">Refresh Question</button>
+                    <div class="roadmap-panel-actions">
+                      <span id="glossary-status" class="analysis-status" hidden>
+                        <span class="analysis-status-spinner" aria-hidden="true"></span>
+                        <span class="analysis-status-text">Refreshing glossary</span>
+                      </span>
+                      <button id="refresh-question" class="secondary-button" type="button">Refresh Question</button>
+                    </div>
                   </div>
                   <div class="roadmap-card-body">
                     <div class="editor-card roadmap-main-question-card">
-                      <label class="field-label" for="roadmap-problem-input">Main Question</label>
+                      <div class="roadmap-main-question-head">
+                        <label class="field-label" for="roadmap-problem-input">Main Question</label>
+                        <button id="open-roadmap-problem-details" class="ghost-button roadmap-context-trigger" type="button">
+                          Additional Context
+                        </button>
+                      </div>
                       <textarea
                         id="roadmap-problem-input"
                         rows="6"
                         placeholder="Refine the question here before confirming the roadmap."
                       ></textarea>
+                      <div id="roadmap-problem-details-preview" class="roadmap-details-preview empty">
+                        No additional context added yet.
+                      </div>
                     </div>
                   </div>
                   <textarea
@@ -234,8 +273,6 @@
                     rows="4"
                     placeholder="Add more context for this problem so the roadmap can be more precise."
                   ></textarea>
-                  <div id="roadmap-problem-details-preview" class="visually-hidden"></div>
-                  <button id="open-roadmap-problem-details" class="visually-hidden" type="button">Insert Details</button>
                 </section>
 
                 <section class="board-card board-section roadmap-assessment-panel">
@@ -247,40 +284,52 @@
                         Keep the roadmap aligned with the kind of question you are actually trying to answer.
                       </p>
                     </div>
-                  </div>
-                  <div class="section-toolbar section-toolbar-left">
-                    <span id="assessment-status" class="analysis-status" hidden>
-                      <span class="analysis-status-spinner" aria-hidden="true"></span>
-                      <span class="analysis-status-text">Reviewing problem type</span>
-                    </span>
+                    <div class="roadmap-panel-actions">
+                      <span id="assessment-status" class="analysis-status" hidden>
+                        <span class="analysis-status-spinner" aria-hidden="true"></span>
+                        <span class="analysis-status-text">Reviewing problem type</span>
+                      </span>
+                    </div>
                   </div>
                   <div class="assessment-card">
                     <div class="assessment-choice-stack" role="radiogroup" aria-label="Problem Type">
                       <button class="assessment-choice-card" type="button" data-problem-type-option="descriptive_analysis">
                         <span class="assessment-choice-radio" aria-hidden="true"></span>
                         <span class="assessment-choice-copy">
-                          <strong>Descriptive Analysis</strong>
+                          <span class="assessment-choice-title-row">
+                            <strong>Descriptive Analysis</strong>
+                            <span class="assessment-choice-badge" hidden>Recommended</span>
+                          </span>
                           <span>Clarify what is happening, where it is happening, and which business factors appear to explain it.</span>
                         </span>
                       </button>
                       <button class="assessment-choice-card" type="button" data-problem-type-option="predictive_modeling">
                         <span class="assessment-choice-radio" aria-hidden="true"></span>
                         <span class="assessment-choice-copy">
-                          <strong>Predictive Modeling</strong>
+                          <span class="assessment-choice-title-row">
+                            <strong>Predictive Modeling</strong>
+                            <span class="assessment-choice-badge" hidden>Recommended</span>
+                          </span>
                           <span>Estimate future outcomes or identify which cases are most likely to require attention next.</span>
                         </span>
                       </button>
                       <button class="assessment-choice-card" type="button" data-problem-type-option="experiment_causal_question">
                         <span class="assessment-choice-radio" aria-hidden="true"></span>
                         <span class="assessment-choice-copy">
-                          <strong>Experiment / Causal Question</strong>
+                          <span class="assessment-choice-title-row">
+                            <strong>Experiment / Causal Question</strong>
+                            <span class="assessment-choice-badge" hidden>Recommended</span>
+                          </span>
                           <span>Test whether an action, feature, or intervention actually causes business results to move.</span>
                         </span>
                       </button>
                       <button class="assessment-choice-card" type="button" data-problem-type-option="operational_optimization">
                         <span class="assessment-choice-radio" aria-hidden="true"></span>
                         <span class="assessment-choice-copy">
-                          <strong>Operational Optimization</strong>
+                          <span class="assessment-choice-title-row">
+                            <strong>Operational Optimization</strong>
+                            <span class="assessment-choice-badge" hidden>Recommended</span>
+                          </span>
                           <span>Choose the best allocation, sequencing, or operational policy under real constraints and tradeoffs.</span>
                         </span>
                       </button>
@@ -288,11 +337,27 @@
                     <div class="assessment-copy">
                       <div class="assessment-copy-top">
                         <label class="field-label" for="assessment-title">Why This Framing Fits</label>
-                        <button id="update-roadbuild" class="secondary-button" type="button">Update Roadbuild</button>
+                        <div class="assessment-copy-actions">
+                          <div class="assessment-recap-hover">
+                            <button
+                              id="assessment-recap-trigger"
+                              class="assessment-recap-trigger"
+                              type="button"
+                              aria-label="Show interview recap"
+                            >
+                              i
+                            </button>
+                            <div class="assessment-recap-popover" role="tooltip">
+                              <p class="assessment-recap-popover-label">Interview Recap</p>
+                              <div id="assessment-recap-popover-copy" class="assessment-recap-popover-copy"></div>
+                            </div>
+                          </div>
+                          <button id="update-roadbuild" class="secondary-button" type="button" hidden>Update Analysis Path</button>
+                        </div>
                       </div>
+                      <div id="assessment-recommendation-note" class="assessment-recommendation-note" hidden></div>
                       <textarea id="assessment-title" rows="3" readonly></textarea>
-                      <label class="field-label" for="assessment-recap">Interview Recap</label>
-                      <textarea id="assessment-recap" rows="6" readonly></textarea>
+                      <textarea id="assessment-recap" class="visually-hidden" rows="6" readonly></textarea>
                     </div>
                     <select id="assessment-type" class="visually-hidden">
                       <option value="descriptive_analysis">Descriptive Analysis</option>
@@ -302,6 +367,26 @@
                     </select>
                   </div>
                 </section>
+              </div>
+              <div class="roadmap-height-guide" aria-hidden="true">
+                <div class="roadmap-height-guide-line"></div>
+                <span class="roadmap-height-guide-marker marker-10">10%</span>
+                <span class="roadmap-height-guide-marker marker-20">20%</span>
+                <span class="roadmap-height-guide-marker marker-30">30%</span>
+                <span class="roadmap-height-guide-marker marker-40">40%</span>
+                <span class="roadmap-height-guide-marker marker-50">50%</span>
+                <span class="roadmap-height-guide-marker marker-60">60%</span>
+                <span class="roadmap-height-guide-marker marker-70">70%</span>
+                <span class="roadmap-height-guide-marker marker-80">80%</span>
+                <span class="roadmap-height-guide-marker marker-90">90%</span>
+              </div>
+              <div class="roadmap-width-guide roadmap-width-guide-bottom" aria-hidden="true">
+                <div class="roadmap-width-guide-line"></div>
+                <span class="roadmap-width-guide-marker marker-0">0%</span>
+                <span class="roadmap-width-guide-marker marker-45">45%</span>
+                <span class="roadmap-width-guide-marker marker-55">55%</span>
+                <span class="roadmap-width-guide-marker marker-100">100%</span>
+              </div>
               </div>
             </div>
 
@@ -319,8 +404,6 @@
                     <span class="analysis-status-spinner" aria-hidden="true"></span>
                     <span class="analysis-status-text">Building approach</span>
                   </span>
-                  <button id="open-roadmap-log" class="secondary-button" type="button">Review Full Log</button>
-                  <button id="confirm-roadmap" class="primary-button roadmap-confirm-button">Confirm This Is the Roadmap</button>
                 </div>
               </div>
               <div class="roadmap-toolbar-wrap">
@@ -341,6 +424,12 @@
                     <span class="add-node-placeholder-text">Extend the framework only if something important is still missing.</span>
                   </span>
                 </button>
+              </div>
+              <div class="roadmap-bottom-bar">
+                <div class="roadmap-bottom-bar-inner">
+                  <button id="open-roadmap-log-bottom" class="secondary-button" type="button">Review Full Log</button>
+                  <button id="confirm-roadmap-bottom" class="primary-button roadmap-confirm-button" type="button">Continue to Workspace</button>
+                </div>
               </div>
             </section>
           </section>
@@ -480,15 +569,15 @@
           </section>
 
           <section id="step-summary" class="step-panel">
-            <div class="board-hero">
+            <div class="board-hero summary-hero">
               <div>
                 <div class="step-label">Complete</div>
-                <h2>Workflow Summary</h2>
+                <h2>Executive Summary and Work Plan</h2>
                 <p class="section-copy">
-                  You now have the full structure from problem framing through takeaway.
+                  Review the final readout first, then move through each node breakdown and the consolidated work plan.
                 </p>
               </div>
-              <div class="section-heading-actions">
+              <div class="section-heading-actions summary-hero-actions">
                 <button id="save-problem-framing" class="primary-button" type="button" disabled aria-disabled="true">Save This Problem Framing</button>
                 <button id="export-docx" class="secondary-button" type="button">Download Word</button>
                 <button id="export-pptx" class="secondary-button" type="button">Download PowerPoint</button>
@@ -674,21 +763,20 @@
     <template id="roadmap-node-template">
       <article class="roadmap-node">
         <div class="roadmap-node-shell">
-          <div class="roadmap-node-topline">
-            <div class="node-order"></div>
-            <div class="node-summary">
-              <div class="node-title-row">
-                <h3 class="node-title-text"></h3>
-                <span class="node-state-chip"></span>
-              </div>
-              <p class="node-summary-copy"></p>
-              <div class="node-summary-meta">
-                <span class="node-followup-chip"></span>
-              </div>
+          <div class="node-grip" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span class="node-order"></span>
+          <div class="node-summary">
+            <h3 class="node-title-text"></h3>
+            <p class="node-summary-copy"></p>
+            <div class="node-summary-meta">
+              <span class="node-followup-chip" hidden></span>
             </div>
-            <div class="node-header-actions">
-              <button class="ghost-button open-node" type="button">Details</button>
-            </div>
+          </div>
+          <span class="node-status-wrap">
+            <span class="node-state-chip"></span>
+          </span>
+          <div class="node-header-actions">
+            <button class="open-node" type="button">Start →</button>
           </div>
         </div>
       </article>
