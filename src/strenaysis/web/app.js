@@ -1024,7 +1024,7 @@ function loadDetailStep() {
   const currentNode = state.roadmap[state.currentIndex];
   resetDetailSections();
   renderDetailNodeSwitcher();
-  detailTitle.textContent = "Roadmap Buildup";
+  detailTitle.textContent = "Think Tank Workbench";
   if (detailStepTitle) {
     detailStepTitle.textContent = currentNode.title;
   }
@@ -1032,10 +1032,10 @@ function loadDetailStep() {
   detailNodeDescription.value = currentNode.why;
   detailNodeBreakdown.value = currentNode.breakdown;
   syncBriefPreviews();
-  detailSubtitle.textContent = `Build out the ${currentNode.title.toLowerCase()} node in detail before moving to the next part of the roadmap. ${currentNode.why}`;
+  detailSubtitle.textContent = `Pressure-test the ${currentNode.title.toLowerCase()} lens, define the evidence needed, and convert it into research workstreams before moving to the next part of the roadmap. ${currentNode.why}`;
   detailProgress.textContent = `${state.currentIndex + 1} of ${state.roadmap.length}`;
   nextNodeButton.textContent =
-    state.currentIndex === state.roadmap.length - 1 ? "Finish Workflow" : "Save and Continue";
+    state.currentIndex === state.roadmap.length - 1 ? "Finalize Brief" : "Save and Continue";
   loadNodeBuild(currentNode, false);
 }
 
@@ -1171,9 +1171,9 @@ function renderWorkItemCard(item) {
   approvalInput.value = approvalValue;
   blockersInput.value = item.blockers || "";
   const refreshSummary = () => {
-    const action = actionInput.value.trim() || "New action item";
+    const action = actionInput.value.trim() || "New workstream item";
     const owner = ownerInput.value.trim() || "Owner not set";
-    const source = sourceInput.value.trim() || "Source not set";
+    const source = sourceInput.value.trim() || "Evidence source not set";
     summaryTitle.textContent = action;
     summaryMeta.textContent = `${owner} | ${source}`;
   };
@@ -1260,19 +1260,19 @@ function renderSummary() {
   metaStrip.className = "summary-meta-strip";
   metaStrip.innerHTML = `
     <article class="summary-meta-card">
-      <p class="summary-meta-label">Problem</p>
+      <p class="summary-meta-label">Strategic Question</p>
       <p class="summary-meta-value">${escapeHtml(summarizeProblemTitle("", state.problem || "", "Current problem"))}</p>
     </article>
     <article class="summary-meta-card">
-      <p class="summary-meta-label">Nodes Reviewed</p>
+      <p class="summary-meta-label">Lenses Reviewed</p>
       <p class="summary-meta-value">${readyCount}/${state.roadmap.length || 0}</p>
     </article>
     <article class="summary-meta-card">
-      <p class="summary-meta-label">Work Plan Items</p>
+      <p class="summary-meta-label">Workstreams</p>
       <p class="summary-meta-value">${allActions.length}</p>
     </article>
     <article class="summary-meta-card">
-      <p class="summary-meta-label">Open Questions</p>
+      <p class="summary-meta-label">Evidence Gaps</p>
       <p class="summary-meta-value">${unansweredCount}</p>
     </article>
   `;
@@ -1283,17 +1283,17 @@ function renderSummary() {
   const leadNodeTitles = state.roadmap.slice(0, 3).map((node) => node.title).filter(Boolean).join(", ");
   const executiveCopy = [
     state.problem
-      ? `This workflow frames the question "${state.problem}" into ${state.roadmap.length || 0} analytical node${state.roadmap.length === 1 ? "" : "s"}.`
-      : `This workflow is organized into ${state.roadmap.length || 0} analytical nodes.`,
+      ? `This strategy brief frames the question "${state.problem}" into ${state.roadmap.length || 0} analytical lens${state.roadmap.length === 1 ? "" : "es"}.`
+      : `This strategy brief is organized into ${state.roadmap.length || 0} analytical lenses.`,
     readyCount
-      ? `${readyCount} node${readyCount === 1 ? "" : "s"} are already settled enough to move forward.`
-      : "The roadmap still needs more coverage before it is fully settled.",
+      ? `${readyCount} lens${readyCount === 1 ? " is" : "es are"} settled enough to move into work planning.`
+      : "The diagnostic roadmap still needs more evidence coverage before it is fully settled.",
     leadNodeTitles
-      ? `The structure currently centers on ${leadNodeTitles}.`
+      ? `The diagnosis currently centers on ${leadNodeTitles}.`
       : "",
     allActions.length
-      ? `${allActions.length} concrete work plan item${allActions.length === 1 ? "" : "s"} have already been captured.`
-      : "No concrete work plan items have been captured yet.",
+      ? `${allActions.length} concrete workstream item${allActions.length === 1 ? "" : "s"} have already been captured.`
+      : "No concrete workstream items have been captured yet.",
   ].filter(Boolean).join(" ");
   executiveSummary.innerHTML = `
     <p class="summary-executive-label">Executive Summary</p>
@@ -1337,33 +1337,33 @@ function renderSummary() {
       : `<p class="summary-node-empty">No follow-up discussion captured for this node yet.</p>`;
     report.innerHTML = `
       <div class="summary-node-report-head">
-        <span class="summary-node-report-num">Node ${index + 1}</span>
+        <span class="summary-node-report-num">Lens ${index + 1}</span>
         <h3>${escapeHtml(node.title)}</h3>
-        <span class="status-chip">${escapeHtml(isReady ? "Settled" : "Needs Context")}</span>
+        <span class="status-chip">${escapeHtml(isReady ? "Evidence Settled" : "Evidence Gap")}</span>
       </div>
-      <p class="summary-node-report-copy">${escapeHtml(nodeBuild.execution_summary || node.why || "No node summary written yet.")}</p>
+      <p class="summary-node-report-copy">${escapeHtml(nodeBuild.execution_summary || node.why || "No lens synthesis written yet.")}</p>
       <div class="summary-node-report-grid">
         <div class="summary-node-report-block">
-          <h4>Node Breakdown</h4>
-          <p>${escapeHtml(node.breakdown || "No node breakdown added yet.")}</p>
+          <h4>Hypothesis Tree</h4>
+          <p>${escapeHtml(node.breakdown || "No hypothesis breakdown added yet.")}</p>
         </div>
         <div class="summary-node-report-block">
-          <h4>Focus</h4>
-          <p>${escapeHtml(outputSections.focus || "No focus captured yet.")}</p>
+          <h4>Strategic Implication</h4>
+          <p>${escapeHtml(outputSections.focus || "No strategic implication captured yet.")}</p>
         </div>
         <div class="summary-node-report-block">
-          <h4>What Will Be Done</h4>
-          <p>${escapeHtml(outputSections.work_to_complete || "No work plan summary captured yet.")}</p>
+          <h4>Recommended Workstream</h4>
+          <p>${escapeHtml(outputSections.work_to_complete || "No workstream summary captured yet.")}</p>
         </div>
         <div class="summary-node-report-block">
-          <h4>Owners and Sources</h4>
-          <p>${escapeHtml(outputSections.owners_and_sources || "No ownership or source summary captured yet.")}</p>
+          <h4>Evidence Path</h4>
+          <p>${escapeHtml(outputSections.owners_and_sources || "No evidence path or owner summary captured yet.")}</p>
         </div>
       </div>
       <div class="summary-node-report-section">
         <div class="summary-node-report-section-head">
-          <h4>Follow-Up Coverage</h4>
-          <button class="ghost-button summary-review-button" type="button">Review Node</button>
+          <h4>Evidence and Assumption Coverage</h4>
+          <button class="ghost-button summary-review-button" type="button">Review Lens</button>
         </div>
         <div class="summary-node-thread-list">${qaMarkup}</div>
       </div>
@@ -1381,8 +1381,8 @@ function renderSummary() {
         <thead>
           <tr>
             <th>#</th>
-            <th>Node</th>
-            <th>Action</th>
+            <th>Lens</th>
+            <th>Workstream Item</th>
             <th>Owner</th>
             <th>Approval</th>
           </tr>
@@ -1404,11 +1404,11 @@ function renderSummary() {
         </tbody>
       </table>
     `
-    : `<p class="summary-node-empty">No work plan items have been collected yet.</p>`;
+    : `<p class="summary-node-empty">No workstream items have been collected yet.</p>`;
   workplanSection.innerHTML = `
-    <p class="summary-executive-label">Work Plan</p>
-    <h3>Consolidated Next Steps</h3>
-    <p class="section-copy">A single list of actions pulled from across the node breakdowns, organized for execution handoff.</p>
+    <p class="summary-executive-label">Consolidated Work Plan</p>
+    <h3>Operating Plan</h3>
+    <p class="section-copy">A single list of workstream items pulled from across the diagnostic lenses, organized for decision and execution handoff.</p>
     ${workplanRows}
   `;
   summaryContent.appendChild(workplanSection);
@@ -1749,7 +1749,7 @@ function renderProfileHistory(items) {
     profileHistoryList.innerHTML = `
       <article class="profile-history-card">
         <div class="profile-history-meta">
-          No saved problem structures yet. Save one from Workflow Summary and it will appear here.
+          No saved problem structures yet. Save one from the strategy brief and it will appear here.
         </div>
       </article>
     `;
@@ -2721,10 +2721,10 @@ function formatWorkstreams(items) {
 
 function syncBriefPreviews() {
   if (detailNodeDescriptionPreview) {
-    detailNodeDescriptionPreview.textContent = detailNodeDescription.value.trim() || "No node description added yet.";
+  detailNodeDescriptionPreview.textContent = detailNodeDescription.value.trim() || "No strategic tension added yet.";
   }
   if (detailNodeBreakdownPreview) {
-    detailNodeBreakdownPreview.textContent = detailNodeBreakdown.value.trim() || "No node breakdown added yet.";
+  detailNodeBreakdownPreview.textContent = detailNodeBreakdown.value.trim() || "No hypothesis tree added yet.";
   }
 }
 
@@ -2798,7 +2798,7 @@ function renderDetailCoverageReview() {
   if (!threads.length) {
     detailCoverageReview.innerHTML = `
       <article class="detail-coverage-empty">
-        No earlier roadmap coverage has been saved for this node yet. Any follow-up captured during roadmap buildup will appear here.
+        No diagnostic coverage has been saved for this lens yet. Any assumptions, evidence, or follow-up context captured during roadmap framing will appear here.
       </article>
     `;
     return;
@@ -2931,7 +2931,7 @@ function refreshExecutionPreview() {
   if (!items.length) {
     executionItemsPreview.innerHTML = `
       <div class="execution-preview-copy">
-        No action items yet. Open planning to add tasks, owners, approvals, and blockers.
+        No workstream items yet. Open the work plan to add tasks, owners, approvals, evidence sources, and blockers.
       </div>
     `;
     return;
@@ -2941,8 +2941,8 @@ function refreshExecutionPreview() {
       (item, index) => `
         <div class="execution-preview-item">
           <div class="execution-preview-main">
-            <div class="execution-preview-title">${escapeHtml(item.action || `Action item ${index + 1}`)}</div>
-            <div class="execution-preview-meta">${escapeHtml(`${item.owner || "Owner not set"} | ${item.source || "Source not set"}`)}</div>
+            <div class="execution-preview-title">${escapeHtml(item.action || `Workstream item ${index + 1}`)}</div>
+            <div class="execution-preview-meta">${escapeHtml(`${item.owner || "Owner not set"} | Evidence/source: ${item.source || "Not set"}`)}</div>
           </div>
         </div>
       `,
@@ -2971,14 +2971,14 @@ function parseStructuredOutput(text) {
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line) => {
-      if (line.startsWith("Focus:")) {
-        sections.focus = line.replace("Focus:", "").trim();
-      } else if (line.startsWith("What will be done:")) {
-        sections.work_to_complete = line.replace("What will be done:", "").trim();
-      } else if (line.startsWith("Who and where:")) {
-        sections.owners_and_sources = line.replace("Who and where:", "").trim();
-      } else if (line.startsWith("Deliverable and risk:")) {
-        sections.risks_and_handoff = line.replace("Deliverable and risk:", "").trim();
+      if (line.startsWith("Strategic implication:") || line.startsWith("Focus:")) {
+        sections.focus = line.replace("Strategic implication:", "").replace("Focus:", "").trim();
+      } else if (line.startsWith("Recommended workstream:") || line.startsWith("What will be done:")) {
+        sections.work_to_complete = line.replace("Recommended workstream:", "").replace("What will be done:", "").trim();
+      } else if (line.startsWith("Evidence path:") || line.startsWith("Who and where:")) {
+        sections.owners_and_sources = line.replace("Evidence path:", "").replace("Who and where:", "").trim();
+      } else if (line.startsWith("Risks and counterarguments:") || line.startsWith("Deliverable and risk:")) {
+        sections.risks_and_handoff = line.replace("Risks and counterarguments:", "").replace("Deliverable and risk:", "").trim();
       }
     });
   return sections;
@@ -2996,10 +2996,10 @@ function buildStructuredOutput() {
     return "";
   }
   detailOutput.value = [
-    `Focus: ${sections.focus}`,
-    `What will be done: ${sections.work_to_complete}`,
-    `Who and where: ${sections.owners_and_sources}`,
-    `Deliverable and risk: ${sections.risks_and_handoff}`,
+    `Strategic implication: ${sections.focus}`,
+    `Recommended workstream: ${sections.work_to_complete}`,
+    `Evidence path: ${sections.owners_and_sources}`,
+    `Risks and counterarguments: ${sections.risks_and_handoff}`,
   ].join("\n");
   return detailOutput.value;
 }
@@ -3064,24 +3064,24 @@ function openSummaryNodeModal(node, nodeBuild) {
   const threads = normalizeNodeFollowUpThreads(node);
   const actions = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items : [];
   summaryNodeModalTitle.textContent = node.title;
-  summaryNodeModalCopy.textContent = "Review how this node moved from roadmap framing into follow-up coverage and execution work.";
+  summaryNodeModalCopy.textContent = "Review how this lens moved from diagnostic framing into evidence coverage and workstream planning.";
   summaryNodeModalBody.className = "modal-body summary-modal-body";
   summaryNodeModalBody.innerHTML = `
     <section class="summary-modal-section">
-      <h4>Roadmap Framing</h4>
+      <h4>Diagnostic Framing</h4>
       <div class="summary-modal-list">
         <div class="summary-modal-item">
-          <strong>Node Description</strong>
-          <p>${escapeHtml(node.why || "No node description added yet.")}</p>
+          <strong>Strategic Tension</strong>
+          <p>${escapeHtml(node.why || "No strategic tension added yet.")}</p>
         </div>
         <div class="summary-modal-item">
-          <strong>Node Breakdown</strong>
-          <p>${escapeHtml(node.breakdown || "No node breakdown added yet.")}</p>
+          <strong>Hypothesis Tree</strong>
+          <p>${escapeHtml(node.breakdown || "No hypothesis tree added yet.")}</p>
         </div>
       </div>
     </section>
     <section class="summary-modal-section">
-      <h4>Roadmap Follow-Up Coverage</h4>
+      <h4>Evidence and Assumption Coverage</h4>
       <div class="summary-modal-list">
         ${
           threads.length
@@ -3106,25 +3106,25 @@ function openSummaryNodeModal(node, nodeBuild) {
                   `,
                 )
                 .join("")
-            : `<div class="summary-modal-item">No follow-up coverage was captured for this node in roadmap buildup.</div>`
+            : `<div class="summary-modal-item">No evidence or assumption coverage was captured for this lens yet.</div>`
         }
       </div>
     </section>
     <section class="summary-modal-section">
-      <h4>Execution Planning</h4>
+      <h4>Workstream Planning</h4>
       <div class="summary-modal-list">
         <div class="summary-modal-item">
-          <strong>Execution Summary</strong>
-          <p>${escapeHtml(nodeBuild.execution_summary || "No execution summary added yet.")}</p>
+          <strong>Analytical Lens</strong>
+          <p>${escapeHtml(nodeBuild.execution_summary || "No analytical lens summary added yet.")}</p>
         </div>
         <div class="summary-modal-item">
-          <strong>Problem Parse</strong>
-          <p>${escapeHtml(nodeBuild.extracted_context || "No extracted context added yet.")}</p>
+          <strong>Known Signals and Evidence Required</strong>
+          <p>${escapeHtml(nodeBuild.extracted_context || "No evidence plan added yet.")}</p>
         </div>
       </div>
     </section>
     <section class="summary-modal-section">
-      <h4>Action Items and Blockers</h4>
+      <h4>Workstream Items and Blockers</h4>
       <div class="summary-modal-list">
         ${
           actions.length
@@ -3132,7 +3132,7 @@ function openSummaryNodeModal(node, nodeBuild) {
                 .map(
                   (item) => `
                     <div class="summary-modal-item">
-                      <p><strong>${escapeHtml(item.action || "No action title")}</strong></p>
+                      <p><strong>${escapeHtml(item.action || "No workstream item title")}</strong></p>
                       <p>${escapeHtml(`Owner: ${item.owner || "Not set"} | Collaborator: ${item.collaborator || "Not set"}`)}</p>
                       <p>${escapeHtml(`Source: ${item.source || "Not set"} | Artifact: ${item.artifact || "Not set"}`)}</p>
                       <p>${escapeHtml(`Approval: ${item.approval || "Not set"} | Blocker: ${item.blockers || "Not set"}`)}</p>
@@ -3140,7 +3140,7 @@ function openSummaryNodeModal(node, nodeBuild) {
                   `,
                 )
                 .join("")
-            : `<div class="summary-modal-item">No action items added yet.</div>`
+            : `<div class="summary-modal-item">No workstream items added yet.</div>`
         }
       </div>
     </section>
@@ -3228,11 +3228,11 @@ function buildRoadmapLogMarkup() {
             <span class="status-chip">${escapeHtml(node.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM)}</span>
           </div>
           <div class="roadmap-log-block">
-            <span class="roadmap-log-block-label">Node Description</span>
+            <span class="roadmap-log-block-label">Strategic Tension</span>
             <div class="roadmap-log-block-copy">${escapeHtml(node.why || "No description yet.")}</div>
           </div>
           <div class="roadmap-log-block">
-            <span class="roadmap-log-block-label">Node Breakdown</span>
+            <span class="roadmap-log-block-label">Hypothesis Tree</span>
             <div class="roadmap-log-block-copy">${escapeHtml(node.breakdown || "No breakdown yet.")}</div>
           </div>
           <div class="roadmap-log-block">

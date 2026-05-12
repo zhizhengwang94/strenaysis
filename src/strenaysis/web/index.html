@@ -81,11 +81,11 @@
               </button>
               <button class="nav-substep" data-problem-step="details" type="button">
                 <span class="nav-substep-index">Step 3</span>
-                <span class="nav-substep-label">Roadmap Buildup</span>
+                <span class="nav-substep-label">Think Tank Workbench</span>
               </button>
               <button class="nav-substep" data-problem-step="summary" type="button">
                 <span class="nav-substep-index">Step 4</span>
-                <span class="nav-substep-label">Workflow Summary</span>
+                <span class="nav-substep-label">Strategy Brief</span>
               </button>
             </div>
           </div>
@@ -112,21 +112,20 @@
       <div class="workspace-shell">
         <header class="workspace-header">
           <div>
-            <p class="eyebrow">Agentic Business-to-Analytics Translator</p>
-            <h2 class="workspace-title">Translate ambiguous business asks into a structured analytical workflow.</h2>
+            <p class="eyebrow">Strategy Research Workspace</p>
+            <h2 class="workspace-title">Turn ambiguous business questions into structured diagnosis, research workstreams, and decision-ready briefs.</h2>
             <p class="workspace-copy">
-              Start with the real question in plain language, pressure-test the framing, and turn it into a roadmap
-              the analytics team can actually execute.
+              Start with the real question in plain language, pressure-test the framing, and convert early thinking into a credible analytical work plan.
             </p>
           </div>
           <div class="workspace-status">
             <div class="status-card">
               <span class="status-card-label">Workspace</span>
-              <strong>Problem Structuring</strong>
+              <strong>Strategic Framing</strong>
             </div>
             <div class="status-card">
               <span class="status-card-label">Mode</span>
-              <strong>Roadmap Drafting</strong>
+              <strong>Research Desk</strong>
             </div>
           </div>
         </header>
@@ -140,17 +139,16 @@
                   <span class="step-home-topbar-sep">/</span>
                   <span class="is-active">New problem</span>
                 </div>
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Start with a question</p>
-                <h2 class="step-home-title">What business question are you trying to answer?</h2>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Frame the strategic question</p>
+                <h2 class="step-home-title">What are we trying to understand?</h2>
                 <p class="step-home-lede">
-                  Write it the way a colleague would ask you over coffee - plain language, one sentence, the real thing.
-                  Strenaysis will turn it into a defensible analytical roadmap in the next step.
+                  Draft the situation, tension, or decision in plain language. Strenaysis will turn it into a defensible diagnostic roadmap in the next step.
                 </p>
               </div>
 
               <section class="board-card board-card-emphasis step-composer-card" aria-label="Main Question Composer">
                 <label class="field-label composer-label" for="problem-input">
-                  Your question
+                  Initial problem statement
                   <span class="composer-required">Required</span>
                 </label>
                 <div class="step-composer-frame">
@@ -163,12 +161,12 @@
                   ></textarea>
 
                   <details class="step-context-details">
-                    <summary>Add context - who's asking and what hangs on the answer</summary>
+                    <summary>Add context, constraints, stakeholders, or decision urgency</summary>
                     <textarea
                       id="problem-details-input"
                       class="step-context-input"
                       rows="3"
-                      placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."
+                      placeholder="Known signals, constraints, stakeholder pressure, decision deadline, and what would change if the answer were clear."
                     ></textarea>
                   </details>
 
@@ -183,7 +181,7 @@
                         <span class="analysis-status-spinner" aria-hidden="true"></span>
                         <span class="analysis-status-text">Analyzing question</span>
                       </span>
-                      <button id="start-roadmap" class="primary-button step-start-button" type="button">Structure the problem</button>
+                      <button id="start-roadmap" class="primary-button step-start-button" type="button">Build diagnosis</button>
                     </div>
                   </div>
                 </div>
@@ -215,15 +213,15 @@
                   <span class="step-home-topbar-sep">/</span>
                   <span class="is-active">Roadmap workspace</span>
                 </div>
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 2 of 4 - Shape the roadmap</p>
-                <h2 class="roadmap-header-title problem-flow-title">Review the question, choose the framing, and work through the nodes that still need context.</h2>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 2 of 4 - Diagnose the framing</p>
+                <h2 class="roadmap-header-title problem-flow-title">Review the strategic question, choose the diagnostic lens, and identify the nodes that still need evidence.</h2>
                 <p class="roadmap-header-lede problem-flow-lede">
-                  Keep the question editable, pressure-test the problem type, then open any roadmap node to capture the follow-up memory that should guide the next build step.
+                  Keep the question editable, pressure-test the problem type, then open any roadmap node to capture assumptions, evidence, and unknowns for the workbench.
                 </p>
               </div>
               <div class="roadmap-header-status problem-flow-status">
                 <span id="roadmap-source" class="status-chip"></span>
-                <div class="board-hero-badge">Roadmap Workspace</div>
+                <div class="board-hero-badge">Diagnostic Desk</div>
               </div>
             </div>
 
@@ -240,10 +238,10 @@
                 <section class="board-card board-section roadmap-question-panel">
                   <div class="section-heading">
                     <div>
-                      <p class="card-label">Current Question</p>
+                      <p class="card-label">Strategic Question</p>
                       <h3>Tighten the business ask</h3>
                       <p class="section-copy">
-                        The roadmap references the latest version of the question below, so keep it grounded in the real business decision.
+                        The roadmap references the latest version of the question below, so keep it grounded in the real decision and operating context.
                       </p>
                     </div>
                     <div class="roadmap-panel-actions">
@@ -257,7 +255,7 @@
                   <div class="roadmap-card-body">
                     <div class="editor-card roadmap-main-question-card">
                       <div class="roadmap-main-question-head">
-                        <label class="field-label" for="roadmap-problem-input">Main Question</label>
+                        <label class="field-label" for="roadmap-problem-input">Strategic Question</label>
                         <button id="open-roadmap-problem-details" class="ghost-button roadmap-context-trigger" type="button">
                           Additional Context
                         </button>
@@ -283,10 +281,10 @@
                 <section class="board-card board-section roadmap-assessment-panel">
                   <div class="section-heading">
                     <div>
-                      <p class="card-label">Problem Assessment</p>
-                      <h3>Choose the analytical framing</h3>
+                      <p class="card-label">Diagnostic Framing</p>
+                      <h3>Choose the analytical lens</h3>
                       <p class="section-copy">
-                        Keep the roadmap aligned with the kind of question you are actually trying to answer.
+                        Keep the roadmap aligned with the kind of decision, uncertainty, and evidence standard this problem requires.
                       </p>
                     </div>
                     <div class="roadmap-panel-actions">
@@ -398,10 +396,10 @@
             <section class="board-card board-section roadmap-sequence-panel">
               <div class="section-heading roadmap-sequence-heading">
                 <div>
-                  <p class="card-label">Roadmap Buildup</p>
-                  <h3>Framework Sequence</h3>
+                  <p class="card-label">Research Roadmap</p>
+                  <h3>Diagnostic Pathway</h3>
                   <p class="section-copy">
-                    Review the proposed sequence, open any node to capture follow-up coverage, and only confirm once the structure feels right.
+                    Review the proposed sequence, open any node to capture assumptions or evidence gaps, and only confirm once the diagnostic path feels right.
                   </p>
                 </div>
                 <div class="roadmap-confirm-wrap">
@@ -445,10 +443,10 @@
                 <div class="step-home-topbar" aria-label="Breadcrumb">
                   <span>Workspace</span>
                   <span class="step-home-topbar-sep">/</span>
-                  <span class="is-active">Roadmap buildup</span>
+                  <span class="is-active">Think tank workbench</span>
                 </div>
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 3 of 4 - Build the workspace</p>
-                <h2 id="detail-title" class="problem-flow-title">Roadmap Buildup</h2>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 3 of 4 - Convert diagnosis into workstreams</p>
+                <h2 id="detail-title" class="problem-flow-title">Think Tank Workbench</h2>
                 <p class="section-copy problem-flow-lede" id="detail-subtitle"></p>
               </div>
               <div class="detail-hero-actions problem-flow-status">
@@ -457,15 +455,15 @@
                   <span class="analysis-status-text">Preparing node</span>
                 </span>
                 <span id="detail-progress" class="status-chip"></span>
-                <button id="refresh-node-build" class="secondary-button" type="button">Refresh Node Draft</button>
+                <button id="refresh-node-build" class="secondary-button" type="button">Refresh Workbench Draft</button>
               </div>
             </div>
 
             <section class="board-card board-section detail-node-switcher-card">
               <div class="section-heading">
                 <div>
-                  <p class="card-label">Node Navigation</p>
-                  <h3>Jump Across the Roadmap</h3>
+                  <p class="card-label">Diagnostic Pathway</p>
+                  <h3>Move Across the Research Sequence</h3>
                 </div>
               </div>
               <div class="detail-node-switcher-row">
@@ -482,26 +480,26 @@
                 <section class="board-card board-section detail-brief-card">
                   <div class="detail-brief-header">
                     <div>
-                      <p class="card-label">Node Brief</p>
-                      <h3 id="detail-step-title">Detail Builder</h3>
+                  <p class="card-label">Selected Strategic Lens</p>
+                      <h3 id="detail-step-title">Workbench Node</h3>
                     </div>
                   </div>
                   <div class="detail-brief-block">
-                    <span class="detail-brief-label">Node Name</span>
+                    <span class="detail-brief-label">Lens / Workstream</span>
                     <div id="detail-node-name" class="detail-brief-value"></div>
                   </div>
                   <div class="detail-brief-block">
-                    <span class="detail-brief-label">Node Description</span>
+                    <span class="detail-brief-label">Strategic Tension</span>
                     <div id="detail-node-description-preview" class="detail-brief-preview"></div>
                   </div>
                   <div class="detail-brief-block">
-                    <span class="detail-brief-label">Node Breakdown</span>
+                    <span class="detail-brief-label">Hypothesis Tree</span>
                     <div id="detail-node-breakdown-preview" class="detail-brief-preview detail-brief-preview-breakdown"></div>
                   </div>
                   <textarea id="detail-node-description" class="visually-hidden" rows="3"></textarea>
                   <textarea id="detail-node-breakdown" class="visually-hidden" rows="5"></textarea>
                   <div class="detail-brief-footnote">
-                    Keep this brief on the left as the quick readout for the node while the right side shows the settled roadmap coverage and execution work.
+                    Keep this brief visible while the workbench turns the diagnosis into evidence needs, research questions, risks, and a workstream plan.
                   </div>
                 </section>
               </aside>
@@ -510,10 +508,10 @@
                 <section class="board-card board-section collapsible-section is-open" data-section="coverage-review">
                   <div class="section-heading collapsible-heading">
                     <div>
-                      <p class="card-label">Coverage Review</p>
-                      <h3>Earlier Roadmap Coverage</h3>
+                      <p class="card-label">Evidence Log</p>
+                      <h3>Earlier Diagnostic Coverage</h3>
                       <p class="section-copy">
-                        Review the questions already raised in roadmap buildup and expand any item to see the answers captured so far.
+                        Review the questions, assumptions, and evidence already captured for this strategic lens.
                       </p>
                     </div>
                     <div class="section-heading-actions">
@@ -538,24 +536,78 @@
                   </select>
                   <textarea id="detail-followup-input" rows="4"></textarea>
                   <button id="add-followup-response" type="button">Add Response</button>
-                  <textarea id="detail-execution-summary" rows="3"></textarea>
-                  <textarea id="detail-key-question" rows="3"></textarea>
-                  <textarea id="detail-workstreams" rows="4"></textarea>
-                  <textarea id="detail-extracted-context" rows="5"></textarea>
-                  <textarea id="detail-open-questions" rows="5"></textarea>
                 </div>
+
+                <section class="board-card board-section detail-section-emphasis collapsible-section is-open" data-section="workbench">
+                  <div class="section-heading collapsible-heading">
+                    <div>
+                      <p class="card-label">Strategy Workbench</p>
+                      <h3>Hypothesis, Evidence, and Decision Path</h3>
+                      <p class="section-copy">
+                        Pressure-test the current lens, define the evidence required, and convert the node into a credible research workstream.
+                      </p>
+                    </div>
+                    <div class="section-heading-actions">
+                      <button class="ghost-button section-toggle" type="button" data-target="workbench">Collapse</button>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                    <div class="thinktank-workbench-grid">
+                      <section class="context-panel context-panel-priority">
+                        <span class="context-panel-label">Lens</span>
+                        <div class="context-heading-row">
+                          <h4>Analytical Lens</h4>
+                          <span class="research-tag">Hypothesis</span>
+                        </div>
+                        <textarea id="detail-execution-summary" rows="4" placeholder="Summarize how this lens frames the strategic tension and what it is trying to explain."></textarea>
+                      </section>
+                      <section class="context-panel context-panel-workstreams">
+                        <span class="context-panel-label">Questions</span>
+                        <div class="context-heading-row">
+                          <h4>Key Research Question</h4>
+                          <span class="research-tag">Question</span>
+                        </div>
+                        <textarea id="detail-key-question" rows="4" placeholder="What must be true, false, or better understood before this decision can move forward?"></textarea>
+                      </section>
+                      <section class="context-panel context-panel-context">
+                        <span class="context-panel-label">Evidence</span>
+                        <div class="context-heading-row">
+                          <h4>Known Signals and Evidence Required</h4>
+                          <span class="research-tag">Evidence Gap</span>
+                        </div>
+                        <textarea id="detail-extracted-context" rows="5" placeholder="List known facts, useful signals, missing data, and evidence that would increase confidence."></textarea>
+                      </section>
+                      <section class="context-panel context-panel-workstreams context-panel-wide">
+                        <span class="context-panel-label">Workstreams</span>
+                        <div class="context-heading-row">
+                          <h4>Prioritized Research Workstreams</h4>
+                          <span class="research-tag">Priority</span>
+                        </div>
+                        <textarea id="detail-workstreams" rows="5" placeholder="Define the analysis tasks, research streams, expected outputs, and decision dependencies."></textarea>
+                      </section>
+                      <section class="context-panel context-panel-risk">
+                        <span class="context-panel-label">Assumptions</span>
+                        <div class="context-heading-row">
+                          <h4>Risks, Counterarguments, and Open Questions</h4>
+                          <span class="research-tag">Risk</span>
+                        </div>
+                        <textarea id="detail-open-questions" rows="5" placeholder="Capture assumptions to pressure-test, counterarguments, risks, and unresolved stakeholder questions."></textarea>
+                      </section>
+                    </div>
+                  </div>
+                </section>
 
                 <section class="board-card board-section detail-section-emphasis collapsible-section is-open" data-section="planning">
                   <div class="section-heading collapsible-heading">
                     <div>
-                      <p class="card-label">Execution Planning</p>
-                      <h3>Action Items and Blockers</h3>
+                      <p class="card-label">Operating Plan</p>
+                      <h3>Workstreams, Owners, and Blockers</h3>
                       <p class="section-copy">
-                        Turn the node into practical tasks, named ownership, approval needs, and visible blockers.
+                        Convert the research workstream into practical tasks, owners, approval needs, and visible blockers.
                       </p>
                     </div>
                     <div class="section-heading-actions">
-                      <button id="open-execution-modal" class="secondary-button" type="button">Open Planning</button>
+                      <button id="open-execution-modal" class="secondary-button" type="button">Open Work Plan</button>
                       <button class="ghost-button section-toggle" type="button" data-target="planning">Collapse</button>
                     </div>
                   </div>
@@ -563,15 +615,50 @@
                     <div id="execution-items-preview" class="execution-preview-list"></div>
                   </div>
                 </section>
+                <section class="board-card board-section detail-output-section collapsible-section is-open" data-section="memo-output">
+                  <div class="section-heading collapsible-heading">
+                    <div>
+                      <p class="card-label">Decision Memo Draft</p>
+                      <h3>Brief-Ready Synthesis</h3>
+                      <p class="section-copy">
+                        Shape the node into the concise language that will carry into the final strategy brief.
+                      </p>
+                    </div>
+                    <div class="section-heading-actions">
+                      <span id="output-status" class="analysis-status" hidden>
+                        <span class="analysis-status-spinner" aria-hidden="true"></span>
+                        <span class="analysis-status-text">Synthesizing output</span>
+                      </span>
+                      <button class="ghost-button section-toggle" type="button" data-target="memo-output">Collapse</button>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                    <div class="detail-output-grid">
+                      <div class="output-panel output-panel-focus">
+                        <span class="context-panel-label">Implication</span>
+                        <label class="field-label" for="detail-output-focus">Strategic implication</label>
+                        <textarea id="detail-output-focus" rows="3" placeholder="What this lens implies for the decision or strategic question."></textarea>
+                      </div>
+                      <div class="output-panel output-panel-work">
+                        <span class="context-panel-label">Workstream</span>
+                        <label class="field-label" for="detail-output-work">Recommended workstream</label>
+                        <textarea id="detail-output-work" rows="4" placeholder="What analysis or research should be completed next."></textarea>
+                      </div>
+                      <div class="output-panel output-panel-owners">
+                        <span class="context-panel-label">Evidence Path</span>
+                        <label class="field-label" for="detail-output-owners">Evidence, sources, and owner path</label>
+                        <textarea id="detail-output-owners" rows="4" placeholder="Who or what system can provide the evidence, and where the work should live."></textarea>
+                      </div>
+                      <div class="output-panel output-panel-risks">
+                        <span class="context-panel-label">Counterargument</span>
+                        <label class="field-label" for="detail-output-risks">Risks and counterarguments</label>
+                        <textarea id="detail-output-risks" rows="4" placeholder="What could make this interpretation wrong, risky, or incomplete."></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
                 <div class="visually-hidden">
-                  <span id="output-status" class="analysis-status" hidden>
-                    <span class="analysis-status-spinner" aria-hidden="true"></span>
-                    <span class="analysis-status-text">Synthesizing output</span>
-                  </span>
-                  <textarea id="detail-output-focus" rows="3"></textarea>
-                  <textarea id="detail-output-work" rows="4"></textarea>
-                  <textarea id="detail-output-owners" rows="4"></textarea>
-                  <textarea id="detail-output-risks" rows="4"></textarea>
                   <textarea id="detail-output" rows="6"></textarea>
                 </div>
               </div>
@@ -584,12 +671,12 @@
                 <div class="step-home-topbar" aria-label="Breadcrumb">
                   <span>Workspace</span>
                   <span class="step-home-topbar-sep">/</span>
-                  <span class="is-active">Workflow summary</span>
+                  <span class="is-active">Strategy brief</span>
                 </div>
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 4 of 4 - Review the summary</p>
-                <h2 class="problem-flow-title">Executive Summary and Work Plan</h2>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 4 of 4 - Review the strategy brief</p>
+                <h2 class="problem-flow-title">Strategy Brief and Operating Plan</h2>
                 <p class="section-copy problem-flow-lede">
-                  Review the final readout first, then move through each node breakdown and the consolidated work plan.
+                  Review the advisory memo first, then move through each diagnostic lens, evidence plan, risk note, and consolidated work plan.
                 </p>
               </div>
               <div class="section-heading-actions summary-hero-actions">
@@ -801,7 +888,7 @@
         <article class="work-item-card">
           <button class="work-item-summary" type="button">
             <div class="work-item-summary-main">
-              <strong class="work-item-summary-title">New action item</strong>
+              <strong class="work-item-summary-title">New workstream item</strong>
               <span class="work-item-summary-meta">Owner not set</span>
             </div>
             <span class="work-item-summary-toggle">Expand</span>
@@ -809,7 +896,7 @@
           <div class="work-item-body">
           <div class="work-item-grid">
             <div class="work-item-field work-item-field-wide">
-              <label class="field-label">Action</label>
+              <label class="field-label">Workstream Item</label>
               <textarea class="work-item-action" rows="3"></textarea>
           </div>
           <div class="work-item-field">
@@ -821,15 +908,15 @@
             <input class="work-item-collaborator node-input" type="text" />
           </div>
           <div class="work-item-field work-item-field-wide">
-            <label class="field-label">Source / System</label>
+            <label class="field-label">Evidence Source / System</label>
             <textarea class="work-item-source" rows="2"></textarea>
           </div>
           <div class="work-item-field work-item-field-wide">
-            <label class="field-label">Artifact to Create</label>
+            <label class="field-label">Decision Artifact to Create</label>
             <textarea class="work-item-artifact" rows="2"></textarea>
           </div>
           <div class="work-item-field">
-            <label class="field-label">Needs Approval</label>
+            <label class="field-label">Decision Dependency</label>
             <select class="work-item-approval node-input">
               <option value="No approval needed">No approval needed</option>
               <option value="Business owner sign-off">Business owner sign-off</option>
@@ -840,7 +927,7 @@
             </select>
           </div>
           <div class="work-item-field work-item-field-wide">
-            <label class="field-label">Blockers</label>
+            <label class="field-label">Risks / Blockers</label>
             <textarea class="work-item-blockers" rows="3"></textarea>
             </div>
           </div>
@@ -881,35 +968,35 @@
         <div class="modal-card node-modal-card" role="dialog" aria-modal="true" aria-labelledby="node-modal-title">
           <div class="modal-header">
             <div>
-              <p class="eyebrow">Roadmap Node</p>
-              <h2 id="node-modal-title">Node Review</h2>
-              <p class="section-copy">Review the node framing and keep a visible record of which follow-up context has already been covered.</p>
+              <p class="eyebrow">Diagnostic Lens</p>
+              <h2 id="node-modal-title">Lens Review</h2>
+              <p class="section-copy">Review the framing and keep a visible record of which assumptions, evidence, and follow-up context have already been covered.</p>
             </div>
             <button id="close-node-modal" class="ghost-button" type="button">Close</button>
           </div>
           <div class="modal-body">
             <div class="node-modal-layout">
               <section class="node-modal-panel node-modal-brief">
-                <p class="card-label">Node Brief</p>
-                <label class="field-label" for="node-modal-name">Node Name</label>
+                <p class="card-label">Lens Brief</p>
+                <label class="field-label" for="node-modal-name">Lens / Workstream</label>
                 <input id="node-modal-name" class="node-input" type="text" maxlength="5000" />
-                <label class="field-label" for="node-modal-why">Node Description</label>
+                <label class="field-label" for="node-modal-why">Strategic Tension</label>
                 <textarea id="node-modal-why" rows="3" maxlength="5000"></textarea>
-                <label class="field-label" for="node-modal-breakdown">Node Breakdown</label>
+                <label class="field-label" for="node-modal-breakdown">Hypothesis Tree</label>
                 <textarea id="node-modal-breakdown" rows="6" maxlength="5000"></textarea>
               </section>
               <section class="node-modal-panel node-modal-followup">
-                <p class="card-label">Follow-Up Coverage</p>
+                <p class="card-label">Evidence Coverage</p>
                 <div class="followup-thread node-followup-thread">
                   <div id="node-modal-followup-responses" class="followup-responses"></div>
                 </div>
                 <div class="node-followup-bottom">
-                  <label class="field-label" for="node-modal-context">Follow-Up Prompt</label>
+                  <label class="field-label" for="node-modal-context">Evidence Gap / Follow-Up Prompt</label>
                   <textarea id="node-modal-context" rows="4" maxlength="5000"></textarea>
                   <div class="followup-composer node-followup-composer">
                   <div class="followup-composer-topline">
                     <div class="followup-composer-row">
-                      <label class="field-label" for="node-modal-followup-type">Answer Type</label>
+                  <label class="field-label" for="node-modal-followup-type">Evidence Type</label>
                       <select id="node-modal-followup-type" class="assessment-type-select">
                         <option value="Confirmed fact">Confirmed Fact</option>
                         <option value="Gathered evidence">Gathered Evidence</option>
@@ -919,11 +1006,11 @@
                       </select>
                     </div>
                     <div class="followup-composer-actions">
-                      <button id="node-modal-add-followup" class="secondary-button" type="button">Add Response</button>
+                      <button id="node-modal-add-followup" class="secondary-button" type="button">Add Evidence Note</button>
                     </div>
                   </div>
-                  <label class="field-label" for="node-modal-followup-input">Response</label>
-                  <textarea id="node-modal-followup-input" rows="4" maxlength="5000" placeholder="Add the answer, evidence, or assumption you want to keep attached to this node."></textarea>
+                  <label class="field-label" for="node-modal-followup-input">Evidence Note</label>
+                  <textarea id="node-modal-followup-input" rows="4" maxlength="5000" placeholder="Add the answer, evidence, assumption, or counterargument you want attached to this lens."></textarea>
                 </div>
                 </div>
               </section>
@@ -940,18 +1027,18 @@
       <div class="modal-card detail-brief-modal-card" role="dialog" aria-modal="true" aria-labelledby="detail-brief-modal-title">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Focused Brief Editor</p>
-            <h2 id="detail-brief-modal-title">Node Brief</h2>
-            <p class="section-copy">Refine the node framing in a focused view without cluttering the build workspace.</p>
+              <p class="eyebrow">Focused Brief Editor</p>
+            <h2 id="detail-brief-modal-title">Strategic Lens Brief</h2>
+            <p class="section-copy">Refine the lens framing in a focused view without cluttering the workbench.</p>
           </div>
           <button id="close-detail-brief-modal" class="ghost-button" type="button">Close</button>
         </div>
         <div class="modal-body">
-          <label class="field-label" for="detail-brief-modal-name">Node Name</label>
+          <label class="field-label" for="detail-brief-modal-name">Lens / Workstream</label>
           <input id="detail-brief-modal-name" class="node-input" type="text" readonly />
-          <label class="field-label" for="detail-brief-modal-description">Node Description</label>
+          <label class="field-label" for="detail-brief-modal-description">Strategic Tension</label>
           <textarea id="detail-brief-modal-description" rows="4"></textarea>
-          <label class="field-label" for="detail-brief-modal-breakdown">Node Breakdown</label>
+          <label class="field-label" for="detail-brief-modal-breakdown">Hypothesis Tree</label>
           <textarea id="detail-brief-modal-breakdown" rows="7"></textarea>
         </div>
         <div class="modal-footer">
@@ -965,15 +1052,15 @@
         <div class="modal-card execution-modal-card" role="dialog" aria-modal="true" aria-labelledby="execution-modal-title">
           <div class="modal-header">
             <div>
-              <p class="eyebrow">Execution Planning</p>
-              <h2 id="execution-modal-title">Action Items and Blockers</h2>
-              <p class="section-copy">Manage the work like a task board: keep it compact, expand only the item you need, and add more actions as needed.</p>
+              <p class="eyebrow">Operating Plan</p>
+              <h2 id="execution-modal-title">Workstream Items and Blockers</h2>
+              <p class="section-copy">Manage the work plan compactly: expand only the item you need, assign ownership, and keep evidence sources visible.</p>
             </div>
             <button id="close-execution-modal" class="ghost-button" type="button">Close</button>
           </div>
           <div class="modal-body">
             <div class="execution-modal-toolbar">
-              <button id="add-work-item" class="secondary-button" type="button">Add Item</button>
+              <button id="add-work-item" class="secondary-button" type="button">Add Workstream Item</button>
             </div>
             <div id="detail-work-items" class="work-items-list"></div>
           </div>
@@ -1032,9 +1119,9 @@
         <div class="modal-card roadmap-log-modal-card" role="dialog" aria-modal="true" aria-labelledby="roadmap-log-modal-title">
           <div class="modal-header">
             <div>
-              <p class="eyebrow">Roadmap Memory</p>
-              <h2 id="roadmap-log-modal-title">Roadmap Buildup Log</h2>
-              <p class="section-copy">Review the full shared context the follow-up reviewer uses before deciding whether a node still needs another question.</p>
+              <p class="eyebrow">Research Memory</p>
+              <h2 id="roadmap-log-modal-title">Diagnostic Coverage Log</h2>
+              <p class="section-copy">Review the full shared context the follow-up reviewer uses before deciding whether a lens still needs another question.</p>
             </div>
             <button id="close-roadmap-log-modal" class="ghost-button" type="button">Close</button>
           </div>
