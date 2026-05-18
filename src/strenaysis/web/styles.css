@@ -547,13 +547,19 @@ button:disabled {
 
 .step-home-shell {
   display: grid;
-  gap: 18px;
+  gap: 30px;
+  width: min(1200px, 100%);
+  margin: 0 auto;
 }
 
 .step-home-copy {
   display: grid;
-  gap: 6px;
-  max-width: 900px;
+  gap: 16px;
+  max-width: 820px;
+}
+
+#step-problem .step-home-topbar {
+  display: none;
 }
 
 .step-home-kicker {
@@ -579,25 +585,26 @@ button:disabled {
 
 .step-home-title {
   margin: 0;
-  max-width: 920px;
-  font-size: clamp(2rem, 4vw, 3.1rem);
-  line-height: 1;
+  max-width: 820px;
+  font-size: clamp(2.15rem, 4.5vw, 3.45rem);
+  line-height: 1.06;
   letter-spacing: -0.04em;
   color: #132436;
 }
 
 .step-home-lede {
   margin: 0;
-  max-width: 820px;
+  max-width: 760px;
   color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 1.05rem;
+  line-height: 1.58;
 }
 
 .step-composer-card {
   display: grid;
-  gap: 12px;
-  padding: 22px;
+  gap: 0;
+  width: 100%;
+  padding: 42px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 253, 0.98));
 }
@@ -605,16 +612,15 @@ button:disabled {
 .step-composer-frame {
   display: grid;
   gap: 0;
-  padding: 16px 18px 0;
-  border: 1px solid rgba(39, 61, 82, 0.1);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.94);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .step-composer-frame:focus-within {
-  border-color: rgba(34, 87, 122, 0.3);
-  box-shadow: 0 0 0 4px rgba(34, 87, 122, 0.08);
+  box-shadow: none;
 }
 
 .composer-label {
@@ -644,26 +650,28 @@ button:disabled {
 }
 
 .step-composer-input {
-  min-height: 96px !important;
+  min-height: 128px !important;
   padding: 0;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  font-size: 1.04rem;
-  line-height: 1.5;
-  resize: none;
-  margin-top: 8px;
+  font-size: 1.28rem;
+  line-height: 1.55;
+  resize: vertical;
+  margin-top: 22px;
 }
 
 .step-composer-input:focus {
   border: none;
+  box-shadow: none;
+  outline: none;
   transform: none;
 }
 
 .step-context-details {
-  margin-top: 8px;
-  padding-top: 12px;
+  margin-top: 22px;
+  padding-top: 18px;
   border-top: 1px solid rgba(39, 61, 82, 0.08);
 }
 
@@ -674,7 +682,7 @@ button:disabled {
   gap: 8px;
   cursor: pointer;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 500;
 }
 
@@ -699,9 +707,9 @@ button:disabled {
 }
 
 .step-context-input {
-  min-height: 72px !important;
-  margin-top: 10px;
-  border-radius: 16px;
+  min-height: 90px !important;
+  margin-top: 14px;
+  border-radius: 14px;
   background: rgba(251, 252, 254, 0.96);
 }
 
@@ -709,9 +717,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 12px 0 0;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 20px 0 0;
   border-top: 1px solid rgba(39, 61, 82, 0.08);
   flex-wrap: wrap;
 }
@@ -723,7 +731,7 @@ button:disabled {
 
 .composer-counter,
 .composer-shortcut {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .composer-counter {
@@ -741,15 +749,18 @@ button:disabled {
 
 .step-draft-button {
   background: rgba(255, 255, 255, 0.9);
+  border-color: transparent;
 }
 
 .step-start-button[disabled] {
   opacity: 0.42;
+  cursor: not-allowed;
 }
 
 .step-recent-card {
   display: grid;
   gap: 12px;
+  width: 100%;
   padding: 18px 20px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(246, 250, 253, 0.96));

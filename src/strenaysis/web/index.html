@@ -200,19 +200,19 @@
                   <span class="step-home-topbar-sep">/</span>
                   <span class="is-active">New problem</span>
                 </div>
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Frame the strategic question</p>
-                <h2 class="step-home-title">What are we trying to understand?</h2>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Step 1 of 4 - Start with a question</p>
+                <h2 class="step-home-title">What business question are you trying to answer?</h2>
                 <p class="step-home-lede">
-                  Draft the situation, tension, or decision in plain language. Strenaysis will turn it into a defensible diagnostic roadmap in the next step.
+                  Write it the way a colleague would ask you over coffee - plain language, one sentence, the real thing. We'll turn it into a defensible analytical roadmap in the next step.
                 </p>
               </div>
 
               <section class="board-card board-card-emphasis step-composer-card" aria-label="Main Question Composer">
-                <label class="field-label composer-label" for="problem-input">
-                  Initial problem statement
-                  <span class="composer-required">Required</span>
-                </label>
                 <div class="step-composer-frame">
+                  <label class="field-label composer-label" for="problem-input">
+                    Your question
+                    <span class="composer-required">required</span>
+                  </label>
                   <textarea
                     id="problem-input"
                     class="step-composer-input"
@@ -222,12 +222,12 @@
                   ></textarea>
 
                   <details class="step-context-details">
-                    <summary>Add context, constraints, stakeholders, or decision urgency</summary>
+                    <summary>Add context - who's asking and what hangs on the answer</summary>
                     <textarea
                       id="problem-details-input"
                       class="step-context-input"
                       rows="3"
-                      placeholder="Known signals, constraints, stakeholder pressure, decision deadline, and what would change if the answer were clear."
+                      placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."
                     ></textarea>
                   </details>
 
@@ -242,7 +242,7 @@
                         <span class="analysis-status-spinner" aria-hidden="true"></span>
                         <span class="analysis-status-text">Analyzing question</span>
                       </span>
-                      <button id="start-roadmap" class="primary-button step-start-button" type="button">Build diagnosis</button>
+                      <button id="start-roadmap" class="primary-button step-start-button" type="button" disabled>Structure the problem</button>
                     </div>
                   </div>
                 </div>

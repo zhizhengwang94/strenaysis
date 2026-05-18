@@ -414,7 +414,7 @@ startRoadmapButton.addEventListener("click", async () => {
     problemType: state.problemTypeKey,
     button: startRoadmapButton,
     loadingText: "Building...",
-    idleText: "Start to Build the Structure",
+    idleText: "Structure the problem",
     statusKeys: ["startRoadmap"],
     statusText: "Analyzing question",
     resetNotes: true,
