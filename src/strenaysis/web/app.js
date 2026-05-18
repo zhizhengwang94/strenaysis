@@ -1501,13 +1501,9 @@ function renderStepOneRecentProblems(items) {
       <span class="step-recent-status is-draft" aria-hidden="true"></span>
       <span class="step-recent-main">
         <span class="step-recent-title">${escapeHtml(draftTitle)}</span>
-        <span class="step-recent-meta">
-          <span class="step-recent-tag is-draft">Current workspace</span>
-          <span class="step-recent-tag is-draft">Unsaved</span>
-        </span>
       </span>
-      <span class="step-recent-step">Not saved yet</span>
-      <span class="step-recent-date">Resume draft</span>
+      <span class="step-recent-type">Draft</span>
+      <span class="step-recent-date">Unsaved - resume draft</span>
     `;
     draftRow.addEventListener("click", resumeDraftWorkspace);
     problemRecentList.appendChild(draftRow);
@@ -1526,20 +1522,15 @@ function renderStepOneRecentProblems(items) {
     row.type = "button";
     row.className = "step-recent-row";
     const problemType = escapeHtml(item.problem_type || "Not set");
-    const priority = escapeHtml(item.priority || "Medium");
     const isComplete = String(item.status || "").trim().toLowerCase() === "complete";
     const itemTitle = summarizeProblemTitle(item.problem_name, item.problem);
     row.innerHTML = `
       <span class="step-recent-status${isComplete ? " is-complete" : ""}" aria-hidden="true"></span>
       <span class="step-recent-main">
         <span class="step-recent-title">${escapeHtml(itemTitle)}</span>
-        <span class="step-recent-meta">
-          <span class="step-recent-tag">${problemType}</span>
-          <span class="step-recent-tag">${priority}</span>
-        </span>
       </span>
-      <span class="step-recent-step">${escapeHtml(isComplete ? "Complete" : "Saved framing")}</span>
-      <span class="step-recent-date">${escapeHtml(formatSavedDate(item.saved_at))}</span>
+      <span class="step-recent-type">${problemType}</span>
+      <span class="step-recent-date">${escapeHtml(formatSavedDate(item.saved_at))}${isComplete ? " - complete" : ""}</span>
     `;
     row.addEventListener("click", () => openProfileItem(item.filename));
     problemRecentList.appendChild(row);
