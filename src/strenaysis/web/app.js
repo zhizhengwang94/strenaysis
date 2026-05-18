@@ -15,10 +15,11 @@ const state = {
   sequenceEditMode: false,
   dragNodeId: null,
   activeNodeId: null,
-  activeProblemPanel: "problem",
+  activeProblemPanel: "intro",
 };
 
 const panels = {
+  intro: document.getElementById("step-intro"),
   problem: document.getElementById("step-problem"),
   roadmap: document.getElementById("step-roadmap"),
   details: document.getElementById("step-details"),
@@ -39,11 +40,13 @@ const problemCharCounter = document.getElementById("problem-char-counter");
 const problemRecentCount = document.getElementById("problem-recent-count");
 const problemRecentList = document.getElementById("problem-recent-list");
 const step1SidebarRecent = document.getElementById("step1-sidebar-recent");
+const step1SidebarIntroButton = document.getElementById("step1-sidebar-intro");
 const step1SidebarNewProblemButton = document.getElementById("step1-sidebar-new-problem");
 const step1SidebarHistoryButton = document.getElementById("step1-sidebar-history");
 const step1SidebarActionsButton = document.getElementById("step1-sidebar-actions");
 const step1SidebarPortfolioButton = document.getElementById("step1-sidebar-portfolio");
 const problemViewHistoryButton = document.getElementById("problem-view-history");
+const introStartProblemButton = document.getElementById("intro-start-problem");
 const roadmapList = document.getElementById("roadmap-list");
 const confirmRoadmapButton = document.getElementById("confirm-roadmap");
 const openRoadmapLogButton = document.getElementById("open-roadmap-log");
@@ -359,6 +362,14 @@ if (problemViewHistoryButton) {
 
 if (step1SidebarNewProblemButton) {
   step1SidebarNewProblemButton.addEventListener("click", () => showPanel("problem"));
+}
+
+if (step1SidebarIntroButton) {
+  step1SidebarIntroButton.addEventListener("click", () => showPanel("intro"));
+}
+
+if (introStartProblemButton) {
+  introStartProblemButton.addEventListener("click", () => showPanel("problem"));
 }
 
 if (step1SidebarHistoryButton) {
@@ -1896,6 +1907,12 @@ function showPanel(name) {
   problemSubsteps.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.problemStep === state.activeProblemPanel);
   });
+  if (step1SidebarIntroButton) {
+    step1SidebarIntroButton.classList.toggle("is-active", state.activeProblemPanel === "intro");
+  }
+  if (step1SidebarNewProblemButton) {
+    step1SidebarNewProblemButton.classList.toggle("is-active", state.activeProblemPanel === "problem");
+  }
   if (name === "problem") {
     loadStepOneRecentProblems();
   }
