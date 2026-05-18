@@ -15,7 +15,7 @@ const state = {
   sequenceEditMode: false,
   dragNodeId: null,
   activeNodeId: null,
-  activeProblemPanel: "intro",
+  activeProblemPanel: "problem",
 };
 
 const panels = {
@@ -45,8 +45,8 @@ const step1SidebarNewProblemButton = document.getElementById("step1-sidebar-new-
 const step1SidebarHistoryButton = document.getElementById("step1-sidebar-history");
 const step1SidebarActionsButton = document.getElementById("step1-sidebar-actions");
 const step1SidebarPortfolioButton = document.getElementById("step1-sidebar-portfolio");
-const problemViewHistoryButton = document.getElementById("problem-view-history");
 const introStartProblemButton = document.getElementById("intro-start-problem");
+const problemViewHistoryButton = document.getElementById("problem-view-history");
 const roadmapList = document.getElementById("roadmap-list");
 const confirmRoadmapButton = document.getElementById("confirm-roadmap");
 const openRoadmapLogButton = document.getElementById("open-roadmap-log");

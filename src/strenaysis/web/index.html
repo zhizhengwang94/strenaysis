@@ -6,7 +6,7 @@
     <title>Strenaysis</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -21,12 +21,12 @@
         </div>
 
         <div class="step1-sidebar-shell" aria-label="Step 1 sidebar">
-          <div class="step1-sidebar-section">
+          <div class="step1-sidebar-section step1-sidebar-intro-section">
             <p class="step1-sidebar-label">Intro</p>
             <div class="step1-sidebar-links">
-              <button id="step1-sidebar-intro" class="step1-sidebar-link is-active" type="button">
+              <button id="step1-sidebar-intro" class="step1-sidebar-link" type="button">
                 <span class="step1-sidebar-link-main">
-                  <span class="step1-sidebar-link-icon">·</span>
+                  <span class="step1-sidebar-link-icon">i</span>
                   <span>Mission &amp; vision</span>
                 </span>
                 <span class="step1-sidebar-badge">I</span>
@@ -37,7 +37,7 @@
           <div class="step1-sidebar-section">
             <p class="step1-sidebar-label">Workspace</p>
             <div class="step1-sidebar-links">
-              <button id="step1-sidebar-new-problem" class="step1-sidebar-link" type="button">
+              <button id="step1-sidebar-new-problem" class="step1-sidebar-link is-active" type="button">
                 <span class="step1-sidebar-link-main">
                   <span class="step1-sidebar-link-icon">✎</span>
                   <span>New problem</span>
@@ -144,30 +144,30 @@
         </header>
 
         <main class="workspace-board">
-          <section id="step-intro" class="step-panel active">
+          <section id="step-intro" class="step-panel">
             <div class="intro-panel-shell">
               <div class="intro-panel-header">
-                <p class="step-home-kicker"><span class="step-home-dot"></span> Intro - product brief</p>
-                <h2 class="intro-panel-title">Before the query, frame the work.</h2>
+                <div class="step-home-topbar" aria-label="Breadcrumb">
+                  <span>Intro</span>
+                  <span class="step-home-topbar-sep">/</span>
+                  <span class="is-active">Mission &amp; vision</span>
+                </div>
+                <p class="step-home-kicker"><span class="step-home-dot"></span> Product purpose</p>
+                <h2 class="intro-panel-title">Strenaysis is a framing layer for data teams.</h2>
                 <p class="intro-panel-lede">
-                  Strenaysis makes the hidden framing layer of analytical work visible: what question matters, why it matters, and what evidence would make the answer useful.
+                  It starts before the query, before the dashboard, and before the model. The workspace helps teams agree on what they are actually trying to learn.
                 </p>
               </div>
 
               <div class="intro-panel-grid">
                 <article class="intro-statement-card">
-                  <p class="mission-vision-label">The Pitch</p>
-                  <h3>AI tools have learned to answer questions. Most teams still struggle to frame them.</h3>
-                  <p>
-                    Strenaysis takes a raw business question, classifies the analytical problem, generates a node-by-node plan, and turns the reasoning into a reviewable workplan.
-                  </p>
-                </article>
-
-                <article class="intro-statement-card">
                   <p class="mission-vision-label">Mission</p>
                   <h3>Raise the floor on framing questions, not just producing answers.</h3>
                   <p>
-                    The mission is to catch vague or misframed asks before analysis begins, so teams spend effort on questions that deserve the work.
+                    Strenaysis helps data teams catch the expensive failure mode in analytical work: a well-executed answer to a question that was never framed clearly enough.
+                  </p>
+                  <p>
+                    It turns a vague business ask into a structured diagnostic roadmap before a single query gets run.
                   </p>
                 </article>
 
@@ -175,126 +175,24 @@
                   <p class="mission-vision-label">Vision</p>
                   <h3>Make the data team's reasoning visible, reviewable, and reusable.</h3>
                   <p>
-                    The vision is a shared artifact where stakeholders, analysts, and leads can see the decision, evidence path, assumptions, and workplan in one place.
+                    Strenaysis gives stakeholders, analysts, and leads a shared artifact for agreeing on what is worth learning and what evidence is needed.
                   </p>
-                </article>
-
-                <article class="intro-statement-card">
-                  <p class="mission-vision-label">Riskiest Assumption</p>
-                  <h3>Will a working analyst actually trust an LLM's breakdown of their problem?</h3>
                   <p>
-                    Trust means the classification feels right, the node sequence is defensible, and the coaching questions are sharp enough to use. The guardrail is structure, not chat.
+                    The long-term vision is a reasoning workspace that moves teams from unclear requests to decision-ready workplans.
                   </p>
                 </article>
               </div>
 
-              <section class="intro-section">
-                <div class="intro-section-head">
-                  <p class="mission-vision-label">Problem Space</p>
-                  <h3>Three failures that compound silently.</h3>
-                </div>
-                <div class="intro-mini-grid">
-                  <article>
-                    <span>i.</span>
-                    <h4>Asks arrive vague.</h4>
-                    <p>"Why is churn up?" is a symptom, not an analytical plan.</p>
-                  </article>
-                  <article>
-                    <span>ii.</span>
-                    <h4>Decision context is missing.</h4>
-                    <p>Teams need the decision, deadline, and mind-changing evidence before results arrive.</p>
-                  </article>
-                  <article>
-                    <span>iii.</span>
-                    <h4>Unknown unknowns stay hidden.</h4>
-                    <p>The riskiest gaps are the ones nobody thinks to ask about.</p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="intro-section">
-                <div class="intro-section-head">
-                  <p class="mission-vision-label">Who It Helps</p>
-                  <h3>Three audiences, one shared frustration.</h3>
-                </div>
-                <div class="intro-mini-grid">
-                  <article>
-                    <span>01</span>
-                    <h4>The stakeholder</h4>
-                    <p>Operators, PMs, and executives who need to turn a worry into an actionable question.</p>
-                  </article>
-                  <article>
-                    <span>02</span>
-                    <h4>The analyst</h4>
-                    <p>DAs and DSs who spend too much time decoding requests and negotiating scope.</p>
-                  </article>
-                  <article>
-                    <span>03</span>
-                    <h4>The lead</h4>
-                    <p>Analytics leaders who need reasoning to be legible before work is greenlit.</p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="intro-section">
-                <div class="intro-section-head">
-                  <p class="mission-vision-label">The Loop</p>
-                  <h3>Question in. Workplan out.</h3>
-                </div>
-                <div class="intro-loop-grid">
-                  <article>
-                    <span>Frame</span>
-                    <p>Capture the real ask and what hangs on the answer.</p>
-                  </article>
-                  <article>
-                    <span>Roadmap</span>
-                    <p>Classify and decompose it into an editable analytical path.</p>
-                  </article>
-                  <article>
-                    <span>Workspace</span>
-                    <p>Work node by node, tagging facts, assumptions, hypotheses, and gaps.</p>
-                  </article>
-                  <article>
-                    <span>Review</span>
-                    <p>Export the executive summary, node narrative, and workplan.</p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="intro-section">
-                <div class="intro-section-head">
-                  <p class="mission-vision-label">Prototype Learnings</p>
-                  <h3>What changed the product brief.</h3>
-                </div>
-                <div class="intro-mini-grid">
-                  <article>
-                    <span>i.</span>
-                    <h4>Response types are the spine.</h4>
-                    <p>Facts, assumptions, and hypotheses make review sharper.</p>
-                  </article>
-                  <article>
-                    <span>ii.</span>
-                    <h4>Nodes should be reorderable.</h4>
-                    <p>Analysts work non-linearly and should start where the unknowns live.</p>
-                  </article>
-                  <article>
-                    <span>iii.</span>
-                    <h4>The artifact is the product.</h4>
-                    <p>The LLM is the muscle. The reusable reasoning artifact is what travels.</p>
-                  </article>
-                </div>
-              </section>
-
               <div class="intro-panel-callout">
                 <p>
-                  Problem framing is the highest-leverage step in any data project. Get it right and every other step compounds. Get it wrong and no analysis recovers.
+                  Most generative AI raises the floor on producing answers. Strenaysis works upstream: deciding which questions are worth answering.
                 </p>
                 <button id="intro-start-problem" class="primary-button" type="button">Start a new problem</button>
               </div>
             </div>
           </section>
 
-          <section id="step-problem" class="step-panel">
+          <section id="step-problem" class="step-panel active">
             <div class="step-home-shell">
               <div class="step-home-copy">
                 <div class="step-home-topbar" aria-label="Breadcrumb">
