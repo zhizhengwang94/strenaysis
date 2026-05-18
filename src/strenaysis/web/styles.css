@@ -3446,6 +3446,58 @@ body {
   height: 132px;
 }
 
+/* Step 2 should read as one work surface: question on the left, framing on the right. */
+.roadmap-top-frame {
+  height: auto;
+  margin-bottom: 18px;
+  overflow: visible;
+}
+
+.roadmap-top-grid {
+  position: static;
+  display: grid;
+  grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.02fr);
+  gap: 18px;
+  align-items: stretch;
+  width: 100%;
+  height: auto;
+}
+
+.roadmap-question-panel,
+.roadmap-assessment-panel {
+  position: static;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
+.roadmap-question-panel {
+  grid-column: 1;
+}
+
+.roadmap-assessment-panel {
+  grid-column: 2;
+}
+
+.roadmap-card-body,
+.assessment-card {
+  min-height: 0;
+  overflow: visible;
+}
+
+.roadmap-main-question-card {
+  min-height: 430px;
+}
+
+.roadmap-assessment-panel .assessment-card {
+  min-height: 430px;
+}
+
 .priority-grid {
   display: grid;
   gap: 12px;
@@ -5804,6 +5856,11 @@ textarea:focus,
 
   .roadmap-top-grid {
     grid-template-columns: 1fr;
+  }
+
+  .roadmap-question-panel,
+  .roadmap-assessment-panel {
+    grid-column: auto;
   }
 
   .step-home-grid {
