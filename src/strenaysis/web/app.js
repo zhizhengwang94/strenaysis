@@ -84,6 +84,7 @@ const newNodeWhyInput = document.getElementById("new-node-why-input");
 const newNodeBreakdownInput = document.getElementById("new-node-breakdown-input");
 const newNodeContextInput = document.getElementById("new-node-context-input");
 const detailTitle = document.getElementById("detail-title");
+const detailBreadcrumbNode = document.getElementById("detail-breadcrumb-node");
 const detailStepTitle = document.getElementById("detail-step-title");
 const detailSubtitle = document.getElementById("detail-subtitle");
 const detailProgress = document.getElementById("detail-progress");
@@ -1035,7 +1036,10 @@ function loadDetailStep() {
   const currentNode = state.roadmap[state.currentIndex];
   resetDetailSections();
   renderDetailNodeSwitcher();
-  detailTitle.textContent = "Think Tank Workbench";
+  detailTitle.textContent = `What must be true of ${currentNode.title.toLowerCase()}?`;
+  if (detailBreadcrumbNode) {
+    detailBreadcrumbNode.textContent = currentNode.title || "Node";
+  }
   if (detailStepTitle) {
     detailStepTitle.textContent = currentNode.title;
   }

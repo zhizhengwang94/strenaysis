@@ -5988,6 +5988,1011 @@ textarea:focus,
   font-weight: 400;
 }
 
+/* Step 2 PM handoff alignment: preserve product behavior, tighten the work surface. */
+#step-roadmap {
+  width: min(960px, 100%);
+  margin: 0 auto;
+}
+
+#step-roadmap .roadmap-header {
+  margin: 0 0 40px;
+}
+
+#step-roadmap .roadmap-header-copy {
+  max-width: 760px;
+}
+
+#step-roadmap .roadmap-header-title {
+  max-width: 18ch;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+}
+
+#step-roadmap .roadmap-header-lede {
+  max-width: 760px;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+#step-roadmap .roadmap-header-status {
+  display: none;
+}
+
+#step-roadmap .roadmap-stack {
+  gap: 0;
+}
+
+#step-roadmap .roadmap-top-frame {
+  margin-bottom: 48px;
+}
+
+#step-roadmap .roadmap-top-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+#step-roadmap .roadmap-question-panel,
+#step-roadmap .roadmap-assessment-panel,
+#step-roadmap .roadmap-sequence-panel {
+  padding: 22px 26px;
+  border-radius: 10px;
+  gap: 18px;
+}
+
+#step-roadmap .roadmap-question-panel,
+#step-roadmap .roadmap-assessment-panel {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+#step-roadmap .roadmap-question-panel .section-heading,
+#step-roadmap .roadmap-assessment-panel .section-heading {
+  height: auto;
+  min-height: 0;
+}
+
+#step-roadmap .roadmap-question-panel .card-label,
+#step-roadmap .roadmap-assessment-panel .card-label,
+#step-roadmap .roadmap-sequence-panel .card-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.11em;
+}
+
+#step-roadmap .roadmap-question-panel .section-heading h3,
+#step-roadmap .roadmap-assessment-panel .section-heading h3,
+#step-roadmap .roadmap-sequence-panel .section-heading h3 {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+#step-roadmap .roadmap-question-panel .section-copy,
+#step-roadmap .roadmap-assessment-panel .section-copy,
+#step-roadmap .roadmap-sequence-panel .section-copy {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+#step-roadmap .roadmap-card-body {
+  overflow: visible;
+}
+
+#step-roadmap .roadmap-main-question-card {
+  min-height: 270px;
+  padding: 18px 20px;
+  border-radius: 8px;
+  gap: 14px;
+}
+
+#step-roadmap .roadmap-main-question-card .field-label,
+#step-roadmap .roadmap-assessment-panel .field-label {
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#step-roadmap #roadmap-problem-input {
+  min-height: 116px;
+  height: auto;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+#step-roadmap .roadmap-context-trigger {
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+#step-roadmap .roadmap-details-preview {
+  padding-top: 10px;
+  border-top: 1px solid rgba(39, 61, 82, 0.08);
+  font-size: 0.75rem;
+}
+
+#step-roadmap .assessment-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 270px;
+  gap: 12px;
+}
+
+#step-roadmap .assessment-choice-stack {
+  gap: 6px;
+  overflow: visible;
+  padding-right: 0;
+}
+
+#step-roadmap .assessment-choice-card {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+#step-roadmap .assessment-choice-radio {
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+}
+
+#step-roadmap .assessment-choice-card.is-selected .assessment-choice-radio::after {
+  inset: 3px;
+}
+
+#step-roadmap .assessment-choice-title-row {
+  display: contents;
+}
+
+#step-roadmap .assessment-choice-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+}
+
+#step-roadmap .assessment-choice-copy strong {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+#step-roadmap .assessment-choice-copy > span:not(.assessment-choice-title-row) {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+#step-roadmap .assessment-choice-badge {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+}
+
+#step-roadmap .assessment-copy {
+  gap: 10px;
+  padding: 14px 16px;
+  border-left: 2px solid rgba(34, 87, 122, 0.32);
+  border-radius: 0 6px 6px 0;
+  background: rgba(245, 248, 252, 0.82);
+}
+
+#step-roadmap .assessment-recommendation-note {
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 0.8125rem;
+}
+
+#step-roadmap .roadmap-assessment-panel #assessment-title {
+  min-height: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  resize: none;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+#step-roadmap .assessment-recap-trigger {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+#step-roadmap .roadmap-sequence-panel {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#step-roadmap .roadmap-sequence-panel::before {
+  display: none;
+}
+
+#step-roadmap .roadmap-sequence-heading {
+  align-items: end;
+  margin-bottom: 16px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(39, 61, 82, 0.12);
+}
+
+#step-roadmap .roadmap-toolbar-wrap {
+  margin-bottom: 14px;
+}
+
+#step-roadmap .roadmap-toolbar {
+  gap: 8px;
+}
+
+#step-roadmap #edit-sequence,
+#step-roadmap #save-sequence {
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+#step-roadmap .roadmap-progress-inline {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+#step-roadmap .roadmap-progress-copy {
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+#step-roadmap .roadmap-list {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+#step-roadmap .roadmap-node-shell {
+  grid-template-columns: 24px 28px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 16px;
+}
+
+#step-roadmap .node-grip {
+  gap: 2px;
+}
+
+#step-roadmap .node-grip span {
+  width: 10px;
+  height: 1.5px;
+}
+
+#step-roadmap .roadmap-node-shell .node-order {
+  font-size: 0.6875rem;
+}
+
+#step-roadmap .node-title-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+#step-roadmap .node-summary-copy {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+#step-roadmap .node-state-chip {
+  font-family: "Geist", "Segoe UI", sans-serif;
+  font-size: 0.75rem;
+}
+
+#step-roadmap .node-state-chip.is-complete,
+#step-roadmap .node-state-chip.in-progress {
+  padding: 2px 7px;
+  font-size: 0.6875rem;
+}
+
+#step-roadmap .open-node {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+#step-roadmap .add-node-card {
+  margin-top: 14px;
+}
+
+#step-roadmap .roadmap-list > .add-node-card-inline {
+  min-height: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+}
+
+#step-roadmap .add-node-placeholder {
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: transparent;
+}
+
+#step-roadmap .add-node-placeholder-title {
+  font-size: 0.875rem;
+}
+
+#step-roadmap .add-node-placeholder-text {
+  font-size: 0.75rem;
+}
+
+#step-roadmap .roadmap-bottom-bar {
+  bottom: 0;
+  justify-content: stretch;
+  margin: 28px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(39, 61, 82, 0.08);
+}
+
+#step-roadmap .roadmap-bottom-bar-inner {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in oklch, var(--bg) 88%, transparent);
+  box-shadow: none;
+}
+
+/* Step 3 PM handoff alignment: guided workspace, compact brief, visible workplan. */
+#step-details {
+  width: min(820px, 100%);
+  margin: 0 auto;
+}
+
+#step-details .detail-hero {
+  margin: 0 0 28px;
+}
+
+#step-details .problem-flow-copy {
+  max-width: 760px;
+}
+
+#step-details .problem-flow-title {
+  max-width: 19ch;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.18;
+  letter-spacing: -0.022em;
+}
+
+#step-details .problem-flow-lede {
+  max-width: 720px;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+#step-details .detail-hero-actions {
+  display: none;
+}
+
+#step-details .detail-node-switcher-card {
+  margin-bottom: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#step-details .detail-node-switcher-card::before {
+  display: none;
+}
+
+#step-details .detail-node-switcher-card > .section-heading {
+  display: none;
+}
+
+#step-details .detail-node-switcher-row {
+  display: block;
+}
+
+#step-details .detail-node-switcher {
+  gap: 2px;
+  padding: 0;
+  border-bottom: 1px solid rgba(39, 61, 82, 0.12);
+  scrollbar-width: none;
+}
+
+#step-details .detail-node-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+#step-details .detail-node-switcher-button {
+  min-width: max-content;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transform: none;
+}
+
+#step-details .detail-node-switcher-button:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+  transform: none;
+}
+
+#step-details .detail-node-switcher-button.is-active {
+  border-bottom-color: var(--primary);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+
+#step-details .detail-node-switcher-index {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+}
+
+#step-details .detail-switcher-actions {
+  display: none;
+}
+
+#step-details .detail-workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+}
+
+#step-details .detail-sidebar {
+  position: static;
+  top: auto;
+}
+
+#step-details .detail-sidebar,
+#step-details .detail-main {
+  gap: 22px;
+}
+
+#step-details .detail-brief-card {
+  padding: 22px 24px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#step-details .detail-brief-card::before {
+  display: none;
+}
+
+#step-details .detail-brief-header {
+  margin-bottom: 14px;
+}
+
+#step-details .detail-brief-header h3 {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+#step-details .detail-brief-block {
+  display: flex;
+  gap: 24px;
+  align-items: baseline;
+}
+
+#step-details .detail-brief-block + .detail-brief-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(39, 61, 82, 0.08);
+}
+
+#step-details .detail-brief-label {
+  flex: 0 0 88px;
+  margin: 0;
+  padding-top: 1px;
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#step-details .detail-brief-value,
+#step-details .detail-brief-preview {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+#step-details .detail-brief-value {
+  font-weight: 500;
+}
+
+#step-details .detail-brief-preview-breakdown {
+  max-height: 120px;
+}
+
+#step-details .detail-brief-footnote {
+  margin-top: 14px;
+  padding-top: 12px;
+  font-size: 0.75rem;
+}
+
+#step-details .board-section {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#step-details .board-section::before {
+  display: none;
+}
+
+#step-details .section-heading {
+  margin-bottom: 12px;
+}
+
+#step-details .section-heading h3 {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+#step-details .section-copy {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+#step-details .section-toggle {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+#step-details .detail-coverage-review,
+#step-details .followup-responses {
+  gap: 0;
+}
+
+#step-details .detail-coverage-empty,
+#step-details .followup-response-empty {
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+
+#step-details .detail-coverage-card {
+  padding: 0;
+  border: none;
+  border-top: 1px solid rgba(39, 61, 82, 0.08);
+  border-radius: 0;
+  background: transparent;
+}
+
+#step-details .detail-coverage-card:first-child {
+  border-top: none;
+}
+
+#step-details .detail-coverage-summary {
+  grid-template-columns: 118px minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+#step-details .detail-coverage-type {
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+#step-details .detail-coverage-question {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+#step-details .detail-coverage-toggle {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+#step-details .detail-coverage-body {
+  gap: 8px;
+  padding: 0 0 14px 118px;
+  border-top: none;
+}
+
+#step-details .detail-coverage-answer {
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+#step-details .detail-coverage-answer-type {
+  font-size: 0.6875rem;
+}
+
+#step-details .detail-coverage-answer-text {
+  font-size: 0.8125rem;
+}
+
+#step-details .thinktank-workbench-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+#step-details .context-panel-wide {
+  grid-column: auto;
+}
+
+#step-details .context-panel,
+#step-details .output-panel {
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+#step-details .context-panel h4 {
+  font-size: 0.9375rem;
+}
+
+#step-details .context-panel-label,
+#step-details .research-tag {
+  font-size: 0.625rem;
+}
+
+#step-details .context-panel textarea,
+#step-details .output-panel textarea {
+  min-height: 72px;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+#step-details .detail-output-grid,
+#step-details .work-item-grid {
+  grid-template-columns: 1fr;
+}
+
+#step-details .work-item-card {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#step-details .work-item-summary {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+#step-details .work-item-summary-title {
+  font-size: 0.875rem;
+}
+
+#step-details .work-item-summary-meta,
+#step-details .work-item-summary-toggle {
+  font-size: 0.75rem;
+}
+
+#step-details .work-item-body {
+  padding: 14px;
+}
+
+/* Step 4 PM handoff alignment: final report, compact meta, export bar. */
+#step-summary {
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+#step-summary .summary-hero {
+  position: static;
+  top: auto;
+  z-index: auto;
+  margin: 0 0 28px;
+  padding: 0;
+  background: transparent;
+}
+
+#step-summary .problem-flow-copy {
+  max-width: 760px;
+}
+
+#step-summary .problem-flow-title {
+  max-width: 20ch;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.18;
+  letter-spacing: -0.022em;
+}
+
+#step-summary .problem-flow-lede {
+  max-width: 700px;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+#step-summary .summary-hero-actions {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(39, 61, 82, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+}
+
+#step-summary .summary-hero-actions .primary-button,
+#step-summary .summary-hero-actions .secondary-button {
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+#step-summary .summary-report-shell {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#step-summary .summary-report-shell::before {
+  display: none;
+}
+
+#step-summary .summary-grid {
+  gap: 32px;
+}
+
+#step-summary .summary-meta-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border-radius: 8px;
+  background: rgba(39, 61, 82, 0.12);
+}
+
+#step-summary .summary-meta-card {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#step-summary .summary-meta-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+#step-summary .summary-meta-value {
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+#step-summary .summary-executive {
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+#step-summary .summary-executive-label {
+  color: var(--primary);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+#step-summary .summary-executive-text {
+  max-width: 68ch;
+  color: var(--text);
+  font-size: 1.0625rem;
+  line-height: 1.72;
+}
+
+#step-summary .summary-node-reports {
+  gap: 0;
+}
+
+#step-summary .summary-node-report {
+  gap: 14px;
+  padding: 28px 0;
+  border-top: 1px solid rgba(39, 61, 82, 0.12);
+}
+
+#step-summary .summary-node-report:first-child {
+  padding-top: 28px;
+  border-top: 1px solid rgba(39, 61, 82, 0.12);
+}
+
+#step-summary .summary-node-report-head {
+  gap: 10px;
+}
+
+#step-summary .summary-node-report-num {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+#step-summary .summary-node-report-head h3 {
+  color: var(--text);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+#step-summary .summary-node-report-head .status-chip {
+  margin-left: auto;
+  min-height: 26px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+}
+
+#step-summary .summary-node-report-copy {
+  max-width: 65ch;
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+#step-summary .summary-node-report-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+#step-summary .summary-node-report-block {
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 18px;
+  padding: 11px 0;
+  border: none;
+  border-top: 1px solid rgba(39, 61, 82, 0.08);
+  border-radius: 0;
+  background: transparent;
+}
+
+#step-summary .summary-node-report-block:first-child {
+  border-top: none;
+}
+
+#step-summary .summary-node-report-block h4,
+#step-summary .summary-node-report-section h4,
+#step-summary .summary-workplan h3 {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+#step-summary .summary-node-report-block p,
+#step-summary .summary-node-empty,
+#step-summary .summary-node-qa-item p {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+#step-summary .summary-node-report-section {
+  gap: 8px;
+}
+
+#step-summary .summary-node-report-section-head {
+  align-items: center;
+}
+
+#step-summary .summary-review-button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+#step-summary .summary-node-thread-list {
+  gap: 0;
+}
+
+#step-summary .summary-node-thread {
+  border: none;
+  border-top: 1px solid rgba(39, 61, 82, 0.08);
+  border-radius: 0;
+  background: transparent;
+}
+
+#step-summary .summary-node-thread:first-child {
+  border-top: none;
+}
+
+#step-summary .summary-node-thread summary {
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+#step-summary .summary-node-thread-body {
+  gap: 0;
+  padding: 0 0 12px;
+}
+
+#step-summary .summary-node-qa-item {
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(39, 61, 82, 0.06);
+  border-radius: 0;
+  background: transparent;
+}
+
+#step-summary .summary-node-qa-item:first-child {
+  border-top: none;
+}
+
+#step-summary .summary-node-qa-tag {
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.625rem;
+}
+
+#step-summary .summary-workplan {
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 28px;
+  border-top: 2px solid var(--text);
+}
+
+#step-summary .summary-workplan .section-copy {
+  font-size: 0.8125rem;
+}
+
+#step-summary .summary-workplan-table {
+  font-size: 0.8125rem;
+}
+
+#step-summary .summary-workplan-table th,
+#step-summary .summary-workplan-table td {
+  padding: 9px 10px 9px 0;
+}
+
+#step-summary #restart-flow {
+  margin-top: 28px;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
