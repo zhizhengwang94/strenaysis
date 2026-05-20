@@ -741,6 +741,7 @@ function goToPreviousDetailStep() {
   if (state.currentIndex > 0) {
     state.currentIndex -= 1;
     loadDetailStep();
+    scrollWorkspaceToTop();
   } else {
     showPanel("roadmap");
   }
@@ -751,6 +752,7 @@ function goToNextDetailStep() {
   if (state.currentIndex < state.roadmap.length - 1) {
     state.currentIndex += 1;
     loadDetailStep();
+    scrollWorkspaceToTop();
   } else {
     renderSummary();
     showPanel("summary");
@@ -1122,6 +1124,7 @@ function renderDetailNodeSwitcher() {
       saveCurrentNote();
       state.currentIndex = index;
       loadDetailStep();
+      scrollWorkspaceToTop();
     });
     detailNodeSwitcher.appendChild(button);
   });
@@ -1928,10 +1931,11 @@ function buildExportPayload(format) {
 }
 
 function showPanel(name) {
+  const previousPanel = state.activeProblemPanel;
   Object.entries(panels).forEach(([key, panel]) => {
     panel.classList.toggle("active", key === name);
   });
-  if (!["profile", "actions", "review"].includes(name)) {
+  if (!isSecondaryPanel(name)) {
     state.activeProblemPanel = name;
   }
   if (workspaceShell) {
@@ -1940,7 +1944,7 @@ function showPanel(name) {
   if (appShell) {
     appShell.dataset.activeProblemPanel = state.activeProblemPanel;
   }
-  const activeNav = ["profile", "actions", "review"].includes(name) ? name : "problems";
+  const activeNav = isSecondaryPanel(name) ? name : "problems";
   sidebarNavItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === activeNav);
   });
@@ -1957,9 +1961,25 @@ function showPanel(name) {
     loadStepOneRecentProblems();
   }
   requestAnimationFrame(() => {
+    if (previousPanel !== state.activeProblemPanel || isSecondaryPanel(name)) {
+      scrollWorkspaceToTop();
+    }
     autoResizeAll();
     updateAssessmentFields();
     updateStepOneComposerState();
+  });
+}
+
+function isSecondaryPanel(name) {
+  return ["profile", "actions", "review"].includes(name);
+}
+
+function scrollWorkspaceToTop() {
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (workspaceShell) {
+      workspaceShell.scrollTop = 0;
+    }
   });
 }
 
