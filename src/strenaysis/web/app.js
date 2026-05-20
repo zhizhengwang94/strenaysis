@@ -51,7 +51,8 @@ const roadmapList = document.getElementById("roadmap-list");
 const confirmRoadmapButton = document.getElementById("confirm-roadmap");
 const openRoadmapLogButton = document.getElementById("open-roadmap-log");
 const confirmRoadmapBottomButton = document.getElementById("confirm-roadmap-bottom");
-const openRoadmapLogBottomButton = document.getElementById("open-roadmap-log-bottom");
+const backRoadmapBottomButton = document.getElementById("back-roadmap-bottom");
+const roadmapProgressCopyBottom = document.getElementById("roadmap-progress-copy-bottom");
 const editSequenceButton = document.getElementById("edit-sequence");
 const saveSequenceButton = document.getElementById("save-sequence");
 const deleteSequenceZone = document.getElementById("delete-sequence-zone");
@@ -89,6 +90,10 @@ const detailStepTitle = document.getElementById("detail-step-title");
 const detailSubtitle = document.getElementById("detail-subtitle");
 const detailProgress = document.getElementById("detail-progress");
 const detailNodeSwitcher = document.getElementById("detail-node-switcher");
+const detailBottomProgressTrack = document.getElementById("detail-bottom-progress-track");
+const detailBottomProgressCopy = document.getElementById("detail-bottom-progress-copy");
+const detailBottomBackButton = document.getElementById("detail-bottom-back");
+const detailBottomNextButton = document.getElementById("detail-bottom-next");
 const detailNodeName = document.getElementById("detail-node-name");
 const detailNodeDescriptionPreview = document.getElementById("detail-node-description-preview");
 const detailNodeBreakdownPreview = document.getElementById("detail-node-breakdown-preview");
@@ -262,7 +267,7 @@ summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
 closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
 summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
 openRoadmapLogButton?.addEventListener("click", openRoadmapLogModal);
-openRoadmapLogBottomButton?.addEventListener("click", openRoadmapLogModal);
+backRoadmapBottomButton?.addEventListener("click", () => showPanel("problem"));
 closeRoadmapLogModalButton.addEventListener("click", closeRoadmapLogModal);
 roadmapLogModalBackdrop.addEventListener("click", closeRoadmapLogModal);
   closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
@@ -731,7 +736,7 @@ polishNodeButton.addEventListener("click", async () => {
     autoResizeAll();
   });
 
-prevNodeButton.addEventListener("click", () => {
+function goToPreviousDetailStep() {
   saveCurrentNote();
   if (state.currentIndex > 0) {
     state.currentIndex -= 1;
@@ -739,9 +744,9 @@ prevNodeButton.addEventListener("click", () => {
   } else {
     showPanel("roadmap");
   }
-});
+}
 
-nextNodeButton.addEventListener("click", () => {
+function goToNextDetailStep() {
   saveCurrentNote();
   if (state.currentIndex < state.roadmap.length - 1) {
     state.currentIndex += 1;
@@ -750,7 +755,15 @@ nextNodeButton.addEventListener("click", () => {
     renderSummary();
     showPanel("summary");
   }
+}
+
+prevNodeButton.addEventListener("click", goToPreviousDetailStep);
+nextNodeButton.addEventListener("click", goToNextDetailStep);
+detailBottomBackButton?.addEventListener("click", () => {
+  saveCurrentNote();
+  showPanel("roadmap");
 });
+detailBottomNextButton?.addEventListener("click", goToNextDetailStep);
 
 restartFlowButton.addEventListener("click", () => {
   state.problem = "";
@@ -785,9 +798,7 @@ restartFlowButton.addEventListener("click", () => {
   showPanel("problem");
 });
 
-saveProblemFramingButton.addEventListener("click", async () => {
-  return;
-});
+saveProblemFramingButton.addEventListener("click", openSaveProblemModal);
 
 confirmSaveProblemButton.addEventListener("click", async () => {
   const selectedDate = saveProblemDateInput.value || new Date().toISOString().slice(0, 10);
@@ -840,8 +851,8 @@ confirmSaveProblemButton.addEventListener("click", async () => {
   }
 });
 
-exportDocxButton.addEventListener("click", () => exportWorkflow("docx", exportDocxButton, "Download Word"));
-exportPptxButton.addEventListener("click", () => exportWorkflow("pptx", exportPptxButton, "Download PowerPoint"));
+exportDocxButton.addEventListener("click", () => exportWorkflow("docx", exportDocxButton, "Download .docx"));
+exportPptxButton.addEventListener("click", () => exportWorkflow("pptx", exportPptxButton, "Download .pptx"));
 
 sidebarNavItems.forEach((item) => {
   item.addEventListener("click", async () => {
@@ -981,9 +992,13 @@ problemSubsteps.forEach((item) => {
         );
         return !isNoAdditionalSuggestedItem(node.suggested_context || "") && responses > 0;
       }).length;
-      roadmapProgressCopy.textContent = total
+      const progressText = total
         ? `${ready} of ${total} nodes settled${inProgress ? ` · ${inProgress} in progress` : ""}.`
         : "No roadmap yet.";
+      roadmapProgressCopy.textContent = progressText;
+      if (roadmapProgressCopyBottom) {
+        roadmapProgressCopyBottom.textContent = total ? `${ready} of ${total} settled` : progressText;
+      }
     }
     refreshRoadmapCompletionState();
     updateAssessmentPrioritySummary();
@@ -1051,7 +1066,33 @@ function loadDetailStep() {
   detailProgress.textContent = `${state.currentIndex + 1} of ${state.roadmap.length}`;
   nextNodeButton.textContent =
     state.currentIndex === state.roadmap.length - 1 ? "Finalize Brief" : "Save and Continue";
+  updateDetailBottomBar();
   loadNodeBuild(currentNode, false);
+}
+
+function updateDetailBottomBar() {
+  if (detailBottomProgressTrack) {
+    detailBottomProgressTrack.innerHTML = "";
+    state.roadmap.forEach((node, index) => {
+      const segment = document.createElement("span");
+      segment.className = "detail-bottom-progress-segment";
+      if (isNoAdditionalSuggestedItem(node.suggested_context || "")) {
+        segment.classList.add("is-settled");
+      }
+      if (index === state.currentIndex) {
+        segment.classList.add("is-active");
+      }
+      detailBottomProgressTrack.appendChild(segment);
+    });
+  }
+  if (detailBottomProgressCopy) {
+    const settled = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
+    detailBottomProgressCopy.textContent = `${settled} of ${state.roadmap.length} settled`;
+  }
+  if (detailBottomNextButton) {
+    detailBottomNextButton.textContent =
+      state.currentIndex === state.roadmap.length - 1 ? "Continue to summary" : "Save and continue";
+  }
 }
 
 function renderDetailNodeSwitcher() {
@@ -1066,8 +1107,12 @@ function renderDetailNodeSwitcher() {
     if (index === state.currentIndex) {
       button.classList.add("is-active");
     }
+    const isSettled = isNoAdditionalSuggestedItem(node.suggested_context || "");
+    if (isSettled) {
+      button.classList.add("is-settled");
+    }
     button.innerHTML = `
-      <span class="detail-node-switcher-index">${index + 1}</span>
+      <span class="detail-node-switcher-index">${isSettled ? "✓" : String(index + 1).padStart(2, "0")}</span>
       <span>${escapeHtml(node.title || `Node ${index + 1}`)}</span>
     `;
     button.addEventListener("click", () => {

@@ -554,8 +554,9 @@
               </div>
               <div class="roadmap-bottom-bar">
                 <div class="roadmap-bottom-bar-inner">
-                  <button id="open-roadmap-log-bottom" class="secondary-button" type="button">Review Full Log</button>
-                  <button id="confirm-roadmap-bottom" class="primary-button roadmap-confirm-button" type="button">Continue to Workspace</button>
+                  <span id="roadmap-progress-copy-bottom" class="roadmap-progress-copy roadmap-progress-copy-bottom">No roadmap yet.</span>
+                  <button id="back-roadmap-bottom" class="secondary-button roadmap-back-button" type="button">&larr; Back to question</button>
+                  <button id="confirm-roadmap-bottom" class="primary-button roadmap-confirm-button" type="button">Continue to workspace</button>
                 </div>
               </div>
             </section>
@@ -789,6 +790,20 @@
                 </div>
               </div>
             </div>
+            <div class="detail-bottom-bar">
+              <div class="detail-bottom-bar-inner">
+                <div class="detail-bottom-status">
+                  <span class="detail-saved-dot"></span>
+                  <span>All changes saved</span>
+                </div>
+                <div class="detail-bottom-progress-row">
+                  <div id="detail-bottom-progress-track" class="detail-bottom-progress-track" aria-hidden="true"></div>
+                  <span id="detail-bottom-progress-copy" class="detail-bottom-progress-copy">0 of 0 settled</span>
+                </div>
+                <button id="detail-bottom-back" class="secondary-button detail-bottom-back" type="button">&larr; Back to analysis path</button>
+                <button id="detail-bottom-next" class="primary-button detail-bottom-next" type="button">Continue to summary</button>
+              </div>
+            </div>
           </section>
 
           <section id="step-summary" class="step-panel">
@@ -805,15 +820,20 @@
                   Export it, save it, or share it with your team. The brief keeps the executive read, node evidence, and workplan together.
                 </p>
               </div>
-              <div class="section-heading-actions summary-hero-actions">
-                <button id="save-problem-framing" class="primary-button" type="button" disabled aria-disabled="true">Save This Problem Framing</button>
-                <button id="export-docx" class="secondary-button" type="button">Download Word</button>
-                <button id="export-pptx" class="secondary-button" type="button">Download PowerPoint</button>
-              </div>
             </div>
             <section class="board-card board-section summary-report-shell">
               <div id="summary-content" class="summary-grid"></div>
-              <button id="restart-flow" class="secondary-button">Start Over</button>
+              <section class="summary-export-bar">
+                <span class="summary-export-info">Export includes all nodes, action items, and the decision rule.</span>
+                <span class="spacer"></span>
+                <button id="export-docx" class="secondary-button" type="button">Download .docx</button>
+                <button id="export-pptx" class="secondary-button" type="button">Download .pptx</button>
+              </section>
+              <div class="summary-footer-actions">
+                <button id="restart-flow" class="secondary-button summary-start-over" type="button">&larr; Start a new problem</button>
+                <span class="spacer"></span>
+                <button id="save-problem-framing" class="primary-button" type="button">Save to history</button>
+              </div>
             </section>
           </section>
 

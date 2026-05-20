@@ -2064,9 +2064,15 @@ body {
 }
 
 .sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
   padding: 16px 12px 12px;
   background: linear-gradient(180deg, #fbfcfe, #f2f5f9);
   border-right: 1px solid rgba(39, 61, 82, 0.08);
@@ -3596,26 +3602,52 @@ body {
 }
 
 .roadmap-bottom-bar {
-  position: sticky;
-  bottom: 12px;
-  z-index: 8;
+  position: fixed;
+  left: 240px;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
   display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-  padding-top: 8px;
+  justify-content: stretch;
+  margin: 0;
+  padding: 14px 22px;
+  border-top: 1px solid rgba(39, 61, 82, 0.1);
+  background: rgba(248, 250, 252, 0.94);
+  backdrop-filter: blur(12px);
 }
 
 .roadmap-bottom-bar-inner {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba(39, 61, 82, 0.08);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 14px 32px rgba(19, 36, 54, 0.12);
-  backdrop-filter: blur(12px);
+  gap: 28px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.roadmap-progress-copy-bottom {
+  margin-right: auto;
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.roadmap-back-button {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .roadmap-list {
@@ -5969,8 +6001,10 @@ textarea:focus,
 .app-shell[data-active-problem-panel="roadmap"] .sidebar-footer,
 .app-shell[data-active-problem-panel="details"] .sidebar-footer,
 .app-shell[data-active-problem-panel="summary"] .sidebar-footer {
+  margin-top: auto;
   gap: 4px;
   padding-top: 16px;
+  border-top: 1px solid rgba(255, 253, 248, 0.14);
 }
 
 .utility-item,
@@ -6337,11 +6371,13 @@ textarea:focus,
 }
 
 #step-roadmap .roadmap-bottom-bar {
+  left: 240px;
+  right: 0;
   bottom: 0;
   justify-content: stretch;
-  margin: 28px 0 0;
-  padding: 14px 0 0;
-  border-top: 1px solid rgba(39, 61, 82, 0.08);
+  margin: 0;
+  padding: 14px 22px;
+  border-top: 1px solid rgba(39, 61, 82, 0.1);
 }
 
 #step-roadmap .roadmap-bottom-bar-inner {
@@ -6349,14 +6385,26 @@ textarea:focus,
   padding: 0;
   border: none;
   border-radius: 0;
-  background: color-mix(in oklch, var(--bg) 88%, transparent);
+  background: transparent;
   box-shadow: none;
+}
+
+#step-roadmap .roadmap-confirm-button {
+  min-height: 46px;
+  border-radius: 6px;
+  background: #111821;
+  color: #ffffff;
+}
+
+#step-roadmap {
+  padding-bottom: 92px;
 }
 
 /* Step 3 PM handoff alignment: guided workspace, compact brief, visible workplan. */
 #step-details {
   width: min(820px, 100%);
   margin: 0 auto;
+  padding-bottom: 110px;
 }
 
 #step-details .detail-hero {
@@ -6442,6 +6490,10 @@ textarea:focus,
   background: transparent;
   box-shadow: none;
   color: var(--text);
+}
+
+#step-details .detail-node-switcher-button.is-settled .detail-node-switcher-index {
+  color: #4f8a66;
 }
 
 #step-details .detail-node-switcher-index {
@@ -6556,7 +6608,18 @@ textarea:focus,
 }
 
 #step-details .section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 18px;
   margin-bottom: 12px;
+}
+
+#step-details .section-heading-actions {
+  width: auto;
+  justify-content: flex-end;
+  align-items: flex-start;
+  flex-wrap: nowrap;
 }
 
 #step-details .section-heading h3 {
@@ -6706,6 +6769,101 @@ textarea:focus,
   padding: 14px;
 }
 
+.detail-bottom-bar {
+  position: fixed;
+  left: 240px;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 14px 22px;
+  border-top: 1px solid rgba(39, 61, 82, 0.1);
+  background: rgba(248, 250, 252, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.detail-bottom-bar-inner {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  width: min(990px, 100%);
+  margin: 0 auto;
+}
+
+.detail-bottom-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-saved-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #4f8a66;
+}
+
+.detail-bottom-progress-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.detail-bottom-progress-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.detail-bottom-progress-segment {
+  width: 29px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(39, 61, 82, 0.12);
+}
+
+.detail-bottom-progress-segment.is-settled {
+  background: #151922;
+}
+
+.detail-bottom-progress-segment.is-active {
+  background: var(--primary);
+}
+
+.detail-bottom-progress-copy {
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-bottom-back {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.detail-bottom-next {
+  min-height: 46px;
+  border-radius: 6px;
+  background: #111821;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
 /* Step 4 PM handoff alignment: final report, compact meta, export bar. */
 #step-summary {
   width: min(900px, 100%);
@@ -6736,28 +6894,6 @@ textarea:focus,
   max-width: 700px;
   font-size: 0.9375rem;
   line-height: 1.65;
-}
-
-#step-summary .summary-hero-actions {
-  position: sticky;
-  top: 12px;
-  z-index: 20;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid rgba(39, 61, 82, 0.1);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: none;
-}
-
-#step-summary .summary-hero-actions .primary-button,
-#step-summary .summary-hero-actions .secondary-button {
-  min-height: 36px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-size: 0.8125rem;
 }
 
 #step-summary .summary-report-shell {
@@ -6985,8 +7121,38 @@ textarea:focus,
   padding: 9px 10px 9px 0;
 }
 
-#step-summary #restart-flow {
+#step-summary .summary-export-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: 28px;
+  padding: 14px 16px;
+  border: 1px solid rgba(39, 61, 82, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+#step-summary .summary-export-info {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+#step-summary .summary-export-bar .spacer,
+#step-summary .summary-footer-actions .spacer {
+  flex: 1;
+}
+
+#step-summary .summary-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+#step-summary .summary-export-bar .secondary-button,
+#step-summary .summary-footer-actions .primary-button,
+#step-summary .summary-footer-actions .secondary-button {
   min-height: 36px;
   padding: 8px 14px;
   border-radius: 6px;
@@ -6999,6 +7165,10 @@ textarea:focus,
   }
 
   .sidebar {
+    position: static;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
     gap: 16px;
     padding-bottom: 14px;
     border-right: none;
@@ -7091,7 +7261,9 @@ textarea:focus,
   }
 
   .step-composer-footer,
-  .step-recent-head {
+  .step-recent-head,
+  #step-summary .summary-export-bar,
+  #step-summary .summary-footer-actions {
     flex-direction: column;
     align-items: stretch;
   }
@@ -7146,6 +7318,32 @@ textarea:focus,
   .roadmap-bottom-bar-inner {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .roadmap-bottom-bar,
+  #step-roadmap .roadmap-bottom-bar,
+  .detail-bottom-bar {
+    left: 0;
+    padding: 12px 14px;
+  }
+
+  .roadmap-bottom-bar-inner {
+    gap: 14px;
+  }
+
+  .detail-bottom-bar-inner {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .detail-bottom-progress-row {
+    flex-wrap: wrap;
+  }
+
+  .detail-bottom-back,
+  .detail-bottom-next {
+    justify-self: stretch;
+    text-align: center;
   }
 
   .roadmap-node-topline {
