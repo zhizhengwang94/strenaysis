@@ -4,9 +4,7 @@ import json
 import os
 import re
 import socketserver
-import uuid
 import webbrowser
-from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler
@@ -29,9 +27,6 @@ ACCESS_COOKIE = "strenaysis_access"
 ACCESS_CODE = "2825628257282931"
 SAVE_DIRECTORY = "saved_problem_structures"
 ACTION_DIRECTORY = "active_problem_structures"
-PROBLEMS_DIRECTORY = "problems"
-MAX_QUESTION_LENGTH = 600
-MAX_CONTEXT_LENGTH = 2000
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -45,9 +40,6 @@ class AppHandler(SimpleHTTPRequestHandler):
             self._serve_unlock_page()
             return
         path = urlsplit(self.path).path
-        if path == "/problems" or path.endswith("/problems"):
-            self._handle_list_problems()
-            return
         if path == "/api/problem-framings" or path.endswith("/api/problem-framings"):
             self._handle_list_problem_framings()
             return
@@ -71,9 +63,6 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if not self._is_authenticated():
             self._send_json({"error": "Authentication required."}, status=HTTPStatus.UNAUTHORIZED)
-            return
-        if path == "/problems" or path.endswith("/problems"):
-            self._handle_create_problem()
             return
         if path == "/api/roadmap" or path.endswith("/api/roadmap"):
             self._handle_generate_roadmap()
@@ -125,84 +114,6 @@ class AppHandler(SimpleHTTPRequestHandler):
             "assessment_title": result.assessment_title,
             "assessment_recap": result.assessment_recap,
         })
-
-    def _handle_create_problem(self) -> None:
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
-        try:
-            body = json.loads(raw_body.decode("utf-8"))
-        except json.JSONDecodeError:
-            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
-            return
-
-        question = str(body.get("question", "")).strip()
-        context = str(body.get("context", "")).strip()
-        if not question:
-            self._send_json({"error": "Question is required."}, status=HTTPStatus.BAD_REQUEST)
-            return
-        if len(question) > MAX_QUESTION_LENGTH:
-            self._send_json(
-                {"error": f"Question must be {MAX_QUESTION_LENGTH} characters or fewer."},
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-        if len(context) > MAX_CONTEXT_LENGTH:
-            self._send_json(
-                {"error": f"Context must be {MAX_CONTEXT_LENGTH} characters or fewer."},
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        problem_id = uuid.uuid4().hex[:12]
-        now = datetime.now(timezone.utc).isoformat()
-        payload = {
-            "id": problem_id,
-            "question": question,
-            "context": context,
-            "problem_type": None,
-            "recommended_type": None,
-            "owner": None,
-            "status": "in_progress",
-            "current_step": 1,
-            "created_at": now,
-            "updated_at": now,
-            "nodes": [],
-        }
-
-        problems_dir = self._problems_dir()
-        problems_dir.mkdir(parents=True, exist_ok=True)
-        (problems_dir / f"{problem_id}.json").write_text(
-            json.dumps(payload, indent=2), encoding="utf-8"
-        )
-        self._send_json({"problem_id": problem_id}, status=HTTPStatus.CREATED)
-
-    def _handle_list_problems(self) -> None:
-        query = parse_qs(urlsplit(self.path).query)
-        status_filter = (query.get("status") or [""])[0].strip().lower()
-
-        problems_dir = self._problems_dir()
-        problems_dir.mkdir(parents=True, exist_ok=True)
-        items = []
-        for path in sorted(problems_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
-            try:
-                payload = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            status = str(payload.get("status", "")).strip().lower() or "in_progress"
-            if status_filter and status_filter != "recent" and status != status_filter:
-                continue
-
-            question = str(payload.get("question", "")).strip()
-            truncated = question if len(question) <= 100 else question[:97] + "..."
-            items.append({
-                "id": str(payload.get("id", "")),
-                "question": truncated,
-                "problem_type": payload.get("problem_type"),
-                "current_step": int(payload.get("current_step", 1) or 1),
-                "status": status,
-                "updated_at": str(payload.get("updated_at", "")),
-            })
-        self._send_json({"items": items})
 
     def _handle_polish_node(self) -> None:
         content_length = int(self.headers.get("Content-Length", "0"))
@@ -834,10 +745,6 @@ class AppHandler(SimpleHTTPRequestHandler):
     @staticmethod
     def _action_storage_dir() -> Path:
         return Path.cwd() / ACTION_DIRECTORY
-
-    @staticmethod
-    def _problems_dir() -> Path:
-        return Path.cwd() / PROBLEMS_DIRECTORY
 
     def log_message(self, format: str, *args) -> None:  # noqa: A003
         return

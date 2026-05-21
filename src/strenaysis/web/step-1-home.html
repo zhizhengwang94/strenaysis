@@ -180,7 +180,7 @@
 
       <details class="context">
         <summary>Add context — who's asking and what hangs on the answer</summary>
-        <textarea id="problem-context" placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."></textarea>
+        <textarea placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."></textarea>
       </details>
 
       <div class="composer-foot">
@@ -196,11 +196,42 @@
     <section class="recent" aria-label="Recent problems">
       <div class="recent-head">
         <h3>Pick up where you left off</h3>
-        <span class="count" id="recent-count">0 in progress</span>
+        <span class="count">4 in progress</span>
         <span class="spacer"></span>
         <a href="#" class="view">View history →</a>
       </div>
-      <div id="recent-list"></div>
+      <div>
+        <a class="recent-row in-progress" href="step-2-roadmap.html" style="text-decoration:none;">
+          <span class="status" aria-label="In progress"></span>
+          <span class="rtitle">How should we evaluate whether the premium reco feature moves subscription revenue?</span>
+          <span class="rtype">Causal</span>
+          <span class="rdate">Today · step 2 of 4</span>
+        </a>
+        <a class="recent-row in-progress" href="step-3-buildup.html" style="text-decoration:none;">
+          <span class="status" aria-label="In progress"></span>
+          <span class="rtitle">Why did EMEA B2B trial-to-paid conversion drop to 14% in Q1 while SMB stayed flat?</span>
+          <span class="rtype">Descriptive</span>
+          <span class="rdate">May 09 · step 3 of 4</span>
+        </a>
+        <a class="recent-row in-progress" href="step-3-buildup.html" style="text-decoration:none;">
+          <span class="status" aria-label="In progress"></span>
+          <span class="rtitle">Which onboarding signals best predict whether a self-serve account is still active at day 90?</span>
+          <span class="rtype">Predictive</span>
+          <span class="rdate">May 06 · step 3 of 4</span>
+        </a>
+        <a class="recent-row done" href="step-4-summary.html" style="text-decoration:none;">
+          <span class="status" aria-label="Complete"></span>
+          <span class="rtitle">Did the Q1 entry-tier price increase cause the churn bump, or was it the renewal-cohort timing?</span>
+          <span class="rtype">Causal</span>
+          <span class="rdate">Apr 22 · complete</span>
+        </a>
+        <a class="recent-row done" href="step-4-summary.html" style="text-decoration:none;">
+          <span class="status" aria-label="Complete"></span>
+          <span class="rtitle">How should we re-allocate the 12 CS reps across the new account tier structure?</span>
+          <span class="rtype">Optimization</span>
+          <span class="rdate">Apr 14 · complete</span>
+        </a>
+      </div>
     </section>
 
   </main>
@@ -209,11 +240,8 @@
 <script>
   (function () {
     const ta = document.getElementById('problem');
-    const ctx = document.getElementById('problem-context');
     const counter = document.getElementById('char-counter');
     const go = document.getElementById('go');
-    const recentList = document.getElementById('recent-list');
-    const recentCount = document.getElementById('recent-count');
     const MAX = 600;
 
     function update() {
@@ -221,6 +249,7 @@
       const raw = ta.value.length;
       const hasContent = n > 0;
 
+      // Counter text
       if (!hasContent) {
         counter.textContent = 'Type a question to continue';
         counter.style.color = 'var(--muted)';
@@ -232,6 +261,7 @@
         counter.style.color = 'var(--muted)';
       }
 
+      // Button enabled state
       if (hasContent && raw <= MAX) {
         go.removeAttribute('aria-disabled');
         go.style.opacity = '';
@@ -245,113 +275,30 @@
       }
     }
 
-    let submitting = false;
-    async function submit() {
-      if (submitting) return;
-      if (go.getAttribute('aria-disabled') === 'true') return;
-      submitting = true;
-      const originalText = go.textContent.trim();
-      go.textContent = 'Creating…';
-      go.setAttribute('aria-disabled', 'true');
-      go.style.pointerEvents = 'none';
-      try {
-        const res = await fetch('/problems', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            question: ta.value.trim(),
-            context: ctx ? ctx.value.trim() : ''
-          })
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          window.alert(err.error || 'Could not create the problem. Please try again.');
-          go.textContent = originalText;
-          submitting = false;
-          update();
-          return;
-        }
-        const data = await res.json();
-        window.location.href = '/step-2-roadmap.html?problem_id=' + encodeURIComponent(data.problem_id);
-      } catch (e) {
-        window.alert('Network error. Please try again.');
-        go.textContent = originalText;
-        submitting = false;
-        update();
-      }
-    }
-
+    // Block navigation when disabled
     go.addEventListener('click', function (e) {
-      e.preventDefault();
-      submit();
+      if (this.getAttribute('aria-disabled') === 'true') e.preventDefault();
     });
 
+    // ⌘↵ shortcut
     document.addEventListener('keydown', function (e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        if (go.getAttribute('aria-disabled') !== 'true') go.click();
+      }
     });
 
     ta.addEventListener('input', update);
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      })[c]);
-    }
+    document.querySelectorAll('.example').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.textContent.replace(/^\s*\S+\s*/, '').trim();
+        ta.value = text;
+        ta.focus();
+        update();
+      });
+    });
 
-    function formatDate(iso) {
-      if (!iso) return '';
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return '';
-      const now = new Date();
-      if (d.toDateString() === now.toDateString()) return 'Today';
-      return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
-    }
-
-    function typeLabel(t) {
-      if (!t) return '—';
-      return t.charAt(0).toUpperCase() + t.slice(1);
-    }
-
-    function renderRecent(items) {
-      if (!items.length) {
-        recentList.innerHTML = '<p style="font-size:var(--text-sm);color:var(--muted);padding:var(--s-4) var(--s-3);margin:0;">Nothing here yet — submit your first question above.</p>';
-        recentCount.textContent = '0 in progress';
-        return;
-      }
-      const inProgress = items.filter(i => i.status !== 'complete').length;
-      recentCount.textContent = inProgress + ' in progress';
-      recentList.innerHTML = items.map(item => {
-        const isComplete = item.status === 'complete';
-        const klass = isComplete ? 'done' : 'in-progress';
-        const aria = isComplete ? 'Complete' : 'In progress';
-        const date = formatDate(item.updated_at);
-        const stepLabel = isComplete ? 'complete' : 'step ' + item.current_step + ' of 4';
-        const href = (isComplete ? '/step-4-summary.html' : '/step-2-roadmap.html')
-          + '?problem_id=' + encodeURIComponent(item.id);
-        return '<a class="recent-row ' + klass + '" href="' + href + '" style="text-decoration:none;">'
-          + '<span class="status" aria-label="' + aria + '"></span>'
-          + '<span class="rtitle">' + escapeHtml(item.question) + '</span>'
-          + '<span class="rtype">' + escapeHtml(typeLabel(item.problem_type)) + '</span>'
-          + '<span class="rdate">' + escapeHtml((date ? date + ' · ' : '') + stepLabel) + '</span>'
-          + '</a>';
-      }).join('');
-    }
-
-    async function loadRecent() {
-      if (!recentList) return;
-      try {
-        const res = await fetch('/problems?status=recent', { credentials: 'same-origin' });
-        if (!res.ok) return;
-        const data = await res.json();
-        renderRecent(data.items || []);
-      } catch (e) {
-        // Silent — keep blank
-      }
-    }
-
-    update();
-    loadRecent();
+    update(); // run once on load
   })();
 </script>
 </body>
