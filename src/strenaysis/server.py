@@ -40,6 +40,88 @@ PROBLEM_TYPE_SHORT = {
     "operational_optimization": "optimization",
 }
 
+RESPONSE_TYPES = {"confirmed", "assumption", "hypothesis"}
+
+NODE_QUESTION_TEMPLATES = {
+    "objective": [
+        "What business decision is this analysis supposed to support, and who is going to act on the output?",
+        "What is the scope of this question — what is in, and what is explicitly out?",
+        "What would make the answer to this question useful versus interesting?",
+    ],
+    "metric": [
+        "What is the single metric you would use to determine success or failure?",
+        "What guardrail metrics should you track alongside it to catch unintended side effects?",
+        "How long does the observation window need to be for the metric to stabilize?",
+        "What magnitude of change would be practically meaningful versus merely statistically significant?",
+    ],
+    "segmentation": [
+        "How will you slice the population so the analysis is decision-useful?",
+        "Which segments matter most for the decision, and why?",
+        "What segments are too small or noisy to act on?",
+    ],
+    "drivers": [
+        "What is the strongest mechanism by which the outcome could move?",
+        "What alternative explanations could produce the same movement without the real driver acting?",
+        "Under what conditions would the apparent driver be live but produce no lasting impact?",
+    ],
+    "hypotheses": [
+        "What is the central hypothesis you are testing?",
+        "What would convince you the hypothesis is wrong?",
+        "What hypotheses have you ruled out already, and why?",
+    ],
+    "data": [
+        "What tables, event streams, or feeds touch this question? How fresh is each?",
+        "How do records from different sources join together, and where does the match rate break down?",
+        "What pre-experiment or baseline data do you have, and is it free of known outages or seasonality?",
+        "Are there known data quality issues, schema changes, or gaps that could silently corrupt your results?",
+    ],
+    "model": [
+        "What modeling approach fits the problem, and what are the tradeoffs versus simpler alternatives?",
+        "How will you evaluate the model — what split strategy, what metric?",
+        "What sample size do you need to detect the effect you care about with adequate power?",
+    ],
+    "experiment design": [
+        "What randomization unit will you use, and why?",
+        "What sample size do you need to detect the minimum effect you care about?",
+        "How will you handle network effects, spillover, or contamination between groups?",
+    ],
+    "constraints": [
+        "What real-world limits constrain the action — budget, time, capacity, regulation?",
+        "Which constraints are hard, and which are soft and negotiable?",
+        "What would change if the most binding constraint were relaxed?",
+    ],
+    "decision": [
+        "Write the exact decision rule: under what conditions do you ship, iterate, or kill?",
+        "Who has final decision authority, and what happens if the data is ambiguous?",
+        "What would justify overriding the rule? Document the conditions now, before results.",
+    ],
+    "result": [
+        "What were the headline results? State the primary metric outcome with confidence intervals.",
+        "Did anything in the guardrail metrics surprise you? What does that change?",
+        "What do you believe differently now than before the analysis ran?",
+    ],
+    "impact": [
+        "What is the business upside if this is shipped or implemented?",
+        "What downside risks remain, and how would you detect them?",
+        "How does the impact compare to alternative uses of the same effort?",
+    ],
+    "takeaway": [
+        "Write the one-sentence takeaway. It should be specific enough to act on and memorable enough to stick.",
+        "What is the most important caveat or limitation someone citing this result should keep in mind?",
+    ],
+}
+
+GENERIC_NODE_QUESTIONS = [
+    "What is the single thing this node needs to settle?",
+    "What evidence, inputs, or stakeholders do you need to work through this node?",
+    "What is the deliverable from this node, and who depends on it?",
+]
+
+GUIDANCE_FALLBACK = (
+    "Work through the questions below in order. Each answer commits you to a position; "
+    "you can come back and revise as the analysis evolves."
+)
+
 
 class AppHandler(SimpleHTTPRequestHandler):
     web_root: Path
@@ -57,6 +139,10 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if "/problems/" in path and path.endswith("/assessment"):
             self._handle_get_assessment()
+            return
+        node_parts = path.strip("/").split("/")
+        if len(node_parts) == 4 and node_parts[0] == "problems" and node_parts[2] == "nodes":
+            self._handle_get_node()
             return
         if path == "/api/problem-framings" or path.endswith("/api/problem-framings"):
             self._handle_list_problem_framings()
@@ -84,6 +170,15 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if path == "/problems" or path.endswith("/problems"):
             self._handle_create_problem()
+            return
+        answer_parts = path.strip("/").split("/")
+        if (
+            len(answer_parts) == 5
+            and answer_parts[0] == "problems"
+            and answer_parts[2] == "nodes"
+            and answer_parts[4] == "answers"
+        ):
+            self._handle_submit_answer()
             return
         if path == "/api/roadmap" or path.endswith("/api/roadmap"):
             self._handle_generate_roadmap()
@@ -276,6 +371,181 @@ class AppHandler(SimpleHTTPRequestHandler):
         file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
         self._send_json(self._build_assessment_response(payload))
+
+    def _handle_get_node(self) -> None:
+        path = urlsplit(self.path).path
+        parts = path.strip("/").split("/")
+        problem_id = parts[1]
+        node_id = parts[3]
+
+        file_path = self._problems_dir() / f"{problem_id}.json"
+        if not file_path.exists():
+            self._send_json({"error": "Problem not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        try:
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Could not read problem."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        nodes = payload.get("nodes") or []
+        node = next((n for n in nodes if n.get("node_id") == node_id), None)
+        if not node:
+            self._send_json({"error": "Node not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        if not node.get("questions"):
+            template = NODE_QUESTION_TEMPLATES.get(
+                str(node.get("name", "")).strip().lower(),
+                GENERIC_NODE_QUESTIONS,
+            )
+            node["questions"] = [
+                {
+                    "question_id": uuid.uuid4().hex[:12],
+                    "text": text,
+                    "position": i + 1,
+                }
+                for i, text in enumerate(template)
+            ]
+            node["questions_total"] = len(node["questions"])
+            payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+            file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+        self._send_json(self._build_node_response(node))
+
+    def _handle_submit_answer(self) -> None:
+        path = urlsplit(self.path).path
+        parts = path.strip("/").split("/")
+        problem_id = parts[1]
+        node_id = parts[3]
+
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            body = json.loads(raw_body.decode("utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        question_id = str(body.get("question_id", "")).strip()
+        answer = str(body.get("answer", "")).strip()
+        response_type = str(body.get("response_type", "")).strip().lower()
+
+        if not question_id:
+            self._send_json({"error": "question_id is required."}, status=HTTPStatus.BAD_REQUEST)
+            return
+        if len(answer) < 10:
+            self._send_json({"error": "Answer must be at least 10 characters."}, status=HTTPStatus.BAD_REQUEST)
+            return
+        if response_type not in RESPONSE_TYPES:
+            self._send_json(
+                {"error": "response_type must be one of confirmed, assumption, hypothesis."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        file_path = self._problems_dir() / f"{problem_id}.json"
+        if not file_path.exists():
+            self._send_json({"error": "Problem not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        try:
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Could not read problem."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        nodes = payload.get("nodes") or []
+        node = next((n for n in nodes if n.get("node_id") == node_id), None)
+        if not node:
+            self._send_json({"error": "Node not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        questions = node.get("questions") or []
+        question = next((q for q in questions if q.get("question_id") == question_id), None)
+        if not question:
+            self._send_json({"error": "Question not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        followup = self._build_followup(answer, response_type)
+        question["answer"] = answer
+        question["response_type"] = response_type
+        question["followup"] = followup
+
+        answered = sum(1 for q in questions if q.get("answer"))
+        node["questions_answered"] = answered
+        node["questions_total"] = len(questions)
+        node["status"] = "settled" if answered == len(questions) and len(questions) > 0 else "in_progress"
+
+        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+        payload["current_step"] = max(int(payload.get("current_step", 1) or 1), 3)
+        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+        self._send_json({
+            "followup": followup,
+            "node_status": node["status"],
+            "questions_answered": answered,
+            "questions_total": len(questions),
+        })
+
+    @staticmethod
+    def _build_followup(answer: str, response_type: str) -> str:
+        if response_type == "confirmed":
+            return "Noted as confirmed. Cleanly stated. The next question builds on this position."
+        if response_type == "assumption":
+            return "Noted as an assumption. Worth validating with data or a domain expert before building on it."
+        if response_type == "hypothesis":
+            return "Noted as a hypothesis. The next question may help test or refine it."
+        return "Got it. Let me think about how that affects the rest of the analysis."
+
+    @staticmethod
+    def _parse_thinking(breakdown: str) -> list[dict[str, str]]:
+        if not breakdown:
+            return []
+        items: list[dict[str, str]] = []
+        for raw in breakdown.split("\n"):
+            line = raw.strip()
+            if not line:
+                continue
+            for sep in (" — ", " - "):
+                if sep in line:
+                    label, text = line.split(sep, 1)
+                    if len(label.strip()) <= 60:
+                        items.append({"label": label.strip(), "text": text.strip()})
+                        break
+            else:
+                items.append({"label": "", "text": line})
+        return items
+
+    def _build_node_response(self, node: dict) -> dict:
+        questions = []
+        for q in node.get("questions", []) or []:
+            entry = {
+                "question_id": q.get("question_id"),
+                "text": q.get("text"),
+                "position": q.get("position"),
+            }
+            if q.get("answer"):
+                entry["answer"] = q.get("answer")
+                entry["response_type"] = q.get("response_type")
+                entry["followup"] = q.get("followup")
+            questions.append(entry)
+
+        return {
+            "node_id": node.get("node_id"),
+            "name": node.get("name"),
+            "description": node.get("description"),
+            "guidance": node.get("description") or GUIDANCE_FALLBACK,
+            "thinking": self._parse_thinking(node.get("_breakdown", "")),
+            "position": node.get("position"),
+            "status": node.get("status", "open"),
+            "questions_answered": node.get("questions_answered", 0),
+            "questions_total": node.get("questions_total", len(questions)),
+            "is_custom": node.get("is_custom", False),
+            "questions": questions,
+            "actions": node.get("actions", []) or [],
+        }
 
     @staticmethod
     def _build_assessment_response(payload: dict) -> dict:

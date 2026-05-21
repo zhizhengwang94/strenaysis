@@ -676,498 +676,326 @@
 
 <script>
 (function () {
-  // ————— Node data —————
-  var nodes = {
-    metric: {
-      title: 'What single metric would settle this debate?',
-      desc: 'The single revenue outcome that would settle the debate, plus guardrails.',
-      brief: 'Define the primary revenue outcome, set guardrail metrics, and agree on how long the observation window must be.',
-      thinking: [
-        { label: 'Primary metric', text: 'pick one number that captures the revenue effect directly, not a proxy.' },
-        { label: 'Guardrails', text: 'identify side-effect metrics that would signal the feature is doing harm even if the primary metric moves up.' },
-        { label: 'Observation window', text: 'determine how long the metric needs to stabilize, given billing cycles and user behavior lags.' },
-        { label: 'Practical significance', text: 'pre-commit to a threshold that separates a meaningful lift from noise, before seeing any data.' }
-      ],
-      status: 'done',
-      questions: [
-        { q: 'What is the single metric you would use to determine whether the premium recommendation feature moved subscription revenue?', type: 'confirmed', answer: 'Net new MRR from subscriptions initiated within 14 days of first feature exposure, excluding reactivations.', followup: 'Clean choice. One nuance: are you counting only net-new subscribers, or also plan upgrades from an existing tier? If the feature nudges existing subscribers toward a higher plan, MRR moves but your metric misses it.' },
-        { q: 'What guardrail metrics should you track alongside the primary metric to catch unintended side effects?', type: 'confirmed', answer: 'Churn rate among existing subscribers, support ticket volume, and engagement frequency (sessions per week).', followup: 'Solid guardrails. Consider adding time-to-first-value for new subscribers since a feature that converts but disappoints leads to deferred churn you won\'t see in the experiment window.' },
-        { q: 'How long does the observation window need to be for the metric to stabilize?', type: 'confirmed', answer: 'Minimum 4 weeks post-exposure. Our subscription billing cycle is monthly, so we need at least one full cycle.', followup: 'Agreed. One cycle is the floor. Two cycles would let you see early renewal behavior, but the cost is calendar time. Reasonable tradeoff given your context.' },
-        { q: 'What magnitude of change in MRR would be practically meaningful versus merely statistically significant?', type: 'confirmed', answer: 'A 3% lift in net new MRR per exposed user. Below that, the engineering and support cost of maintaining the feature likely exceeds the revenue gain.', followup: 'This is exactly the kind of pre-commitment that prevents post-hoc rationalization. Document this threshold before the experiment runs.' }
-      ],
-      actions: [
-        { title: 'Document the primary metric definition and share with stakeholders before the experiment begins.', detail: 'Write a one-page metric spec: definition, inclusion/exclusion criteria, observation window, and the 3% MDE threshold. Get sign-off from product and finance.', owner: 'Euphie', collaborator: '', source: '', artifact: 'One-page metric spec document', blockers: '', fromQ: 1 },
-        { title: 'Add plan-upgrade tracking alongside net-new MRR.', detail: 'Instrument a secondary metric for existing-subscriber plan upgrades triggered by the feature, so revenue impact is fully captured.', owner: '', collaborator: 'Eng lead', source: 'billing.subscriptions', artifact: 'Updated metric dashboard', blockers: '', fromQ: 2 }
-      ]
-    },
-    drivers: {
-      title: 'How could this feature plausibly move the metric?',
-      desc: 'Mechanisms by which the feature could plausibly move the metric, and silently fail.',
-      brief: 'Map the mechanisms by which the feature could drive subscription revenue, and identify how it could silently fail.',
-      thinking: [
-        { label: 'Causal mechanisms', text: 'enumerate the specific paths by which the feature could drive subscriptions, not just "it will help."' },
-        { label: 'Alternative explanations', text: 'name the confounds that could produce the same metric movement even if the feature does nothing.' },
-        { label: 'Silent failure modes', text: 'describe scenarios where the feature is live, looks like it is working, but creates zero incremental value.' }
-      ],
-      status: 'done',
-      questions: [
-        { q: 'What is the strongest causal mechanism by which premium recommendations would drive new subscriptions?', type: 'confirmed', answer: 'Personalized recommendations surface high-value content behind the paywall, creating a "moment of need" that converts free users who otherwise wouldn\'t discover it.', followup: 'Clear mechanism. The key assumption here is that discovery is the bottleneck, not willingness to pay. If users already know what\'s behind the paywall and choose not to subscribe, better recommendations won\'t move the needle.' },
-        { q: 'What alternative explanations could produce the same metric movement without the feature actually working?', type: 'assumption', answer: 'Novelty effect from any new feature driving temporary engagement. Also possible that the recommendation UI simply increases time-on-site, and it\'s the dwell time that converts, not the recommendations themselves.', followup: 'The novelty concern is real. A 4-week window helps but doesn\'t eliminate it. Consider measuring whether conversion lift decays over the user\'s first 2 vs. last 2 weeks of exposure.' },
-        { q: 'Under what conditions would the feature be live, appear to work, but actually produce no lasting revenue impact?', type: 'assumption', answer: 'If it cannibalizes organic discovery. Users who would have found premium content on their own now find it via recommendations. Net new conversions are zero, but attribution says otherwise.', followup: 'This is the most important failure mode to design against. Your experiment needs to distinguish incremental discovery from redirected discovery. A well-designed holdout can do this.' }
-      ],
-      actions: [
-        { title: 'Design a novelty-decay analysis into the experiment plan.', detail: 'Split the observation window into weekly cohorts and test whether conversion lift is stable or declining. If lift concentrates in week 1, the feature may not sustain.', owner: 'Euphie', collaborator: '', source: '', artifact: 'Novelty-decay analysis section in experiment doc', blockers: '', fromQ: 1 },
-        { title: 'Instrument incremental vs. redirected discovery tracking.', detail: 'Tag content surfaces as "organic" or "recommended." Compare the share of paywall-gated content discovered via each path in treatment vs. control.', owner: '', collaborator: 'Product analytics', source: 'content surface logs', artifact: 'Discovery path comparison report', blockers: 'Need content tagging deployed first', fromQ: 2 }
-      ]
-    },
-    data: {
-      title: 'What must be true of the data for this to work?',
-      desc: 'Tables, event logs, identity graph; what\'s recent, what\'s stale, what\'s missing.',
-      brief: 'Inventory sources of truth, their grain, their lag, and their known blind spots before designing the comparison.',
-      thinking: [
-        { label: 'Source inventory', text: 'identify every table, event stream, and third-party feed that touches the metric or the feature.' },
-        { label: 'Grain and freshness', text: 'for each source, confirm the grain (user-session, user-day, etc.) and how stale it can get in the worst case.' },
-        { label: 'Identity resolution', text: 'map how records from different sources link together and where the match rate breaks down.' },
-        { label: 'Blind spots', text: 'name the populations, events, or time windows your data cannot see, and decide how that affects your design.' }
-      ],
-      status: 'in-progress',
-      questions: [
-        { q: 'What tables record feature exposure events, and how fresh are they? If there\'s staleness, how would that affect your ability to attribute subscription outcomes to the feature?', type: 'confirmed', answer: 'warehouse.events.exposures, one row per user per session. Refreshed nightly, ~18h worst-case staleness. For a multi-week experiment this lag is acceptable since we\'re measuring subscription conversion over 14-day windows.', followup: 'Good. Nightly refresh with a 14-day conversion window gives you plenty of buffer. One thing to watch: if the feature triggers mid-session, the exposure row might land in the next day\'s batch. Worth confirming the event timestamp reflects trigger time, not ETL time.' },
-        { q: 'How do exposure events join to subscription outcomes? Walk me through the identity resolution. Where does the match rate break down, and what happens to unmatched users in your analysis?', type: 'assumption', answer: 'Join through the canonical identity graph on user_id. Match rate is ~94% but drops for anonymous sessions. We\'d exclude unmatched users from the primary analysis and run a sensitivity check assuming they convert at the base rate.', followup: 'Flagging the 6% gap is the right instinct. But "exclude and sensitivity-check" only works if missingness is random. If anonymous users skew toward a specific cohort (e.g., mobile web, new visitors), you might be systematically dropping the population most affected by the feature. How would you test whether that 6% is random or patterned?' },
-        { q: 'What pre-experiment baseline data do you have? How many weeks of clean history exist, and are there any seasonality patterns or data outages that would compromise a stable baseline?' },
-        { q: 'Are there any known data quality issues, recent schema changes, or instrumentation gaps that could silently corrupt your results?' }
-      ],
-      actions: [
-        { title: 'Verify exposure event timestamps reflect trigger time, not ETL batch time.', detail: 'Run a sample of 1,000 exposure rows against session logs. Compare event_timestamp to session_start and ETL load_timestamp. Flag any where event_timestamp matches load_timestamp.', owner: 'Euphie', collaborator: 'Priya (DE)', source: 'warehouse.events.exposures', artifact: 'A one-page timestamp audit note circulated to the DS channel.', blockers: '', fromQ: 1 },
-        { title: 'Profile the 6% unmatched users to determine if missingness is random or patterned.', detail: 'Pull device type, traffic source, and session depth for matched vs. unmatched cohorts. If distributions differ meaningfully, the exclusion strategy needs rethinking.', owner: '', collaborator: '', source: 'canonical identity graph', artifact: '', blockers: '', fromQ: 2 }
-      ]
-    },
-    model: {
-      title: 'How will you design the experiment?',
-      desc: 'A/B design, sample size, power, handling of network effects.',
-      brief: 'Nail down A/B design, sample size, statistical power, and how you\'ll handle network effects or spillover.',
-      thinking: [
-        { label: 'Randomization unit', text: 'choose the unit (user, session, cluster) and defend the tradeoffs for this specific feature.' },
-        { label: 'Power calculation', text: 'compute sample size for the pre-committed MDE, state all assumptions, and check feasibility against traffic.' },
-        { label: 'Spillover and contamination', text: 'assess whether treatment and control can truly be isolated, and design mitigations if not.' }
-      ],
-      status: 'open',
-      questions: [
-        { q: 'What randomization unit will you use, and why? Walk me through the tradeoffs between user-level, session-level, and cluster randomization for this feature.' },
-        { q: 'What sample size do you need to detect a 3% MRR lift with 80% power? Show me the assumptions behind that calculation.' },
-        { q: 'How will you handle network effects or spillover between treatment and control groups?' }
-      ],
-      actions: []
-    },
-    decision: {
-      title: 'What decision rule will you commit to before seeing results?',
-      desc: 'The decision rule, a written pre-commitment, and an escalation path.',
-      brief: 'Write the decision rule, document the pre-commitment, and define the escalation path if results are ambiguous.',
-      thinking: [
-        { label: 'Decision rule', text: 'write the exact ship/iterate/kill conditions so there is no ambiguity after results land.' },
-        { label: 'Authority and escalation', text: 'name who decides, and what happens when the data is unclear or guardrails move.' },
-        { label: 'Override conditions', text: 'document now what would justify breaking the rule, so post-hoc rationalization is harder.' }
-      ],
-      status: 'open',
-      questions: [
-        { q: 'Write the exact decision rule: under what conditions do you ship, iterate, or kill the feature?' },
-        { q: 'Who has final decision authority, and what happens if the data is ambiguous or the guardrail metrics move in the wrong direction?' },
-        { q: 'What would make you override the decision rule? Document the conditions now, before you see results.' }
-      ],
-      actions: []
-    },
-    result: {
-      title: 'What did you observe, and what surprised you?',
-      desc: 'What we observed, what surprised us, what we now believe.',
-      brief: 'After the experiment runs, document what happened, what surprised you, and what you now believe differently.',
-      thinking: [
-        { label: 'Headline results', text: 'state the primary metric outcome with confidence intervals, not just "it went up."' },
-        { label: 'Guardrail check', text: 'report every guardrail metric, especially surprises that change interpretation.' },
-        { label: 'Belief update', text: 'articulate what you now believe differently than before the experiment ran.' }
-      ],
-      status: 'open',
-      questions: [
-        { q: 'What were the headline results? State the primary metric outcome, confidence interval, and practical significance.' },
-        { q: 'Did anything in the guardrail metrics surprise you? What does that change about your interpretation?' },
-        { q: 'What do you believe differently now than before the experiment ran?' }
-      ],
-      actions: []
-    },
-    takeaway: {
-      title: 'What is the one sentence a colleague will remember?',
-      desc: 'The one sentence a colleague will remember a month from now.',
-      brief: 'Distill the entire analysis into a single takeaway that someone will remember a month from now.',
-      thinking: [
-        { label: 'Distillation', text: 'compress the entire analysis into a single sentence specific enough to act on.' },
-        { label: 'Caveats', text: 'name the one limitation someone citing this result must keep in mind.' }
-      ],
-      status: 'open',
-      questions: [
-        { q: 'Write the one-sentence takeaway. It should be specific enough to act on and memorable enough to stick.' },
-        { q: 'What is the most important caveat or limitation someone citing this result should keep in mind?' }
-      ],
-      actions: []
-    }
-  };
+  const params = new URLSearchParams(window.location.search);
+  const problemId = params.get('problem_id');
+  let currentNodeId = params.get('node_id');
+  if (!problemId) {
+    window.location.href = '/';
+    return;
+  }
 
-  // ————— DOM refs —————
-  var thread = document.getElementById('thread');
-  var actionList = document.getElementById('action-list');
-  var actionsCount = document.getElementById('actions-count');
-  var nodeTitle = document.getElementById('node-title');
-  var nbDesc = document.getElementById('nb-desc');
-  var nbGuidance = document.getElementById('nb-guidance');
-  var nbThinking = document.getElementById('nb-thinking');
-  var nbThinkingBody = document.getElementById('nb-thinking-body');
-  var crumbNode = document.getElementById('crumb-node');
-  var answerInput = document.getElementById('answer-input');
-  var submitBtn = document.getElementById('submit-answer');
-  var respType = document.getElementById('resp-type');
-  var charCount = document.getElementById('char-count');
-  var saveIndicator = document.querySelector('.save-indicator');
+  const tabsContainer = document.querySelector('.node-tabs');
+  const titleEl = document.getElementById('node-title');
+  const nbDesc = document.getElementById('nb-desc');
+  const nbGuidance = document.getElementById('nb-guidance');
+  const nbThinking = document.getElementById('nb-thinking');
+  const nbThinkingBody = document.getElementById('nb-thinking-body');
+  const thread = document.getElementById('thread');
+  const actionsCount = document.getElementById('actions-count');
+  const actionList = document.getElementById('action-list');
+  const crumbNode = document.getElementById('crumb-node');
+  const addActionBtn = document.getElementById('add-action');
 
-  var currentNode = 'data';
-
-  // ————— Render a node —————
-  function renderNode(key) {
-    currentNode = key;
-    var node = nodes[key];
-
-    // Update header
-    nodeTitle.textContent = node.title;
-    nbDesc.textContent = node.desc || '';
-    nbGuidance.textContent = node.brief;
-    crumbNode.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-    document.title = 'Strenaysis \u2014 Workspace \u00B7 ' + key.charAt(0).toUpperCase() + key.slice(1);
-
-    // Update thinking breakdown
-    if (node.thinking && node.thinking.length > 0) {
-      nbThinking.style.display = '';
-      nbThinking.removeAttribute('open');
-      var thinkingHtml = '<ol>';
-      for (var t = 0; t < node.thinking.length; t++) {
-        thinkingHtml += '<li><strong>' + node.thinking[t].label + '</strong> \u2014 ' + node.thinking[t].text + '</li>';
+  document.querySelectorAll('.side-step, .sticky-actions a.btn').forEach(a => {
+    try {
+      const u = new URL(a.getAttribute('href'), window.location.origin);
+      if (u.pathname.endsWith('.html')) {
+        u.searchParams.set('problem_id', problemId);
+        a.setAttribute('href', u.pathname + u.search);
       }
-      thinkingHtml += '</ol>';
-      nbThinkingBody.innerHTML = thinkingHtml;
+    } catch (e) {}
+  });
+
+  const nodeCache = {};
+  let allNodesMeta = [];
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  function nodePath(nodeId) {
+    return '/problems/' + encodeURIComponent(problemId) + '/nodes/' + encodeURIComponent(nodeId);
+  }
+
+  async function init() {
+    try {
+      const res = await fetch('/problems/' + encodeURIComponent(problemId) + '/assessment', { credentials: 'same-origin' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Could not load problem.');
+      }
+      const data = await res.json();
+      allNodesMeta = data.nodes || [];
+
+      if (!currentNodeId || !allNodesMeta.find(n => n.node_id === currentNodeId)) {
+        currentNodeId = allNodesMeta[0] && allNodesMeta[0].node_id;
+      }
+      if (!currentNodeId) {
+        window.alert('This problem has no nodes yet.');
+        window.location.href = '/step-2-roadmap.html?problem_id=' + encodeURIComponent(problemId);
+        return;
+      }
+
+      renderTabs();
+      await loadAndRenderNode(currentNodeId);
+    } catch (err) {
+      window.alert(err.message || 'Could not load problem.');
+      window.location.href = '/';
+    }
+  }
+
+  function renderTabs() {
+    tabsContainer.innerHTML = '';
+    allNodesMeta.forEach(meta => {
+      const btn = document.createElement('button');
+      btn.className = 'node-tab';
+      if (meta.status === 'settled') btn.classList.add('done');
+      if (meta.node_id === currentNodeId) btn.classList.add('on');
+      btn.dataset.nodeId = meta.node_id;
+      const num = meta.status === 'settled'
+        ? '✓'
+        : String(meta.position || 1).padStart(2, '0');
+      btn.innerHTML = '<span class="tnum">' + escapeHtml(num) + '</span> ' + escapeHtml(meta.name || '');
+      btn.addEventListener('click', () => {
+        if (meta.node_id === currentNodeId) return;
+        currentNodeId = meta.node_id;
+        const u = new URL(window.location.href);
+        u.searchParams.set('node_id', meta.node_id);
+        window.history.replaceState(null, '', u.toString());
+        renderTabs();
+        loadAndRenderNode(meta.node_id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      tabsContainer.appendChild(btn);
+    });
+  }
+
+  async function loadAndRenderNode(nodeId, force) {
+    if (!nodeCache[nodeId] || force) {
+      try {
+        const res = await fetch(nodePath(nodeId), { credentials: 'same-origin' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          window.alert(err.error || 'Could not load node.');
+          return;
+        }
+        nodeCache[nodeId] = await res.json();
+      } catch (e) {
+        window.alert('Network error. Please try again.');
+        return;
+      }
+    }
+    renderNode(nodeCache[nodeId]);
+  }
+
+  function renderNode(node) {
+    titleEl.textContent = node.name || '';
+    nbDesc.textContent = node.description || '';
+    nbGuidance.textContent = node.guidance || '';
+    crumbNode.textContent = node.name || '';
+    document.title = 'Strenaysis — Workspace · ' + (node.name || '');
+
+    if (node.thinking && node.thinking.length) {
+      nbThinking.style.display = '';
+      const olItems = node.thinking.map(t => {
+        const label = t.label ? '<strong>' + escapeHtml(t.label) + '</strong> — ' : '';
+        return '<li>' + label + escapeHtml(t.text || '') + '</li>';
+      }).join('');
+      nbThinkingBody.innerHTML = '<ol>' + olItems + '</ol>';
     } else {
       nbThinking.style.display = 'none';
     }
 
-    // Update tabs
-    document.querySelectorAll('.node-tab').forEach(function (tab) {
-      tab.classList.remove('on');
-      var n = nodes[tab.dataset.node];
-      if (n && n.status === 'done') { tab.classList.add('done'); }
-      else { tab.classList.remove('done'); }
-      if (tab.dataset.node === key) tab.classList.add('on');
+    renderThread(node);
+    renderActions(node);
+    updateProgressStrip();
+  }
+
+  function renderThread(node) {
+    thread.innerHTML = '';
+    const qs = node.questions || [];
+    let firstUnansweredIndex = qs.findIndex(q => !q.answer);
+    if (firstUnansweredIndex < 0) firstUnansweredIndex = qs.length;
+
+    qs.forEach((q, i) => {
+      const exchange = document.createElement('div');
+      exchange.className = 'exchange';
+
+      let html = '<div class="ai-msg">'
+        + '<div class="ai-avatar">S</div>'
+        + '<div class="ai-body">'
+          + '<div class="ai-label"><span class="q-num">Q' + (i + 1) + ' of ' + qs.length + '</span></div>'
+          + '<div class="ai-text">' + escapeHtml(q.text || '') + '</div>'
+        + '</div>'
+      + '</div>';
+
+      if (q.answer) {
+        const type = q.response_type || 'confirmed';
+        html += '<div class="user-resp">'
+          + '<div class="ur-head"><span class="ur-type ' + escapeHtml(type) + '">' + escapeHtml(type.charAt(0).toUpperCase() + type.slice(1)) + '</span></div>'
+          + '<div class="ur-text">' + escapeHtml(q.answer) + '</div>'
+          + '<button class="ur-edit">Edit response</button>'
+        + '</div>';
+        if (q.followup) {
+          html += '<div class="ai-followup">' + escapeHtml(q.followup) + '</div>';
+        }
+      } else if (i === firstUnansweredIndex) {
+        html += composerHtml(q.question_id);
+      }
+
+      exchange.innerHTML = html;
+      thread.appendChild(exchange);
     });
 
-    // Build thread
-    thread.innerHTML = '';
-    var qs = node.questions;
-    var answeredCount = 0;
-
-    for (var i = 0; i < qs.length; i++) {
-      var q = qs[i];
-      var ex = document.createElement('div');
-      ex.className = 'exchange';
-
-      var answered = q.answer && q.answer.length > 0;
-      if (answered) answeredCount++;
-
-      // AI question
-      var aiHtml = '<div class="ai-msg">' +
-        '<div class="ai-avatar">S</div>' +
-        '<div class="ai-body">' +
-          '<div class="ai-label"><span class="q-num">Q' + (i + 1) + ' of ' + qs.length + '</span></div>' +
-          '<div class="ai-text">' + q.q + '</div>' +
-        '</div>' +
-      '</div>';
-
-      if (answered) {
-        // User response
-        aiHtml += '<div class="user-resp">' +
-          '<div class="ur-head"><span class="ur-type ' + q.type + '">' + q.type.charAt(0).toUpperCase() + q.type.slice(1) + '</span></div>' +
-          '<div class="ur-text">' + q.answer + '</div>' +
-          '<button class="ur-edit">Edit response</button>' +
-        '</div>';
-
-        // AI follow-up
-        if (q.followup) {
-          aiHtml += '<div class="ai-followup">' + q.followup + '</div>';
-        }
-      } else if (i === answeredCount) {
-        // Current question: show composer
-        aiHtml += '<div class="composer" id="composer">' +
-          '<textarea id="answer-input" placeholder="Type your answer..."></textarea>' +
-          '<div class="composer-bar">' +
-            '<select id="resp-type">' +
-              '<option value="confirmed">Confirmed</option>' +
-              '<option value="assumption" selected>Assumption</option>' +
-              '<option value="hypothesis">Hypothesis</option>' +
-            '</select>' +
-            '<span class="spacer"></span>' +
-            '<span style="font-size:var(--text-xs);color:var(--faint);font-family:var(--mono);font-variant-numeric:tabular-nums;" id="char-count">0 chars</span>' +
-            '<button class="btn btn-primary" id="submit-answer" disabled>Submit answer</button>' +
-          '</div>' +
-        '</div>';
-      }
-      // Future questions: just show the question, no composer
-
-      ex.innerHTML = aiHtml;
-      thread.appendChild(ex);
-    }
-
-    // Render action items
-    renderActions(node);
-
-    // Re-bind composer events
     bindComposer();
-  }
 
-  var approvalOptions = '<option>No approval needed</option>' +
-    '<option>Business owner sign-off</option>' +
-    '<option>Leadership review</option>' +
-    '<option>Data access approval</option>' +
-    '<option>Legal or compliance review</option>' +
-    '<option>Finance approval</option>' +
-    '<option>Product Strategy Lead approval required</option>';
-
-  function buildActionHTML(letter, a) {
-    return '<summary>' +
-        '<span class="ai-num">' + letter + '</span>' +
-        '<span class="ai-title">' + a.title + '</span>' +
-        '<span class="ai-meta">From Q' + (a.fromQ || '?') + '</span>' +
-        '<span class="chev">\u203A</span>' +
-      '</summary>' +
-      '<div class="action-body">' +
-        '<div class="wide"><label class="field-label">Action</label>' +
-          '<textarea rows="2">' + (a.detail || '') + '</textarea></div>' +
-        '<div><label class="field-label">Owner</label>' +
-          '<input type="text" value="' + (a.owner || '') + '" placeholder="Who owns this?" /></div>' +
-        '<div><label class="field-label">Collaborator</label>' +
-          '<input type="text" value="' + (a.collaborator || '') + '" placeholder="Optional" /></div>' +
-        '<div><label class="field-label">Source / system</label>' +
-          '<input type="text" value="' + (a.source || '') + '" placeholder="Table or system" /></div>' +
-        '<div><label class="field-label">Needs approval</label>' +
-          '<select>' + approvalOptions + '</select></div>' +
-        '<div class="wide"><label class="field-label">Artifact to create</label>' +
-          '<input type="text" value="' + (a.artifact || '') + '" placeholder="What deliverable comes out of this?" /></div>' +
-        '<div class="wide"><label class="field-label">Blockers</label>' +
-          '<input type="text" value="' + (a.blockers || '') + '" placeholder="Anything blocking this work?" /></div>' +
-      '</div>' +
-      '<div class="action-footer">' +
-        '<span class="count">Auto-saved</span>' +
-        '<button class="btn btn-ghost btn-danger">Remove item</button>' +
-      '</div>';
-  }
-
-  function renderActions(node) {
-    actionList.innerHTML = '';
-    var actions = node.actions;
-    var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-    if (actions.length === 0) {
-      actionList.innerHTML = '<div class="actions-empty">No action items yet. Answer follow-up questions to generate suggested items for your workplan.</div>';
-      actionsCount.textContent = 'no items yet';
-      return;
-    }
-
-    actionsCount.textContent = actions.length + ' item' + (actions.length !== 1 ? 's' : '') + ' from answered questions';
-
-    for (var i = 0; i < actions.length; i++) {
-      var item = document.createElement('details');
-      item.className = 'action-item';
-      item.innerHTML = buildActionHTML(letters[i], actions[i]);
-      actionList.appendChild(item);
-    }
-
-    // Wire accordion + remove buttons
-    wireActionList();
-  }
-
-  function wireActionList() {
-    // Accordion: one open at a time
-    actionList.addEventListener('toggle', function (e) {
-      var item = e.target.closest('.action-item');
-      if (item && item.open) {
-        actionList.querySelectorAll('.action-item[open]').forEach(function (other) {
-          if (other !== item) other.removeAttribute('open');
-        });
-      }
-    }, true);
-
-    // Remove buttons
-    actionList.querySelectorAll('.btn-danger').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var item = btn.closest('.action-item');
-        if (item) item.remove();
-        // Update count
-        var remaining = actionList.querySelectorAll('.action-item').length;
-        actionsCount.textContent = remaining > 0
-          ? remaining + ' item' + (remaining !== 1 ? 's' : '')
-          : 'no items yet';
-        if (remaining === 0) {
-          actionList.innerHTML = '<div class="actions-empty">No action items yet. Answer follow-up questions to generate suggested items for your workplan.</div>';
-        }
+    thread.querySelectorAll('.ur-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        window.alert('Editing answers is coming in the next phase.');
       });
     });
   }
 
+  function composerHtml(questionId) {
+    return '<div class="composer" data-question-id="' + escapeHtml(questionId) + '">'
+      + '<textarea class="answer-input" placeholder="Type your answer..."></textarea>'
+      + '<div class="composer-bar">'
+        + '<select class="resp-type">'
+          + '<option value="confirmed">Confirmed</option>'
+          + '<option value="assumption" selected>Assumption</option>'
+          + '<option value="hypothesis">Hypothesis</option>'
+        + '</select>'
+        + '<span class="spacer"></span>'
+        + '<span class="char-count" style="font-size: var(--text-xs); color: var(--faint); font-family: var(--mono); font-variant-numeric: tabular-nums;">0 chars</span>'
+        + '<button class="btn btn-primary submit-answer" disabled>Submit answer</button>'
+      + '</div>'
+    + '</div>';
+  }
+
   function bindComposer() {
-    var input = document.getElementById('answer-input');
-    var btn = document.getElementById('submit-answer');
-    var cc = document.getElementById('char-count');
+    const composer = thread.querySelector('.composer');
+    if (!composer) return;
+    const input = composer.querySelector('.answer-input');
+    const submit = composer.querySelector('.submit-answer');
+    const respType = composer.querySelector('.resp-type');
+    const charCount = composer.querySelector('.char-count');
+    const questionId = composer.dataset.questionId;
 
-    if (!input || !btn) return;
-
-    input.addEventListener('input', function () {
-      var len = input.value.trim().length;
-      btn.disabled = len < 10;
-      cc.textContent = len + ' char' + (len !== 1 ? 's' : '');
+    input.addEventListener('input', () => {
+      const len = input.value.trim().length;
+      submit.disabled = len < 10;
+      charCount.textContent = len + ' char' + (len === 1 ? '' : 's');
     });
+    input.focus();
 
-    btn.addEventListener('click', function () {
-      if (btn.disabled) return;
-      var val = input.value.trim();
-      var type = document.getElementById('resp-type').value;
-      var node = nodes[currentNode];
-
-      // Find first unanswered question
-      for (var i = 0; i < node.questions.length; i++) {
-        if (!node.questions[i].answer) {
-          node.questions[i].answer = val;
-          node.questions[i].type = type;
-          // Simulate AI follow-up
-          node.questions[i].followup = 'Noted. Let me think about the implications of that position for the next part of the analysis.';
-          // Add a suggested action item
-          node.actions.push({
-            title: 'Review and validate: ' + val.substring(0, 60) + (val.length > 60 ? '...' : ''),
-            detail: 'This was tagged as ' + type + '. Confirm with the data or a subject-matter expert before building on it.',
-            owner: '',
-            collaborator: '',
-            source: '',
-            artifact: '',
-            blockers: '',
-            fromQ: i + 1
-          });
-          break;
-        }
-      }
-
-      // Check if all questions answered
-      var allDone = node.questions.every(function (q) { return q.answer; });
-      if (allDone) node.status = 'done';
-      else node.status = 'in-progress';
-
-      // Flash save
+    submit.addEventListener('click', async () => {
+      if (submit.disabled) return;
+      submit.disabled = true;
+      const originalText = submit.textContent;
+      submit.textContent = 'Submitting…';
       flashSave();
-
-      // Re-render
-      renderNode(currentNode);
-
-      // Scroll to newly visible composer or end of thread
-      setTimeout(function () {
-        var comp = document.getElementById('composer');
-        if (comp) comp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        else thread.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }, 100);
+      try {
+        const res = await fetch(nodePath(currentNodeId) + '/answers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            question_id: questionId,
+            answer: input.value.trim(),
+            response_type: respType.value,
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          window.alert(err.error || 'Could not submit answer.');
+          submit.disabled = false;
+          submit.textContent = originalText;
+          return;
+        }
+        await loadAndRenderNode(currentNodeId, true);
+        refreshTabsMeta();
+        const nextComposer = thread.querySelector('.composer');
+        if (nextComposer) nextComposer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) {
+        window.alert('Network error. Please try again.');
+        submit.disabled = false;
+        submit.textContent = originalText;
+      }
     });
+  }
+
+  async function refreshTabsMeta() {
+    try {
+      const res = await fetch('/problems/' + encodeURIComponent(problemId) + '/assessment', { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const data = await res.json();
+      allNodesMeta = data.nodes || [];
+      renderTabs();
+      updateProgressStrip();
+    } catch (e) {}
+  }
+
+  function renderActions(node) {
+    actionList.innerHTML = '';
+    const actions = node.actions || [];
+    if (actions.length === 0) {
+      actionList.innerHTML = '<div class="actions-empty">No action items yet. They will appear here as the workplan develops.</div>';
+      actionsCount.textContent = 'no items yet';
+      return;
+    }
+    actionsCount.textContent = actions.length + ' item' + (actions.length !== 1 ? 's' : '');
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    actions.forEach((a, i) => {
+      const item = document.createElement('details');
+      item.className = 'action-item';
+      item.innerHTML = '<summary>'
+        + '<span class="ai-num">' + escapeHtml(letters[i] || '?') + '</span>'
+        + '<span class="ai-title">' + escapeHtml(a.title || '') + '</span>'
+        + '<span class="ai-meta">From Q' + escapeHtml(String(a.from_question || '?')) + '</span>'
+        + '<span class="chev">›</span>'
+      + '</summary>'
+      + '<div class="action-body">'
+        + '<div class="wide"><label class="field-label">Action</label>'
+          + '<textarea rows="2" readonly>' + escapeHtml(a.detail || '') + '</textarea></div>'
+      + '</div>';
+      actionList.appendChild(item);
+    });
+  }
+
+  if (addActionBtn) {
+    addActionBtn.addEventListener('click', () => {
+      window.alert('Adding action items is coming in the next phase.');
+    });
+  }
+
+  function updateProgressStrip() {
+    const total = allNodesMeta.length;
+    const settled = allNodesMeta.filter(n => n.status === 'settled').length;
+    const stripContainer = document.querySelector('.progress-strip');
+    if (!stripContainer) return;
+    const counterText = stripContainer.querySelector('span:last-child');
+    if (counterText) counterText.textContent = settled + ' of ' + total + ' settled';
   }
 
   function flashSave() {
-    var si = document.querySelector('.save-indicator');
-    si.innerHTML = '<span class="saved-dot" style="background:var(--accent)"></span> Saving\u2026';
-    setTimeout(function () {
-      si.innerHTML = '<span class="saved-dot"></span> Saved just now';
+    const si = document.querySelector('.save-indicator');
+    if (!si) return;
+    si.innerHTML = '<span class="saved-dot" style="background:var(--accent)"></span> Saving…';
+    setTimeout(() => {
+      si.innerHTML = '<span class="saved-dot"></span> All changes saved';
     }, 800);
   }
 
-  // ————— Tab switching —————
-  document.querySelectorAll('.node-tab').forEach(function (tab) {
-    tab.addEventListener('click', function () {
-      renderNode(tab.dataset.node);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  });
-
-  // ————— Add custom action item —————
-  document.getElementById('add-action').addEventListener('click', function () {
-    var node = nodes[currentNode];
-    var letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    var newAction = {
-      title: 'New action item',
-      detail: '',
-      owner: '',
-      collaborator: '',
-      source: '',
-      artifact: '',
-      blockers: '',
-      fromQ: '-'
-    };
-    node.actions.push(newAction);
-
-    // If the list currently shows the empty state, clear it and recreate container
-    var empty = actionList.querySelector('.actions-empty');
-    if (empty) actionList.innerHTML = '';
-
-    var item = document.createElement('details');
-    item.className = 'action-item';
-    item.innerHTML = buildActionHTML(letters[node.actions.length - 1], newAction);
-    actionList.appendChild(item);
-
-    // Collapse others, open the new one
-    actionList.querySelectorAll('.action-item[open]').forEach(function (other) {
-      if (other !== item) other.removeAttribute('open');
-    });
-    item.open = true;
-
-    // Focus the action textarea
-    var ta = item.querySelector('textarea');
-    if (ta) ta.focus();
-
-    // Wire remove button
-    item.querySelector('.btn-danger').addEventListener('click', function () {
-      item.remove();
-      var idx = node.actions.indexOf(newAction);
-      if (idx > -1) node.actions.splice(idx, 1);
-      var remaining = actionList.querySelectorAll('.action-item').length;
-      actionsCount.textContent = remaining > 0
-        ? remaining + ' item' + (remaining !== 1 ? 's' : '')
-        : 'no items yet';
-      if (remaining === 0) {
-        actionList.innerHTML = '<div class="actions-empty">No action items yet. Answer follow-up questions to generate suggested items for your workplan.</div>';
-      }
-    });
-
-    actionsCount.textContent = node.actions.length + ' item' + (node.actions.length !== 1 ? 's' : '');
-  });
-
-  // ————— Keyboard shortcut —————
-  document.addEventListener('keydown', function (e) {
+  document.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      var btn = document.getElementById('submit-answer');
-      if (btn && !btn.disabled) btn.click();
+      const submit = thread.querySelector('.submit-answer');
+      if (submit && !submit.disabled) submit.click();
     }
   });
 
-  // ————— Auto-save pulse on field changes —————
-  var saveTimeout;
-  document.addEventListener('change', function (e) {
-    if (e.target.matches('.action-body textarea, .action-body input, .action-body select')) {
-      clearTimeout(saveTimeout);
-      var si = document.querySelector('.save-indicator');
-      si.innerHTML = '<span class="saved-dot" style="background:var(--accent)"></span> Saving\u2026';
-      saveTimeout = setTimeout(function () {
-        si.innerHTML = '<span class="saved-dot"></span> Saved just now';
-      }, 800);
-    }
-  });
-
-  // ————— Init —————
-  bindComposer();
-  wireActionList();
+  init();
 })();
 </script>
 </body>
