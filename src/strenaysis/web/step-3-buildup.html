@@ -696,6 +696,16 @@
   const crumbNode = document.getElementById('crumb-node');
   const addActionBtn = document.getElementById('add-action');
 
+  const APPROVAL_OPTIONS = [
+    'No approval needed',
+    'Business owner sign-off',
+    'Leadership review',
+    'Data access approval',
+    'Legal or compliance review',
+    'Finance approval',
+    'Product Strategy Lead approval required',
+  ];
+
   document.querySelectorAll('.side-step, .sticky-actions a.btn').forEach(a => {
     try {
       const u = new URL(a.getAttribute('href'), window.location.origin);
@@ -813,6 +823,8 @@
     updateProgressStrip();
   }
 
+  // ————— Thread / answers —————
+
   function renderThread(node) {
     thread.innerHTML = '';
     const qs = node.questions || [];
@@ -822,6 +834,7 @@
     qs.forEach((q, i) => {
       const exchange = document.createElement('div');
       exchange.className = 'exchange';
+      exchange.dataset.questionId = q.question_id;
 
       let html = '<div class="ai-msg">'
         + '<div class="ai-avatar">S</div>'
@@ -832,12 +845,7 @@
       + '</div>';
 
       if (q.answer) {
-        const type = q.response_type || 'confirmed';
-        html += '<div class="user-resp">'
-          + '<div class="ur-head"><span class="ur-type ' + escapeHtml(type) + '">' + escapeHtml(type.charAt(0).toUpperCase() + type.slice(1)) + '</span></div>'
-          + '<div class="ur-text">' + escapeHtml(q.answer) + '</div>'
-          + '<button class="ur-edit">Edit response</button>'
-        + '</div>';
+        html += answerHtml(q);
         if (q.followup) {
           html += '<div class="ai-followup">' + escapeHtml(q.followup) + '</div>';
         }
@@ -850,12 +858,16 @@
     });
 
     bindComposer();
+    bindEditButtons();
+  }
 
-    thread.querySelectorAll('.ur-edit').forEach(btn => {
-      btn.addEventListener('click', () => {
-        window.alert('Editing answers is coming in the next phase.');
-      });
-    });
+  function answerHtml(q) {
+    const type = q.response_type || 'confirmed';
+    return '<div class="user-resp" data-question-id="' + escapeHtml(q.question_id) + '">'
+      + '<div class="ur-head"><span class="ur-type ' + escapeHtml(type) + '">' + escapeHtml(type.charAt(0).toUpperCase() + type.slice(1)) + '</span></div>'
+      + '<div class="ur-text">' + escapeHtml(q.answer) + '</div>'
+      + '<button class="ur-edit">Edit response</button>'
+    + '</div>';
   }
 
   function composerHtml(questionId) {
@@ -926,6 +938,84 @@
     });
   }
 
+  function bindEditButtons() {
+    thread.querySelectorAll('.ur-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wrap = btn.closest('.user-resp');
+        if (!wrap || wrap.dataset.editing === '1') return;
+        wrap.dataset.editing = '1';
+        const questionId = wrap.dataset.questionId;
+        const currentText = wrap.querySelector('.ur-text').textContent;
+        const currentTypeNode = wrap.querySelector('.ur-type');
+        const currentType = (currentTypeNode.className.replace('ur-type', '').trim()) || 'confirmed';
+
+        wrap.innerHTML = '<div class="ur-head" style="margin-bottom:8px;">'
+          + '<select class="edit-type">'
+            + ['confirmed', 'assumption', 'hypothesis'].map(t =>
+                '<option value="' + t + '"' + (t === currentType ? ' selected' : '') + '>' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>'
+              ).join('')
+          + '</select>'
+          + '</div>'
+          + '<textarea class="edit-text" rows="3">' + escapeHtml(currentText) + '</textarea>'
+          + '<div style="display:flex;align-items:center;gap:var(--s-3);margin-top:var(--s-3);">'
+            + '<span class="edit-count" style="font-size:var(--text-xs);color:var(--faint);font-family:var(--mono);font-variant-numeric:tabular-nums;">' + currentText.length + ' chars</span>'
+            + '<span class="spacer" style="flex:1;"></span>'
+            + '<button class="btn btn-ghost edit-cancel">Cancel</button>'
+            + '<button class="btn btn-primary edit-save">Save</button>'
+          + '</div>';
+
+        const ta = wrap.querySelector('.edit-text');
+        const saveBtn = wrap.querySelector('.edit-save');
+        const cancelBtn = wrap.querySelector('.edit-cancel');
+        const typeSel = wrap.querySelector('.edit-type');
+        const counter = wrap.querySelector('.edit-count');
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+
+        ta.addEventListener('input', () => {
+          const len = ta.value.trim().length;
+          saveBtn.disabled = len < 10;
+          counter.textContent = len + ' char' + (len === 1 ? '' : 's');
+        });
+
+        cancelBtn.addEventListener('click', () => {
+          loadAndRenderNode(currentNodeId);
+        });
+
+        saveBtn.addEventListener('click', async () => {
+          if (saveBtn.disabled) return;
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving…';
+          flashSave();
+          try {
+            const res = await fetch(nodePath(currentNodeId) + '/answers/' + encodeURIComponent(questionId), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                answer: ta.value.trim(),
+                response_type: typeSel.value,
+              })
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              window.alert(err.error || 'Could not save edit.');
+              saveBtn.disabled = false;
+              saveBtn.textContent = 'Save';
+              return;
+            }
+            await loadAndRenderNode(currentNodeId, true);
+            refreshTabsMeta();
+          } catch (e) {
+            window.alert('Network error. Please try again.');
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+          }
+        });
+      });
+    });
+  }
+
   async function refreshTabsMeta() {
     try {
       const res = await fetch('/problems/' + encodeURIComponent(problemId) + '/assessment', { credentials: 'same-origin' });
@@ -937,11 +1027,50 @@
     } catch (e) {}
   }
 
+  // ————— Action items —————
+
+  function approvalOptionsHtml(selected) {
+    return APPROVAL_OPTIONS.map(o =>
+      '<option' + (o === selected ? ' selected' : '') + '>' + escapeHtml(o) + '</option>'
+    ).join('');
+  }
+
+  function actionItemHtml(a, letter) {
+    return '<summary>'
+      + '<span class="ai-num">' + escapeHtml(letter) + '</span>'
+      + '<span class="ai-title">' + escapeHtml(a.title || 'New action item') + '</span>'
+      + '<span class="ai-meta">' + (a.from_question ? 'From Q' + escapeHtml(String(a.from_question)) : 'Custom') + '</span>'
+      + '<span class="chev">›</span>'
+    + '</summary>'
+    + '<div class="action-body">'
+      + '<div class="wide"><label class="field-label">Title</label>'
+        + '<input type="text" data-field="title" value="' + escapeHtml(a.title || '') + '" /></div>'
+      + '<div class="wide"><label class="field-label">Action</label>'
+        + '<textarea rows="2" data-field="detail">' + escapeHtml(a.detail || '') + '</textarea></div>'
+      + '<div><label class="field-label">Owner</label>'
+        + '<input type="text" data-field="owner" value="' + escapeHtml(a.owner || '') + '" placeholder="Who owns this?" /></div>'
+      + '<div><label class="field-label">Collaborator</label>'
+        + '<input type="text" data-field="collaborator" value="' + escapeHtml(a.collaborator || '') + '" placeholder="Optional" /></div>'
+      + '<div><label class="field-label">Source / system</label>'
+        + '<input type="text" data-field="source" value="' + escapeHtml(a.source || '') + '" placeholder="Table or system" /></div>'
+      + '<div><label class="field-label">Needs approval</label>'
+        + '<select data-field="approval">' + approvalOptionsHtml(a.approval || 'No approval needed') + '</select></div>'
+      + '<div class="wide"><label class="field-label">Artifact to create</label>'
+        + '<input type="text" data-field="artifact" value="' + escapeHtml(a.artifact || '') + '" placeholder="What deliverable comes out of this?" /></div>'
+      + '<div class="wide"><label class="field-label">Blockers</label>'
+        + '<input type="text" data-field="blockers" value="' + escapeHtml(a.blockers || '') + '" placeholder="Anything blocking this work?" /></div>'
+    + '</div>'
+    + '<div class="action-footer">'
+      + '<span class="count action-save-indicator">Auto-saved</span>'
+      + '<button class="btn btn-ghost btn-danger action-remove">Remove item</button>'
+    + '</div>';
+  }
+
   function renderActions(node) {
     actionList.innerHTML = '';
     const actions = node.actions || [];
     if (actions.length === 0) {
-      actionList.innerHTML = '<div class="actions-empty">No action items yet. They will appear here as the workplan develops.</div>';
+      actionList.innerHTML = '<div class="actions-empty">No action items yet. Answer follow-up questions to generate suggested items for your workplan.</div>';
       actionsCount.textContent = 'no items yet';
       return;
     }
@@ -950,25 +1079,138 @@
     actions.forEach((a, i) => {
       const item = document.createElement('details');
       item.className = 'action-item';
-      item.innerHTML = '<summary>'
-        + '<span class="ai-num">' + escapeHtml(letters[i] || '?') + '</span>'
-        + '<span class="ai-title">' + escapeHtml(a.title || '') + '</span>'
-        + '<span class="ai-meta">From Q' + escapeHtml(String(a.from_question || '?')) + '</span>'
-        + '<span class="chev">›</span>'
-      + '</summary>'
-      + '<div class="action-body">'
-        + '<div class="wide"><label class="field-label">Action</label>'
-          + '<textarea rows="2" readonly>' + escapeHtml(a.detail || '') + '</textarea></div>'
-      + '</div>';
+      item.dataset.actionId = a.action_id;
+      item.innerHTML = actionItemHtml(a, letters[i] || '?');
       actionList.appendChild(item);
+    });
+    bindActions();
+  }
+
+  const saveTimers = {};
+
+  function bindActions() {
+    // One-open-at-a-time accordion
+    actionList.querySelectorAll('.action-item').forEach(item => {
+      item.addEventListener('toggle', () => {
+        if (item.open) {
+          actionList.querySelectorAll('.action-item[open]').forEach(other => {
+            if (other !== item) other.removeAttribute('open');
+          });
+        }
+      });
+    });
+
+    // Field changes -> debounced PUT
+    actionList.querySelectorAll('.action-item').forEach(item => {
+      const actionId = item.dataset.actionId;
+      const indicator = item.querySelector('.action-save-indicator');
+      item.querySelectorAll('[data-field]').forEach(field => {
+        const evt = field.tagName === 'SELECT' ? 'change' : 'input';
+        field.addEventListener(evt, () => {
+          if (indicator) indicator.textContent = 'Saving…';
+          clearTimeout(saveTimers[actionId]);
+          saveTimers[actionId] = setTimeout(() => putAction(actionId, item, indicator), 600);
+        });
+      });
+
+      const removeBtn = item.querySelector('.action-remove');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', () => deleteAction(actionId, item));
+      }
     });
   }
 
+  async function putAction(actionId, item, indicator) {
+    const body = {};
+    item.querySelectorAll('[data-field]').forEach(field => {
+      body[field.dataset.field] = field.value;
+    });
+    try {
+      const res = await fetch(nodePath(currentNodeId) + '/actions/' + encodeURIComponent(actionId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        if (indicator) indicator.textContent = 'Save failed';
+        return;
+      }
+      // Update local cache without re-render (avoids losing focus / accordion state)
+      const updated = await res.json();
+      const node = nodeCache[currentNodeId];
+      if (node) {
+        const idx = (node.actions || []).findIndex(a => a.action_id === actionId);
+        if (idx >= 0) node.actions[idx] = updated;
+      }
+      // Also reflect title change in summary if user edited it
+      const titleSpan = item.querySelector('.ai-title');
+      if (titleSpan) titleSpan.textContent = updated.title || 'New action item';
+      if (indicator) indicator.textContent = 'Auto-saved';
+    } catch (e) {
+      if (indicator) indicator.textContent = 'Network error';
+    }
+  }
+
+  async function deleteAction(actionId, item) {
+    if (!window.confirm('Remove this action item?')) return;
+    try {
+      const res = await fetch(nodePath(currentNodeId) + '/actions/' + encodeURIComponent(actionId), {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        window.alert('Could not remove the item.');
+        return;
+      }
+      // Update cache and re-render
+      const node = nodeCache[currentNodeId];
+      if (node) {
+        node.actions = (node.actions || []).filter(a => a.action_id !== actionId);
+      }
+      renderActions(node);
+    } catch (e) {
+      window.alert('Network error. Please try again.');
+    }
+  }
+
   if (addActionBtn) {
-    addActionBtn.addEventListener('click', () => {
-      window.alert('Adding action items is coming in the next phase.');
+    addActionBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(nodePath(currentNodeId) + '/actions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({}),
+        });
+        if (!res.ok) {
+          window.alert('Could not add an item.');
+          return;
+        }
+        const action = await res.json();
+        const node = nodeCache[currentNodeId];
+        if (node) {
+          node.actions = (node.actions || []).concat([action]);
+          renderActions(node);
+          // Open the newly added item
+          const newItem = actionList.querySelector('.action-item[data-action-id="' + action.action_id + '"]');
+          if (newItem) {
+            newItem.open = true;
+            const firstInput = newItem.querySelector('[data-field="title"]');
+            if (firstInput) {
+              firstInput.focus();
+              firstInput.select();
+            }
+            newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      } catch (e) {
+        window.alert('Network error. Please try again.');
+      }
     });
   }
+
+  // ————— Misc —————
 
   function updateProgressStrip() {
     const total = allNodesMeta.length;
@@ -991,7 +1233,9 @@
   document.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       const submit = thread.querySelector('.submit-answer');
+      const editSave = thread.querySelector('.edit-save');
       if (submit && !submit.disabled) submit.click();
+      else if (editSave && !editSave.disabled) editSave.click();
     }
   });
 
