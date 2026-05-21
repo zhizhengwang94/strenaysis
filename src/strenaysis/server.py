@@ -180,14 +180,6 @@ class AppHandler(SimpleHTTPRequestHandler):
         ):
             self._handle_submit_answer()
             return
-        if (
-            len(answer_parts) == 5
-            and answer_parts[0] == "problems"
-            and answer_parts[2] == "nodes"
-            and answer_parts[4] == "actions"
-        ):
-            self._handle_add_action()
-            return
         if path == "/api/roadmap" or path.endswith("/api/roadmap"):
             self._handle_generate_roadmap()
             return
@@ -208,46 +200,6 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if "save-problem-framing" in path:
             self._handle_save_problem_framing()
-            return
-        self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
-
-    def do_PUT(self) -> None:  # noqa: N802
-        if not self._is_authenticated():
-            self._send_json({"error": "Authentication required."}, status=HTTPStatus.UNAUTHORIZED)
-            return
-        path = urlsplit(self.path).path
-        parts = path.strip("/").split("/")
-        if (
-            len(parts) == 6
-            and parts[0] == "problems"
-            and parts[2] == "nodes"
-            and parts[4] == "answers"
-        ):
-            self._handle_edit_answer()
-            return
-        if (
-            len(parts) == 6
-            and parts[0] == "problems"
-            and parts[2] == "nodes"
-            and parts[4] == "actions"
-        ):
-            self._handle_update_action()
-            return
-        self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
-
-    def do_DELETE(self) -> None:  # noqa: N802
-        if not self._is_authenticated():
-            self._send_json({"error": "Authentication required."}, status=HTTPStatus.UNAUTHORIZED)
-            return
-        path = urlsplit(self.path).path
-        parts = path.strip("/").split("/")
-        if (
-            len(parts) == 6
-            and parts[0] == "problems"
-            and parts[2] == "nodes"
-            and parts[4] == "actions"
-        ):
-            self._handle_delete_action()
             return
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
 
@@ -521,9 +473,6 @@ class AppHandler(SimpleHTTPRequestHandler):
         question["response_type"] = response_type
         question["followup"] = followup
 
-        suggested = self._build_suggested_action(answer, response_type, question.get("position", 1))
-        node.setdefault("actions", []).append(suggested)
-
         answered = sum(1 for q in questions if q.get("answer"))
         node["questions_answered"] = answered
         node["questions_total"] = len(questions)
@@ -538,201 +487,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             "node_status": node["status"],
             "questions_answered": answered,
             "questions_total": len(questions),
-            "suggested_action": suggested,
         })
-
-    @staticmethod
-    def _build_suggested_action(answer: str, response_type: str, position: int) -> dict:
-        truncated = answer if len(answer) <= 60 else answer[:57] + "..."
-        hints = {
-            "confirmed": "Worth a quick sanity check before the rest of the analysis depends on it.",
-            "assumption": "Confirm with data or a domain expert before building on it.",
-            "hypothesis": "Design a quick test or check to validate or refute this.",
-        }
-        return {
-            "action_id": uuid.uuid4().hex[:12],
-            "title": f"Validate: {truncated}",
-            "detail": f"Tagged as {response_type}. {hints.get(response_type, 'Review before continuing.')}",
-            "owner": "",
-            "collaborator": "",
-            "source": "",
-            "approval": "",
-            "artifact": "",
-            "blockers": "",
-            "from_question": int(position) if position else 1,
-        }
-
-    def _load_problem_and_node(self, problem_id: str, node_id: str):
-        file_path = self._problems_dir() / f"{problem_id}.json"
-        if not file_path.exists():
-            self._send_json({"error": "Problem not found."}, status=HTTPStatus.NOT_FOUND)
-            return None
-        try:
-            payload = json.loads(file_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            self._send_json({"error": "Could not read problem."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
-            return None
-        nodes = payload.get("nodes") or []
-        node = next((n for n in nodes if n.get("node_id") == node_id), None)
-        if not node:
-            self._send_json({"error": "Node not found."}, status=HTTPStatus.NOT_FOUND)
-            return None
-        return file_path, payload, node
-
-    def _handle_edit_answer(self) -> None:
-        path = urlsplit(self.path).path
-        parts = path.strip("/").split("/")
-        problem_id = parts[1]
-        node_id = parts[3]
-        question_id = parts[5]
-
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
-        try:
-            body = json.loads(raw_body.decode("utf-8"))
-        except json.JSONDecodeError:
-            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
-            return
-
-        answer = str(body.get("answer", "")).strip()
-        response_type = str(body.get("response_type", "")).strip().lower()
-        if len(answer) < 10:
-            self._send_json({"error": "Answer must be at least 10 characters."}, status=HTTPStatus.BAD_REQUEST)
-            return
-        if response_type not in RESPONSE_TYPES:
-            self._send_json(
-                {"error": "response_type must be one of confirmed, assumption, hypothesis."},
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
-
-        loaded = self._load_problem_and_node(problem_id, node_id)
-        if not loaded:
-            return
-        file_path, payload, node = loaded
-
-        questions = node.get("questions") or []
-        question = next((q for q in questions if q.get("question_id") == question_id), None)
-        if not question:
-            self._send_json({"error": "Question not found."}, status=HTTPStatus.NOT_FOUND)
-            return
-        if not question.get("answer"):
-            self._send_json({"error": "Cannot edit an unanswered question."}, status=HTTPStatus.BAD_REQUEST)
-            return
-
-        followup = self._build_followup(answer, response_type)
-        question["answer"] = answer
-        question["response_type"] = response_type
-        question["followup"] = followup
-
-        answered = sum(1 for q in questions if q.get("answer"))
-        node["questions_answered"] = answered
-        node["status"] = "settled" if answered == len(questions) and len(questions) > 0 else "in_progress"
-
-        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        self._send_json({
-            "followup": followup,
-            "node_status": node["status"],
-            "answer": answer,
-            "response_type": response_type,
-        })
-
-    def _handle_add_action(self) -> None:
-        path = urlsplit(self.path).path
-        parts = path.strip("/").split("/")
-        problem_id = parts[1]
-        node_id = parts[3]
-
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length) if content_length > 0 else b""
-        body: dict = {}
-        if raw_body:
-            try:
-                body = json.loads(raw_body.decode("utf-8"))
-            except json.JSONDecodeError:
-                self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
-                return
-
-        loaded = self._load_problem_and_node(problem_id, node_id)
-        if not loaded:
-            return
-        file_path, payload, node = loaded
-
-        action = {
-            "action_id": uuid.uuid4().hex[:12],
-            "title": str(body.get("title", "")).strip() or "New action item",
-            "detail": str(body.get("detail", "")).strip(),
-            "owner": str(body.get("owner", "")).strip(),
-            "collaborator": str(body.get("collaborator", "")).strip(),
-            "source": str(body.get("source", "")).strip(),
-            "approval": str(body.get("approval", "")).strip(),
-            "artifact": str(body.get("artifact", "")).strip(),
-            "blockers": str(body.get("blockers", "")).strip(),
-            "from_question": body.get("from_question"),
-        }
-        node.setdefault("actions", []).append(action)
-        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        self._send_json(action, status=HTTPStatus.CREATED)
-
-    def _handle_update_action(self) -> None:
-        path = urlsplit(self.path).path
-        parts = path.strip("/").split("/")
-        problem_id = parts[1]
-        node_id = parts[3]
-        action_id = parts[5]
-
-        content_length = int(self.headers.get("Content-Length", "0"))
-        raw_body = self.rfile.read(content_length)
-        try:
-            body = json.loads(raw_body.decode("utf-8"))
-        except json.JSONDecodeError:
-            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
-            return
-
-        loaded = self._load_problem_and_node(problem_id, node_id)
-        if not loaded:
-            return
-        file_path, payload, node = loaded
-
-        actions = node.get("actions") or []
-        action = next((a for a in actions if a.get("action_id") == action_id), None)
-        if not action:
-            self._send_json({"error": "Action not found."}, status=HTTPStatus.NOT_FOUND)
-            return
-
-        updatable = {"title", "detail", "owner", "collaborator", "source", "approval", "artifact", "blockers"}
-        for key in updatable:
-            if key in body:
-                action[key] = str(body[key]).strip()
-
-        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        self._send_json(action)
-
-    def _handle_delete_action(self) -> None:
-        path = urlsplit(self.path).path
-        parts = path.strip("/").split("/")
-        problem_id = parts[1]
-        node_id = parts[3]
-        action_id = parts[5]
-
-        loaded = self._load_problem_and_node(problem_id, node_id)
-        if not loaded:
-            return
-        file_path, payload, node = loaded
-
-        actions = node.get("actions") or []
-        original_count = len(actions)
-        node["actions"] = [a for a in actions if a.get("action_id") != action_id]
-        if len(node["actions"]) == original_count:
-            self._send_json({"error": "Action not found."}, status=HTTPStatus.NOT_FOUND)
-            return
-
-        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        self._send_json({"deleted": True})
 
     @staticmethod
     def _build_followup(answer: str, response_type: str) -> str:
