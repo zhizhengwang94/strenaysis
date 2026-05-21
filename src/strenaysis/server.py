@@ -33,6 +33,13 @@ PROBLEMS_DIRECTORY = "problems"
 MAX_QUESTION_LENGTH = 600
 MAX_CONTEXT_LENGTH = 2000
 
+PROBLEM_TYPE_SHORT = {
+    "descriptive_analysis": "descriptive",
+    "predictive_modeling": "predictive",
+    "experiment_causal_question": "causal",
+    "operational_optimization": "optimization",
+}
+
 
 class AppHandler(SimpleHTTPRequestHandler):
     web_root: Path
@@ -47,6 +54,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/problems" or path.endswith("/problems"):
             self._handle_list_problems()
+            return
+        if "/problems/" in path and path.endswith("/assessment"):
+            self._handle_get_assessment()
             return
         if path == "/api/problem-framings" or path.endswith("/api/problem-framings"):
             self._handle_list_problem_framings()
@@ -203,6 +213,93 @@ class AppHandler(SimpleHTTPRequestHandler):
                 "updated_at": str(payload.get("updated_at", "")),
             })
         self._send_json({"items": items})
+
+    def _handle_get_assessment(self) -> None:
+        path = urlsplit(self.path).path
+        parts = path.strip("/").split("/")
+        if len(parts) < 3 or parts[-3] != "problems" or parts[-1] != "assessment":
+            self._send_json({"error": "Invalid assessment path."}, status=HTTPStatus.BAD_REQUEST)
+            return
+        problem_id = parts[-2]
+
+        file_path = self._problems_dir() / f"{problem_id}.json"
+        if not file_path.exists():
+            self._send_json({"error": "Problem not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+
+        try:
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Could not read problem."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        if payload.get("nodes"):
+            self._send_json(self._build_assessment_response(payload))
+            return
+
+        question = str(payload.get("question", "")).strip()
+        context = str(payload.get("context", "")).strip()
+        result = generate_roadmap(question, context, None)
+        roadmap = result.roadmap or [item.copy() for item in DEFAULT_ROADMAP]
+
+        nodes = []
+        for i, item in enumerate(roadmap, start=1):
+            nodes.append({
+                "node_id": uuid.uuid4().hex[:12],
+                "name": str(item.get("title", "")).strip(),
+                "description": str(item.get("why", "")).strip(),
+                "position": i,
+                "status": "open",
+                "questions_answered": 0,
+                "questions_total": 0,
+                "is_custom": False,
+                "_breakdown": str(item.get("breakdown", "")),
+                "_suggested_context": str(item.get("suggested_context", "")),
+            })
+
+        recommended = PROBLEM_TYPE_SHORT.get(result.inferred_problem_type)
+        chosen = PROBLEM_TYPE_SHORT.get(result.problem_type) or recommended
+
+        explanation_parts = []
+        if result.assessment_title:
+            explanation_parts.append(result.assessment_title.strip())
+        if result.assessment_recap:
+            explanation_parts.append(result.assessment_recap.strip())
+        explanation = "\n".join(part for part in explanation_parts if part)
+
+        payload["nodes"] = nodes
+        payload["problem_type"] = chosen
+        payload["recommended_type"] = recommended
+        payload["explanation"] = explanation
+        payload["current_step"] = max(int(payload.get("current_step", 1) or 1), 2)
+        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+        self._send_json(self._build_assessment_response(payload))
+
+    @staticmethod
+    def _build_assessment_response(payload: dict) -> dict:
+        return {
+            "id": payload.get("id"),
+            "question": payload.get("question", ""),
+            "context": payload.get("context", ""),
+            "problem_type": payload.get("problem_type"),
+            "recommended_type": payload.get("recommended_type"),
+            "explanation": payload.get("explanation", ""),
+            "nodes": [
+                {
+                    "node_id": n.get("node_id"),
+                    "name": n.get("name"),
+                    "description": n.get("description"),
+                    "position": n.get("position"),
+                    "status": n.get("status", "open"),
+                    "questions_answered": n.get("questions_answered", 0),
+                    "questions_total": n.get("questions_total", 0),
+                    "is_custom": n.get("is_custom", False),
+                }
+                for n in payload.get("nodes", [])
+            ],
+        }
 
     def _handle_polish_node(self) -> None:
         content_length = int(self.headers.get("Content-Length", "0"))
