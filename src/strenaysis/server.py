@@ -53,7 +53,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             self._handle_get_problem_framing()
             return
         if path in {"", "/"}:
-            self.path = "/step-1-home.html"
+            self.path = "/index.html"
         super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
@@ -534,15 +534,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def end_headers(self) -> None:
-        no_cache_paths = {
-            "/",
-            "/_shared.css",
-            "/step-1-home.html",
-            "/step-2-roadmap.html",
-            "/step-3-buildup.html",
-            "/step-4-summary.html",
-        }
-        if self.path in no_cache_paths:
+        if self.path in {"/", "/index.html", "/app.js", "/styles.css"}:
             self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
