@@ -47,10 +47,9 @@
   .assessment-why {
     font-size: var(--text-sm); line-height: var(--leading-relaxed); color: var(--ink-soft);
     background: var(--surface-2);
-    border-left: 1px solid var(--accent);
     padding: var(--s-4) var(--s-5);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    margin: 0 0 var(--s-4);
+    border-radius: var(--radius-sm);
+    margin: var(--s-4) 0 0;
   }
 
   /* ————— Node list (drag-and-drop) ————— */
@@ -290,18 +289,18 @@
           Your question
           <span class="tag">auto-saves</span>
         </div>
-        <textarea rows="3">How should we evaluate whether launching a premium recommendation feature will actually move subscription revenue &mdash; and what would change our mind?</textarea>
+        <textarea id="problem-textarea" rows="3" readonly></textarea>
+        <p class="assessment-why">
+          This reads as a <strong>causal</strong> question &mdash; whether a new capability <em>causes</em> revenue to move. The system generated 7 nodes to guide your thinking.
+        </p>
       </section>
 
       <section class="panel">
         <div class="panel-title">
           Problem assessment
           <span class="spacer"></span>
-          <span class="chip active"><span class="dot"></span> Causal</span>
+          <span class="chip active" id="problem-type-chip"><span class="dot"></span> —</span>
         </div>
-        <p class="assessment-why">
-          This reads as a <strong>causal</strong> question &mdash; whether a new capability <em>causes</em> revenue to move. The system generated 7 nodes to guide your thinking.
-        </p>
 
         <ul class="types">
           <li><label>
@@ -447,7 +446,7 @@
 
     <!-- Sticky bar -->
     <div class="sticky-actions">
-      <span style="font-family: var(--mono); font-size: var(--text-xs); color: var(--muted); letter-spacing: 0.04em; font-variant-numeric: tabular-nums;">2 of 7 settled</span>
+      <span id="settled-counter" style="font-family: var(--mono); font-size: var(--text-xs); color: var(--muted); letter-spacing: 0.04em; font-variant-numeric: tabular-nums;">0 of 0 settled</span>
       <span class="spacer"></span>
       <a href="step-1-home.html" class="btn btn-ghost">&larr; Back to question</a>
       <a href="step-3-buildup.html" class="btn btn-primary" id="to-workspace">Continue to workspace</a>
@@ -458,245 +457,305 @@
 
 <script>
 (function () {
-  var list = document.getElementById('node-list');
+  const params = new URLSearchParams(window.location.search);
+  const problemId = params.get('problem_id');
+  if (!problemId) {
+    window.location.href = '/';
+    return;
+  }
 
-  // ————— Problem type change: show "Update analysis path" button —————
-  var radios = document.querySelectorAll('input[name="ptype"]');
-  var initialType = document.querySelector('input[name="ptype"]:checked').value;
-  var updateBtn = document.getElementById('update-path');
-  var assessWhy = document.querySelector('.assessment-why');
+  const list = document.getElementById('node-list');
+  const questionTa = document.getElementById('problem-textarea');
+  const typeChip = document.getElementById('problem-type-chip');
+  const assessWhy = document.querySelector('.assessment-why');
+  const settledCounter = document.getElementById('settled-counter');
+  const titleEl = document.querySelector('h1.title');
 
-  var typeLabels = {
-    descriptive: 'descriptive',
-    predictive: 'predictive modeling',
-    causal: 'causal',
-    optimization: 'operational optimization'
+  const TYPE_LABEL = {
+    descriptive: 'Descriptive',
+    predictive: 'Predictive modeling',
+    causal: 'Causal',
+    optimization: 'Optimization'
   };
 
-  radios.forEach(function (radio) {
-    radio.addEventListener('change', function () {
-      var selected = document.querySelector('input[name="ptype"]:checked').value;
-      if (selected !== initialType) {
-        updateBtn.style.display = '';
-        assessWhy.innerHTML = 'You selected <strong>' + typeLabels[selected] + '</strong>. Updating will regenerate the node list for this problem type. Your existing answers will be preserved where nodes overlap.';
-      } else {
-        updateBtn.style.display = 'none';
-        assessWhy.innerHTML = 'This reads as a <strong>causal</strong> question &mdash; whether a new capability <em>causes</em> revenue to move. The system generated 7 nodes to guide your thinking.';
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  document.querySelectorAll('.side-step, .sticky-actions a.btn').forEach(a => {
+    try {
+      const u = new URL(a.getAttribute('href'), window.location.origin);
+      if (u.pathname.endsWith('.html')) {
+        u.searchParams.set('problem_id', problemId);
+        a.setAttribute('href', u.pathname + u.search);
+      }
+    } catch (e) {}
+  });
+
+  let initialType = null;
+  let allNodes = [];
+  let originalExplanation = '';
+
+  list.innerHTML = '<div style="padding: var(--s-6); text-align: center; color: var(--muted); font-size: var(--text-sm);">Loading analysis path…</div>';
+
+  fetch('/problems/' + encodeURIComponent(problemId) + '/assessment', { credentials: 'same-origin' })
+    .then(async r => {
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to load assessment.');
+      }
+      return r.json();
+    })
+    .then(renderAll)
+    .catch(err => {
+      window.alert(err.message || 'Could not load problem. Returning to home.');
+      window.location.href = '/';
+    });
+
+  function renderAll(data) {
+    if (questionTa) questionTa.value = data.question || '';
+
+    if (typeChip) {
+      const label = TYPE_LABEL[data.problem_type] || '—';
+      typeChip.innerHTML = '<span class="dot"></span> ' + escapeHtml(label);
+    }
+
+    originalExplanation = data.explanation || '';
+    if (assessWhy) {
+      assessWhy.innerHTML = originalExplanation
+        ? originalExplanation.split('\n').map(escapeHtml).join('<br>')
+        : '';
+    }
+
+    initialType = data.problem_type || null;
+    document.querySelectorAll('input[name="ptype"]').forEach(radio => {
+      radio.checked = (radio.value === initialType);
+      const label = radio.closest('label');
+      const spans = label ? label.querySelectorAll(':scope > span') : [];
+      const lastSpan = spans.length ? spans[spans.length - 1] : null;
+      if (lastSpan) {
+        if (radio.value === data.recommended_type) {
+          lastSpan.className = 'recommended';
+          lastSpan.textContent = 'Recommended';
+        } else {
+          lastSpan.className = '';
+          lastSpan.textContent = '';
+        }
       }
     });
-  });
 
-  updateBtn.addEventListener('click', function () {
-    // Simulate regeneration: flash the node list, then hide button
-    list.style.opacity = '0.4';
-    list.style.transition = 'opacity 200ms ease';
-    updateBtn.disabled = true;
-    updateBtn.textContent = 'Updating\u2026';
+    allNodes = data.nodes || [];
+    const total = allNodes.length;
+    const words = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve'];
+    if (titleEl) {
+      titleEl.textContent = (words[total] || total) + ' node' + (total === 1 ? '' : 's') + '. Work them in any order.';
+    }
 
-    setTimeout(function () {
-      list.style.opacity = '';
-      updateBtn.style.display = 'none';
-      updateBtn.disabled = false;
-      updateBtn.textContent = 'Update analysis path';
-      initialType = document.querySelector('input[name="ptype"]:checked').value;
-      var label = typeLabels[initialType];
-      assessWhy.innerHTML = 'Updated to <strong>' + label + '</strong>. The system regenerated nodes for this problem type.';
-    }, 800);
-  });
+    renderNodes(allNodes);
+    updateCounter();
+    bindRadios();
+  }
 
-  // ————— Renumber nodes after reorder —————
+  function renderNodes(nodes) {
+    list.innerHTML = '';
+    nodes.forEach(node => {
+      const row = document.createElement('a');
+      let stateClass = '';
+      if (node.status === 'settled') stateClass = ' settled';
+      else if (node.status === 'in_progress' || (node.questions_answered || 0) > 0) stateClass = ' in-progress';
+      row.className = 'node-row' + stateClass;
+      row.draggable = true;
+      row.dataset.nodeId = node.node_id;
+      const stepUrl = new URL('/step-3-buildup.html', window.location.origin);
+      stepUrl.searchParams.set('problem_id', problemId);
+      stepUrl.searchParams.set('node_id', node.node_id);
+      row.href = stepUrl.pathname + stepUrl.search;
+
+      const num = String(node.position || 1).padStart(2, '0');
+      let statusHtml, actionLabel;
+      if (node.status === 'settled') {
+        statusHtml = '<span class="chip ok"><span class="dot"></span> Settled</span>';
+        actionLabel = 'Review &rarr;';
+      } else if (node.status === 'in_progress' || (node.questions_answered || 0) > 0) {
+        const t = node.questions_total || 0;
+        statusHtml = '<span class="chip warn"><span class="dot"></span> ' + (node.questions_answered || 0) + ' of ' + t + '</span>';
+        actionLabel = 'Continue &rarr;';
+      } else {
+        statusHtml = 'Not started';
+        actionLabel = 'Start &rarr;';
+      }
+      row.innerHTML =
+        '<div class="nr-grip"><span></span><span></span><span></span></div>' +
+        '<span class="nr-num">' + num + '</span>' +
+        '<div class="nr-body">' +
+          '<div class="nr-title">' + escapeHtml(node.name) + '</div>' +
+          '<div class="nr-desc">' + escapeHtml(node.description) + '</div>' +
+        '</div>' +
+        '<span class="nr-status">' + statusHtml + '</span>' +
+        '<span class="nr-action">' + actionLabel + '</span>';
+      list.appendChild(row);
+    });
+  }
+
+  function updateCounter() {
+    if (!settledCounter) return;
+    const total = allNodes.length;
+    const settled = allNodes.filter(n => n.status === 'settled').length;
+    settledCounter.textContent = settled + ' of ' + total + ' settled';
+  }
+
   function renumber() {
-    var rows = list.querySelectorAll('.node-row');
-    rows.forEach(function (row, i) {
+    list.querySelectorAll('.node-row').forEach((row, i) => {
       row.querySelector('.nr-num').textContent = String(i + 1).padStart(2, '0');
     });
   }
 
-  // ————— Drag and drop —————
-  var dragRow = null;
-  var isDragFromGrip = false;
-
-  // Only start drag when initiated from the grip handle
-  list.addEventListener('mousedown', function (e) {
-    isDragFromGrip = !!e.target.closest('.nr-grip');
-  });
-
-  list.addEventListener('dragstart', function (e) {
-    var row = e.target.closest('.node-row');
-    if (!row) return;
-
-    // If drag didn't start from grip, cancel it
-    if (!isDragFromGrip) {
-      e.preventDefault();
-      return;
-    }
-
-    // Prevent the link navigation during drag
-    e.stopPropagation();
-    dragRow = row;
-    row.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', '');
-  });
-
-  list.addEventListener('dragend', function (e) {
-    var row = e.target.closest('.node-row');
-    if (row) row.classList.remove('dragging');
-    // Clear all drag-over indicators
-    list.querySelectorAll('.drag-over, .drag-over-below').forEach(function (el) {
-      el.classList.remove('drag-over', 'drag-over-below');
+  function bindRadios() {
+    const radios = document.querySelectorAll('input[name="ptype"]');
+    const updateBtn = document.getElementById('update-path');
+    radios.forEach(radio => {
+      radio.addEventListener('change', function () {
+        const selected = document.querySelector('input[name="ptype"]:checked').value;
+        if (selected !== initialType) {
+          updateBtn.style.display = '';
+          const label = (TYPE_LABEL[selected] || selected).toLowerCase();
+          assessWhy.innerHTML = 'You selected <strong>' + escapeHtml(label) + '</strong>. Updating will regenerate the node list for this problem type.';
+        } else {
+          updateBtn.style.display = 'none';
+          assessWhy.innerHTML = originalExplanation
+            ? originalExplanation.split('\n').map(escapeHtml).join('<br>')
+            : '';
+        }
+      });
     });
-    dragRow = null;
-    isDragFromGrip = false;
-  });
-
-  list.addEventListener('dragover', function (e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-
-    var row = e.target.closest('.node-row');
-    if (!row || row === dragRow) return;
-
-    // Clear previous indicators
-    list.querySelectorAll('.drag-over, .drag-over-below').forEach(function (el) {
-      el.classList.remove('drag-over', 'drag-over-below');
+    updateBtn.addEventListener('click', function () {
+      window.alert('Type-override regeneration is coming in the next phase.');
     });
-
-    // Determine if cursor is in top or bottom half of target row
-    var rect = row.getBoundingClientRect();
-    var midY = rect.top + rect.height / 2;
-    if (e.clientY < midY) {
-      row.classList.add('drag-over');
-    } else {
-      row.classList.add('drag-over-below');
-    }
-  });
-
-  list.addEventListener('dragleave', function (e) {
-    var row = e.target.closest('.node-row');
-    if (row) {
-      row.classList.remove('drag-over', 'drag-over-below');
-    }
-  });
-
-  list.addEventListener('drop', function (e) {
-    e.preventDefault();
-    var row = e.target.closest('.node-row');
-    if (!row || !dragRow || row === dragRow) return;
-
-    var rect = row.getBoundingClientRect();
-    var midY = rect.top + rect.height / 2;
-
-    if (e.clientY < midY) {
-      list.insertBefore(dragRow, row);
-    } else {
-      list.insertBefore(dragRow, row.nextSibling);
-    }
-
-    // Clear indicators, renumber
-    list.querySelectorAll('.drag-over, .drag-over-below').forEach(function (el) {
-      el.classList.remove('drag-over', 'drag-over-below');
-    });
-    renumber();
-  });
-
-  // Prevent link navigation when drag ends (click fires after dragend)
-  var justDragged = false;
-  list.addEventListener('dragstart', function () { justDragged = true; });
-  list.addEventListener('click', function (e) {
-    if (justDragged) {
-      e.preventDefault();
-      justDragged = false;
-    }
-  });
-
-  // ————— Add node —————
-  var trigger = document.getElementById('add-node-trigger');
-  var form = document.getElementById('add-node-form');
-  var nameInput = document.getElementById('new-node-name');
-  var descInput = document.getElementById('new-node-desc');
-  var saveBtn = document.getElementById('save-node');
-  var cancelBtn = document.getElementById('cancel-node');
-
-  trigger.addEventListener('click', function () {
-    trigger.style.display = 'none';
-    form.classList.add('open');
-    nameInput.focus();
-  });
-
-  cancelBtn.addEventListener('click', function () {
-    form.classList.remove('open');
-    trigger.style.display = '';
-    nameInput.value = '';
-    descInput.value = '';
-    saveBtn.disabled = true;
-  });
-
-  function checkNodeForm() {
-    saveBtn.disabled = nameInput.value.trim().length < 2;
   }
-  nameInput.addEventListener('input', checkNodeForm);
-  descInput.addEventListener('input', checkNodeForm);
 
-  saveBtn.addEventListener('click', function () {
-    if (saveBtn.disabled) return;
-    var name = nameInput.value.trim();
-    var desc = descInput.value.trim() || 'Custom node added by the user.';
-    var count = list.querySelectorAll('.node-row').length + 1;
-    var num = String(count).padStart(2, '0');
+  // Drag-and-drop, add-node, keyboard shortcut all bound on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', bindStaticInteractions);
+  if (document.readyState !== 'loading') bindStaticInteractions();
 
-    var row = document.createElement('a');
-    row.className = 'node-row';
-    row.href = 'step-3-buildup.html';
-    row.draggable = true;
-    row.innerHTML =
-      '<div class="nr-grip"><span></span><span></span><span></span></div>' +
-      '<span class="nr-num">' + num + '</span>' +
-      '<div class="nr-body">' +
-        '<div class="nr-title">' + name + '</div>' +
-        '<div class="nr-desc">' + desc + '</div>' +
-      '</div>' +
-      '<span class="nr-status">Not started</span>' +
-      '<span class="nr-action">Start &rarr;</span>';
+  function bindStaticInteractions() {
+    let dragRow = null;
+    let isDragFromGrip = false;
 
-    list.appendChild(row);
-    renumber();
+    list.addEventListener('mousedown', function (e) {
+      isDragFromGrip = !!e.target.closest('.nr-grip');
+    });
 
-    // Update sticky bar count
-    var total = list.querySelectorAll('.node-row').length;
-    var settled = list.querySelectorAll('.node-row.settled').length;
-    var counter = document.querySelector('.sticky-actions span[style]');
-    if (counter) counter.textContent = settled + ' of ' + total + ' settled';
+    list.addEventListener('dragstart', function (e) {
+      const row = e.target.closest('.node-row');
+      if (!row) return;
+      if (!isDragFromGrip) { e.preventDefault(); return; }
+      e.stopPropagation();
+      dragRow = row;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
 
-    // Update page title
-    var h1 = document.querySelector('h1.title');
-    var words = ['Zero','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve'];
-    h1.textContent = (words[total] || total) + ' nodes. Work them in any order.';
+    list.addEventListener('dragend', function (e) {
+      const row = e.target.closest('.node-row');
+      if (row) row.classList.remove('dragging');
+      list.querySelectorAll('.drag-over, .drag-over-below').forEach(el => {
+        el.classList.remove('drag-over', 'drag-over-below');
+      });
+      dragRow = null;
+      isDragFromGrip = false;
+    });
 
-    // Reset form
-    form.classList.remove('open');
-    trigger.style.display = '';
-    nameInput.value = '';
-    descInput.value = '';
-    saveBtn.disabled = true;
+    list.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const row = e.target.closest('.node-row');
+      if (!row || row === dragRow) return;
+      list.querySelectorAll('.drag-over, .drag-over-below').forEach(el => {
+        el.classList.remove('drag-over', 'drag-over-below');
+      });
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) row.classList.add('drag-over');
+      else row.classList.add('drag-over-below');
+    });
 
-    // Scroll to the new row
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
+    list.addEventListener('dragleave', function (e) {
+      const row = e.target.closest('.node-row');
+      if (row) row.classList.remove('drag-over', 'drag-over-below');
+    });
 
-  // ————— Keyboard shortcut —————
-  document.addEventListener('keydown', function (e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      if (form.classList.contains('open') && !saveBtn.disabled) {
-        saveBtn.click();
-      } else {
-        document.getElementById('to-workspace').click();
+    list.addEventListener('drop', function (e) {
+      e.preventDefault();
+      const row = e.target.closest('.node-row');
+      if (!row || !dragRow || row === dragRow) return;
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY < midY) list.insertBefore(dragRow, row);
+      else list.insertBefore(dragRow, row.nextSibling);
+      list.querySelectorAll('.drag-over, .drag-over-below').forEach(el => {
+        el.classList.remove('drag-over', 'drag-over-below');
+      });
+      renumber();
+    });
+
+    let justDragged = false;
+    list.addEventListener('dragstart', function () { justDragged = true; });
+    list.addEventListener('click', function (e) {
+      if (justDragged) {
+        e.preventDefault();
+        justDragged = false;
       }
+    });
+
+    const trigger = document.getElementById('add-node-trigger');
+    const form = document.getElementById('add-node-form');
+    const nameInput = document.getElementById('new-node-name');
+    const descInput = document.getElementById('new-node-desc');
+    const saveBtn = document.getElementById('save-node');
+    const cancelBtn = document.getElementById('cancel-node');
+
+    trigger.addEventListener('click', function () {
+      trigger.style.display = 'none';
+      form.classList.add('open');
+      nameInput.focus();
+    });
+
+    cancelBtn.addEventListener('click', function () {
+      form.classList.remove('open');
+      trigger.style.display = '';
+      nameInput.value = '';
+      descInput.value = '';
+      saveBtn.disabled = true;
+    });
+
+    function checkNodeForm() {
+      saveBtn.disabled = nameInput.value.trim().length < 2;
     }
-    if (e.key === 'Escape' && form.classList.contains('open')) {
+    nameInput.addEventListener('input', checkNodeForm);
+    descInput.addEventListener('input', checkNodeForm);
+
+    saveBtn.addEventListener('click', function () {
+      if (saveBtn.disabled) return;
+      window.alert('Adding custom nodes is coming in the next phase.');
       cancelBtn.click();
-    }
-  });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        if (form.classList.contains('open') && !saveBtn.disabled) {
+          saveBtn.click();
+        } else {
+          document.getElementById('to-workspace').click();
+        }
+      }
+      if (e.key === 'Escape' && form.classList.contains('open')) {
+        cancelBtn.click();
+      }
+    });
+  }
 })();
 </script>
 </body>
