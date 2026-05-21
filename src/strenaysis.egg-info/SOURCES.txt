@@ -3,14 +3,12 @@ pyproject.toml
 src/strenaysis/__init__.py
 src/strenaysis/__main__.py
 src/strenaysis/cli.py
-src/strenaysis/exporter.py
 src/strenaysis/openai_client.py
 src/strenaysis/server.py
 src/strenaysis.egg-info/PKG-INFO
 src/strenaysis.egg-info/SOURCES.txt
 src/strenaysis.egg-info/dependency_links.txt
 src/strenaysis.egg-info/entry_points.txt
-src/strenaysis.egg-info/requires.txt
 src/strenaysis.egg-info/top_level.txt
 src/strenaysis/web/app.js
 src/strenaysis/web/index.html

@@ -5,8 +5,6 @@ Summary: Agentic data analysis workflow app for structuring data scientist probl
 Author: OpenAI Codex
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
-Requires-Dist: python-docx>=1.2.0
-Requires-Dist: python-pptx>=1.0.2
 
 # Strenaysis
 
@@ -50,31 +48,6 @@ strenaysis
 ```
 
 4. Open the printed local URL in your browser.
-
-## Deploy On Render
-
-`strenaysis` can be deployed as a simple Python web service on Render.
-
-1. Push this repo to GitHub.
-2. Go to [Render](https://render.com/) and create a new `Web Service`.
-3. Connect the repo and let Render detect the included `render.yaml`.
-4. If Render asks for commands manually, use:
-
-```bash
-python -m pip install --upgrade pip && pip install .
-```
-
-as the build command, and:
-
-```bash
-python -m strenaysis
-```
-
-as the start command.
-
-5. Add `OPENAI_API_KEY` as an environment variable when you want the live OpenAI-driven behavior.
-
-This first hosted version does not include user authentication yet, so anyone with the Render URL can use it.
 
 ## Notes
 
