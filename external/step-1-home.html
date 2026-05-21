@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strenaysis — New problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* Home-only styles */
+  .composer {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: var(--s-6);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .composer:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+  }
+
+  /* Kill all inner focus rings — the composer border IS the signal */
+  .composer textarea:focus,
+  .composer textarea:focus-visible,
+  .composer input:focus,
+  .composer input:focus-visible {
+    outline: none;
+    box-shadow: none;
+    border-color: var(--line);
+  }
+  .composer-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 500; color: var(--ink);
+    margin-bottom: var(--s-3);
+  }
+  .composer-label .tag {
+    font-family: var(--mono);
+    font-size: 10.5px; letter-spacing: 0.04em;
+    color: var(--accent); background: var(--accent-bg);
+    padding: 2px 7px; border-radius: 4px;
+  }
+  .composer textarea {
+    font-size: 17px; line-height: 1.55;
+    border: none; padding: 0;
+    min-height: 96px;
+  }
+  .composer-foot {
+    display: flex; align-items: center; gap: var(--s-3);
+    margin-top: var(--s-5); padding-top: var(--s-4);
+    border-top: 1px solid var(--line-soft);
+  }
+  .composer-foot .counter { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .composer-foot .spacer { flex: 1; }
+
+  details.context {
+    margin-top: var(--s-4);
+    border-top: 1px solid var(--line-soft);
+    padding-top: var(--s-4);
+  }
+  details.context summary {
+    list-style: none; cursor: pointer;
+    font-size: 13px; color: var(--muted); font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px; user-select: none;
+  }
+  details.context summary::-webkit-details-marker { display: none; }
+  details.context summary::before {
+    content: "+"; font-family: var(--mono); font-size: 14px;
+    color: var(--faint); width: 12px; display: inline-block;
+  }
+  details.context[open] summary::before { content: "−"; }
+  details.context summary:hover { color: var(--ink); }
+  details.context textarea {
+    margin-top: var(--s-3); font-size: 15px; min-height: 64px;
+    border: 1px solid var(--line);
+  }
+
+  /* Text selection highlight */
+  .composer ::selection {
+    background: var(--accent-bg);
+    color: var(--accent-ink);
+  }
+
+  .recent { margin-top: var(--s-8); padding-top: var(--s-7); border-top: 1px solid var(--line); }
+  .recent-head { display: flex; align-items: baseline; gap: var(--s-3); margin-bottom: var(--s-4); }
+  .recent-head h3 { font-size: 15px; font-weight: 500; margin: 0; letter-spacing: -0.01em; }
+  .recent-head .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .recent-head .spacer { flex: 1; }
+  .recent-head a.view { font-size: 13px; color: var(--muted); text-decoration: none; }
+  .recent-head a.view:hover { color: var(--ink); }
+
+  .recent-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: var(--s-4);
+    padding: 12px var(--s-3);
+    border-top: 1px solid var(--line-soft);
+    cursor: pointer;
+    transition: background 120ms ease;
+    border-radius: var(--radius-sm);
+    margin: 0 calc(-1 * var(--s-3));
+  }
+  .recent-row:hover { background: var(--surface-2); }
+  .recent-row .status { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  .recent-row.in-progress .status { background: var(--accent); }
+  .recent-row.done .status { background: var(--success); }
+  .recent-row .rtitle { font-size: 14px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-row .rtype {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .recent-row .rdate { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <aside class="side" aria-label="Primary">
+    <div class="brand">
+      <div class="brand-glyph">S</div>
+      <div>
+        <div class="brand-name">Strenaysis</div>
+        <div class="brand-sub">Decision workspace</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">Workspace</div>
+      <nav class="side-nav">
+        <a href="step-1-home.html" class="on"><span class="side-ico">✎</span> New problem <span class="badge">N</span></a>
+        <a href="#"><span class="side-ico">◱</span> History <span class="badge">12</span></a>
+        <a href="#"><span class="side-ico">◉</span> Actions <span class="badge">3</span></a>
+        <a href="#"><span class="side-ico">△</span> Portfolio</a>
+      </nav>
+    </div>
+
+    <div>
+      <div class="side-label">Recent</div>
+      <nav class="side-nav">
+        <a href="step-2-roadmap.html" style="font-weight:400;"><span class="side-ico" style="color:var(--accent)">●</span> Premium reco lift</a>
+        <a href="#" style="font-weight:400;"><span class="side-ico">○</span> Churn cohort audit</a>
+        <a href="#" style="font-weight:400;"><span class="side-ico">○</span> Onboarding drop-off</a>
+      </nav>
+    </div>
+
+    <div class="side-foot">
+      <button>Settings</button>
+      <button>Feedback</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <span class="crumb">Workspace</span>
+      <span class="sep">/</span>
+      <span class="crumb active">New problem</span>
+      <span class="spacer"></span>
+    </div>
+
+    <p class="eyebrow"><span class="dot"></span> Step 1 of 4 · Frame the question</p>
+    <h1 class="title">What business question are you trying to answer?</h1>
+    <p class="lede">
+      Write it the way a colleague would ask you over coffee — plain language, one sentence, the real thing.
+      We'll turn it into a defensible analytical roadmap in the next step.
+    </p>
+
+    <section class="composer" aria-label="Problem">
+      <label class="composer-label" for="problem">
+        Your question
+        <span class="tag">required</span>
+      </label>
+      <textarea id="problem" placeholder="e.g. How should we evaluate whether launching a premium recommendation feature will actually move subscription revenue?"></textarea>
+
+      <details class="context">
+        <summary>Add context — who's asking and what hangs on the answer</summary>
+        <textarea placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."></textarea>
+      </details>
+
+      <div class="composer-foot">
+        <span class="counter" id="char-counter">Type a question to continue</span>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost">Save as draft</button>
+        <a href="step-2-roadmap.html" class="btn btn-primary" id="go" aria-disabled="true" role="button" tabindex="0">
+          Structure the problem
+        </a>
+      </div>
+    </section>
+
+    <section class="recent" aria-label="Recent problems">
+      <div class="recent-head">
+        <h3>Pick up where you left off</h3>
+        <span class="count">3 in progress</span>
+        <span class="spacer"></span>
+        <a href="#" class="view">View history →</a>
+      </div>
+      <div>
+        <a class="recent-row in-progress" href="step-2-roadmap.html" style="text-decoration:none;">
+          <span class="status" aria-label="In progress"></span>
+          <span class="rtitle">How should we evaluate whether the premium reco feature moves subscription revenue?</span>
+          <span class="rtype">Causal</span>
+          <span class="rdate">Today · step 2 of 4</span>
+        </a>
+        <a class="recent-row in-progress" href="step-3-buildup.html" style="text-decoration:none;">
+          <span class="status" aria-label="In progress"></span>
+          <span class="rtitle">Which cohort of early-tenure customers is driving the Q2 churn bump?</span>
+          <span class="rtype">Descriptive</span>
+          <span class="rdate">Apr 12 · step 3 of 4</span>
+        </a>
+        <a class="recent-row done" href="step-4-summary.html" style="text-decoration:none;">
+          <span class="status" aria-label="Complete"></span>
+          <span class="rtitle">Why is mobile onboarding completion lower than web, and does it matter?</span>
+          <span class="rtype">Descriptive</span>
+          <span class="rdate">Apr 08 · complete</span>
+        </a>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  (function () {
+    const ta = document.getElementById('problem');
+    const counter = document.getElementById('char-counter');
+    const go = document.getElementById('go');
+    const MAX = 600;
+
+    function update() {
+      const n = ta.value.trim().length;
+      const raw = ta.value.length;
+      const hasContent = n > 0;
+
+      // Counter text
+      if (!hasContent) {
+        counter.textContent = 'Type a question to continue';
+        counter.style.color = 'var(--muted)';
+      } else if (raw > MAX) {
+        counter.textContent = raw + ' / ' + MAX + ' — over the limit';
+        counter.style.color = 'var(--accent-ink)';
+      } else {
+        counter.textContent = raw + ' / ' + MAX;
+        counter.style.color = 'var(--muted)';
+      }
+
+      // Button enabled state
+      if (hasContent && raw <= MAX) {
+        go.removeAttribute('aria-disabled');
+        go.style.opacity = '';
+        go.style.cursor = '';
+        go.style.pointerEvents = '';
+      } else {
+        go.setAttribute('aria-disabled', 'true');
+        go.style.opacity = '0.42';
+        go.style.cursor = 'not-allowed';
+        go.style.pointerEvents = 'none';
+      }
+    }
+
+    // Block navigation when disabled
+    go.addEventListener('click', function (e) {
+      if (this.getAttribute('aria-disabled') === 'true') e.preventDefault();
+    });
+
+    // ⌘↵ shortcut
+    document.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        if (go.getAttribute('aria-disabled') !== 'true') go.click();
+      }
+    });
+
+    ta.addEventListener('input', update);
+
+    document.querySelectorAll('.example').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.textContent.replace(/^\s*\S+\s*/, '').trim();
+        ta.value = text;
+        ta.focus();
+        update();
+      });
+    });
+
+    update(); // run once on load
+  })();
+</script>
+</body>
+</html>
