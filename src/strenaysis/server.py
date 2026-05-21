@@ -140,6 +140,9 @@ class AppHandler(SimpleHTTPRequestHandler):
         if "/problems/" in path and path.endswith("/assessment"):
             self._handle_get_assessment()
             return
+        if "/problems/" in path and path.endswith("/summary"):
+            self._handle_get_summary()
+            return
         node_parts = path.strip("/").split("/")
         if len(node_parts) == 4 and node_parts[0] == "problems" and node_parts[2] == "nodes":
             self._handle_get_node()
@@ -170,6 +173,9 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if path == "/problems" or path.endswith("/problems"):
             self._handle_create_problem()
+            return
+        if "/problems/" in path and path.endswith("/save"):
+            self._handle_save_to_history()
             return
         answer_parts = path.strip("/").split("/")
         if (
@@ -791,6 +797,147 @@ class AppHandler(SimpleHTTPRequestHandler):
             "questions": questions,
             "actions": node.get("actions", []) or [],
         }
+
+    def _handle_get_summary(self) -> None:
+        path = urlsplit(self.path).path
+        parts = path.strip("/").split("/")
+        if len(parts) < 3 or parts[-3] != "problems" or parts[-1] != "summary":
+            self._send_json({"error": "Invalid summary path."}, status=HTTPStatus.BAD_REQUEST)
+            return
+        problem_id = parts[-2]
+
+        file_path = self._problems_dir() / f"{problem_id}.json"
+        if not file_path.exists():
+            self._send_json({"error": "Problem not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+        try:
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Could not read problem."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        self._send_json(self._build_summary_response(payload))
+
+    def _handle_save_to_history(self) -> None:
+        path = urlsplit(self.path).path
+        parts = path.strip("/").split("/")
+        if len(parts) < 3 or parts[-3] != "problems" or parts[-1] != "save":
+            self._send_json({"error": "Invalid save path."}, status=HTTPStatus.BAD_REQUEST)
+            return
+        problem_id = parts[-2]
+
+        file_path = self._problems_dir() / f"{problem_id}.json"
+        if not file_path.exists():
+            self._send_json({"error": "Problem not found."}, status=HTTPStatus.NOT_FOUND)
+            return
+        try:
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self._send_json({"error": "Could not read problem."}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        payload["status"] = "complete"
+        payload["current_step"] = 4
+        payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+        file_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self._send_json({"saved": True, "status": "complete"})
+
+    def _build_summary_response(self, payload: dict) -> dict:
+        nodes_raw = payload.get("nodes") or []
+        nodes = []
+        workplan = []
+
+        for node in nodes_raw:
+            questions = node.get("questions") or []
+            node_summary = self._build_node_summary(node)
+            nodes.append({
+                "node_id": node.get("node_id"),
+                "name": node.get("name"),
+                "position": node.get("position"),
+                "status": node.get("status", "open"),
+                "summary": node_summary,
+                "questions_answered": node.get("questions_answered", 0),
+                "questions_total": node.get("questions_total", len(questions)),
+                "questions": [
+                    {
+                        "question_id": q.get("question_id"),
+                        "text": q.get("text"),
+                        "position": q.get("position"),
+                        "answer": q.get("answer"),
+                        "response_type": q.get("response_type"),
+                        "followup": q.get("followup"),
+                    }
+                    for q in questions
+                ],
+                "actions": node.get("actions") or [],
+            })
+            for action in node.get("actions") or []:
+                wp_entry = dict(action)
+                wp_entry["node_name"] = node.get("name")
+                workplan.append(wp_entry)
+
+        return {
+            "problem_id": payload.get("id"),
+            "question": payload.get("question", ""),
+            "context": payload.get("context", ""),
+            "problem_type": payload.get("problem_type"),
+            "recommended_type": payload.get("recommended_type"),
+            "owner": payload.get("owner") or "Unassigned",
+            "status": payload.get("status", "in_progress"),
+            "created_at": payload.get("created_at"),
+            "updated_at": payload.get("updated_at"),
+            "executive_summary": self._build_executive_summary(payload, nodes),
+            "nodes": nodes,
+            "workplan": workplan,
+        }
+
+    @staticmethod
+    def _build_node_summary(node: dict) -> str:
+        questions = node.get("questions") or []
+        answered = [q for q in questions if q.get("answer")]
+        if not answered:
+            return "Not yet started — questions remain unanswered."
+        if len(answered) < len(questions):
+            remaining = len(questions) - len(answered)
+            return (
+                f"{len(answered)} of {len(questions)} questions answered. "
+                f"{remaining} still open — return to the workspace to settle them."
+            )
+        # All answered — surface a short narrative from the first answer
+        first_ans = answered[0].get("answer", "")
+        if len(first_ans) > 280:
+            first_ans = first_ans[:277] + "..."
+        return first_ans
+
+    @staticmethod
+    def _build_executive_summary(payload: dict, nodes: list[dict]) -> str:
+        question = (payload.get("question") or "").strip()
+        problem_type = payload.get("problem_type") or "unclassified"
+        total_nodes = len(nodes)
+        settled_nodes = sum(1 for n in nodes if n.get("status") == "settled")
+        in_progress_nodes = sum(1 for n in nodes if n.get("status") == "in_progress")
+        total_questions = sum(n.get("questions_total", 0) for n in nodes)
+        answered_questions = sum(n.get("questions_answered", 0) for n in nodes)
+        total_actions = sum(len(n.get("actions") or []) for n in nodes)
+
+        parts = []
+        if question:
+            parts.append(f"This analysis examines: {question}")
+        parts.append(
+            f"The problem reads as {problem_type}. "
+            f"{settled_nodes} of {total_nodes} nodes are settled"
+            + (f", {in_progress_nodes} in progress." if in_progress_nodes else ".")
+        )
+        parts.append(
+            f"{answered_questions} of {total_questions} coaching questions have been addressed, "
+            f"producing {total_actions} action item{'s' if total_actions != 1 else ''} in the consolidated workplan."
+        )
+        if settled_nodes < total_nodes:
+            parts.append(
+                "Open nodes are listed below with their remaining questions. "
+                "Return to the workspace to settle them before treating this as final."
+            )
+        return " ".join(parts)
 
     @staticmethod
     def _build_assessment_response(payload: dict) -> dict:
