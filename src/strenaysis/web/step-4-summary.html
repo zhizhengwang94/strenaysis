@@ -315,7 +315,7 @@
       <span class="sep">/</span>
       <span class="crumb active">Review</span>
       <span class="spacer"></span>
-      <span class="chip ok"><span class="dot"></span> Complete</span>
+      <span class="chip ok" id="status-chip"><span class="dot"></span> Complete</span>
     </div>
 
     <p class="eyebrow"><span class="dot"></span> Step 4 of 4 &middot; Review and export</p>
@@ -326,384 +326,31 @@
     <section class="summary-meta" aria-label="Problem meta">
       <div>
         <p class="k">Problem type</p>
-        <p class="v">Experiment / causal</p>
+        <p class="v" id="meta-type">Experiment / causal</p>
       </div>
       <div>
         <p class="k">Nodes</p>
-        <p class="v">7 of 7 settled</p>
+        <p class="v" id="meta-nodes">7 of 7 settled</p>
       </div>
       <div>
         <p class="k">Owner</p>
-        <p class="v">Euphie</p>
+        <p class="v" id="meta-owner">Euphie</p>
       </div>
       <div>
         <p class="k">Created</p>
-        <p class="v small">Apr 15, 2026</p>
+        <p class="v small" id="meta-created">Apr 15, 2026</p>
       </div>
     </section>
 
     <!-- Executive summary -->
     <section class="exec-summary">
       <p class="es-label">Executive summary</p>
-      <p class="es-text">
-        This analysis evaluates whether launching a premium recommendation feature will causally increase subscription revenue. The approach is a pre-registered A/B experiment at the account level, powered to detect a 3% lift in net-new MRR within 14 days of first exposure. Three causal mechanisms were identified (discovery lift, salience, self-selection), alongside a critical failure mode: the feature may cannibalize organic discovery rather than create incremental conversions. A 6% identity-graph gap in anonymous sessions poses the largest data risk, since missingness may be patterned rather than random. The decision rule is pre-committed: ship if lift meets threshold and guardrails hold, otherwise redesign. Two blockers remain before launch: confirming the identity-graph join strategy and validating 8+ weeks of clean baseline data.
-      </p>
+      <p class="es-text" id="exec-summary-text"></p>
     </section>
 
     <!-- ————— Node-by-node report ————— -->
 
-    <!-- 01 Metric -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">01</span>
-        <h2>Metric</h2>
-        <span class="spacer"></span>
-        <span class="chip ok"><span class="dot"></span> Settled</span>
-      </div>
-      <p class="nr-summary">Net-new MRR from subscriptions initiated within 14 days of first feature exposure, excluding reactivations. A 3% lift is the minimum practically meaningful threshold. Guardrails: churn rate, support ticket volume, engagement frequency, and time-to-first-value for new subscribers.</p>
-
-      <details class="qa-disclosure">
-        <summary><span class="chev">&rsaquo;</span> 4 questions answered</summary>
-        <div class="qa-thread">
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What is the single metric you would use to determine whether the premium recommendation feature moved subscription revenue?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Net new MRR from subscriptions initiated within 14 days of first feature exposure, excluding reactivations.</div>
-            </div>
-            <span></span>
-            <div class="qa-followup">Are you counting only net-new subscribers, or also plan upgrades from an existing tier?</div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What guardrail metrics should you track alongside the primary metric to catch unintended side effects?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Churn rate among existing subscribers, support ticket volume, and engagement frequency (sessions per week).</div>
-            </div>
-            <span></span>
-            <div class="qa-followup">Consider adding time-to-first-value for new subscribers since a feature that converts but disappoints leads to deferred churn.</div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">How long does the observation window need to be for the metric to stabilize?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Minimum 4 weeks post-exposure. Our subscription billing cycle is monthly, so we need at least one full cycle.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What magnitude of change in MRR would be practically meaningful versus merely statistically significant?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">A 3% lift in net new MRR per exposed user. Below that, the engineering and support cost of maintaining the feature likely exceeds the revenue gain.</div>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <table class="actions-table">
-        <thead><tr>
-          <th></th><th>Action item</th><th>Owner</th><th>Approval</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td class="at-num">A</td>
-            <td class="at-action">Document the primary metric definition and share with stakeholders before the experiment begins.</td>
-            <td class="at-owner">Euphie</td>
-            <td class="at-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="at-num">B</td>
-            <td class="at-action">Add plan-upgrade tracking alongside net-new MRR.</td>
-            <td class="at-owner unassigned">Unassigned</td>
-            <td class="at-approval">None needed</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- 02 Drivers -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">02</span>
-        <h2>Drivers</h2>
-        <span class="spacer"></span>
-        <span class="chip ok"><span class="dot"></span> Settled</span>
-      </div>
-      <p class="nr-summary">Three causal mechanisms identified: discovery lift (surfacing gated content users wouldn't find), salience effects, and opt-in self-selection. The primary failure mode is cannibalization of organic discovery, where the feature redirects existing paths rather than creating new ones. A novelty-decay analysis is needed to distinguish sustained lift from a temporary engagement spike.</p>
-
-      <details class="qa-disclosure">
-        <summary><span class="chev">&rsaquo;</span> 3 questions answered</summary>
-        <div class="qa-thread">
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What is the strongest causal mechanism by which premium recommendations would drive new subscriptions?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Personalized recommendations surface high-value content behind the paywall, creating a "moment of need" that converts free users who otherwise wouldn't discover it.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What alternative explanations could produce the same metric movement without the feature actually working?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type assumption">Assumption</span>
-              <div class="qa-a-text">Novelty effect from any new feature driving temporary engagement. Also possible that the recommendation UI simply increases time-on-site, and it's the dwell time that converts, not the recommendations themselves.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">Under what conditions would the feature be live, appear to work, but actually produce no lasting revenue impact?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type assumption">Assumption</span>
-              <div class="qa-a-text">If it cannibalizes organic discovery. Users who would have found premium content on their own now find it via recommendations. Net new conversions are zero, but attribution says otherwise.</div>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <table class="actions-table">
-        <thead><tr>
-          <th></th><th>Action item</th><th>Owner</th><th>Approval</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td class="at-num">A</td>
-            <td class="at-action">Design a novelty-decay analysis into the experiment plan.</td>
-            <td class="at-owner">Euphie</td>
-            <td class="at-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="at-num">B</td>
-            <td class="at-action">Instrument incremental vs. redirected discovery tracking.</td>
-            <td class="at-owner unassigned">Unassigned</td>
-            <td class="at-approval">None needed</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- 03 Data -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">03</span>
-        <h2>Data</h2>
-        <span class="spacer"></span>
-        <span class="chip warn"><span class="dot"></span> 2 of 4</span>
-      </div>
-      <p class="nr-summary">Exposure logs in warehouse.events.exposures join to subscription outcomes via the canonical identity graph on user_id, with ~94% match rate. The 6% gap in anonymous sessions may be patterned (skewing mobile web, new visitors) rather than random, which would bias the exclusion strategy. Two questions remain open: baseline data availability and known instrumentation gaps.</p>
-
-      <details class="qa-disclosure">
-        <summary><span class="chev">&rsaquo;</span> 2 answered, 2 remaining</summary>
-        <div class="qa-thread">
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What tables record feature exposure events, and how fresh are they?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">warehouse.events.exposures, one row per user per session. Refreshed nightly, ~18h worst-case staleness.</div>
-            </div>
-            <span></span>
-            <div class="qa-followup">Worth confirming the event timestamp reflects trigger time, not ETL time.</div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">How do exposure events join to subscription outcomes? Where does the match rate break down?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type assumption">Assumption</span>
-              <div class="qa-a-text">Join through the canonical identity graph on user_id. Match rate is ~94% but drops for anonymous sessions.</div>
-            </div>
-            <span></span>
-            <div class="qa-followup">If anonymous users skew toward a specific cohort, you may be systematically dropping the population most affected by the feature.</div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What pre-experiment baseline data do you have? How many weeks of clean history exist?</div>
-            <span></span>
-            <div class="qa-unanswered">Not yet answered</div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">Are there any known data quality issues, recent schema changes, or instrumentation gaps?</div>
-            <span></span>
-            <div class="qa-unanswered">Not yet answered</div>
-          </div>
-        </div>
-      </details>
-
-      <table class="actions-table">
-        <thead><tr>
-          <th></th><th>Action item</th><th>Owner</th><th>Approval</th>
-        </tr></thead>
-        <tbody>
-          <tr>
-            <td class="at-num">A</td>
-            <td class="at-action">Verify exposure event timestamps reflect trigger time, not ETL batch time.</td>
-            <td class="at-owner">Euphie</td>
-            <td class="at-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="at-num">B</td>
-            <td class="at-action">Profile the 6% unmatched users to determine if missingness is random or patterned.</td>
-            <td class="at-owner unassigned">Unassigned</td>
-            <td class="at-approval">None needed</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <!-- 04 Model -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">04</span>
-        <h2>Model</h2>
-        <span class="spacer"></span>
-        <span class="chip ok"><span class="dot"></span> Settled</span>
-      </div>
-      <p class="nr-summary">50/50 A/B at the account level over four weeks, powered for a 3% minimum detectable effect on the primary MRR metric. Account-level randomization avoids within-user contamination from session-level assignment. Network effects are expected to be minimal given the feature is personalized to individual consumption patterns.</p>
-
-      <details class="qa-disclosure">
-        <summary><span class="chev">&rsaquo;</span> 3 questions answered</summary>
-        <div class="qa-thread">
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What randomization unit will you use, and why?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Account-level. Session-level would contaminate since a user could see recommendations in one session and convert in the next. Cluster randomization adds complexity we don't need here.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What sample size do you need to detect a 3% MRR lift with 80% power?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">~48,000 accounts per arm based on current conversion rates and variance. We reach that in ~10 days of traffic.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">How will you handle network effects or spillover between treatment and control groups?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Minimal concern. The recommendation feature is individual-consumption-based, not social. No shared content or viral loops. We'll monitor for cross-group information leakage in shared Slack channels but expect it to be negligible.</div>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <p class="no-actions">No action items for this node.</p>
-    </section>
-
-    <!-- 05 Decision -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">05</span>
-        <h2>Decision</h2>
-        <span class="spacer"></span>
-        <span class="chip ok"><span class="dot"></span> Settled</span>
-      </div>
-      <p class="nr-summary">Ship if MRR lift is 3% or above and all guardrail metrics hold. If lift is positive but below threshold, redesign the feature and re-test. If guardrails move in the wrong direction regardless of lift, halt and investigate. The decision rule is pre-registered and signed before launch. VP of Product has final authority for ambiguous outcomes.</p>
-
-      <details class="qa-disclosure">
-        <summary><span class="chev">&rsaquo;</span> 3 questions answered</summary>
-        <div class="qa-thread">
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">Write the exact decision rule: under what conditions do you ship, iterate, or kill the feature?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Ship if lift &ge; 3% and guardrails hold. Redesign if lift is 0-3%. Kill if guardrails (churn, support tickets) worsen regardless of lift.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">Who has final decision authority, and what happens if the data is ambiguous?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">VP of Product. If ambiguous, we extend the experiment by 2 weeks. If still ambiguous, default is to not ship.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What would make you override the decision rule?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type hypothesis">Hypothesis</span>
-              <div class="qa-a-text">Only if an external event fundamentally changes the competitive landscape during the test (e.g., a competitor launches an identical feature). Documented now, before results.</div>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <p class="no-actions">No action items for this node.</p>
-    </section>
-
-    <!-- 06 Result -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">06</span>
-        <h2>Result</h2>
-        <span class="spacer"></span>
-        <span class="chip"><span class="dot"></span> Pending</span>
-      </div>
-      <p class="nr-summary">Results will be added after the experiment runs. Review planned for May 27.</p>
-      <p class="no-actions">Waiting for experiment completion.</p>
-    </section>
-
-    <!-- 07 Takeaway -->
-    <section class="node-report">
-      <div class="nr-header">
-        <span class="nr-num">07</span>
-        <h2>Takeaway</h2>
-        <span class="spacer"></span>
-        <span class="chip ok"><span class="dot"></span> Settled</span>
-      </div>
-      <p class="nr-summary">The premium recommendation feature deserves a credible causal test rather than a directional dashboard read, because an identity-graph ambiguity can produce the exact shape of lift we'd expect to see, even if the feature is doing nothing. Measure the effect, not the feature.</p>
-
-      <details class="qa-disclosure">
-        <summary><span class="chev">&rsaquo;</span> 2 questions answered</summary>
-        <div class="qa-thread">
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">Write the one-sentence takeaway. It should be specific enough to act on and memorable enough to stick.</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">Measure the effect, not the feature, and name the identity-graph ambiguity before the postmortem does.</div>
-            </div>
-          </div>
-          <div class="qa-exchange">
-            <span class="qa-q-label">Q</span>
-            <div class="qa-q-text">What is the most important caveat or limitation someone citing this result should keep in mind?</div>
-            <span class="qa-a-label">A</span>
-            <div>
-              <span class="qa-type confirmed">Confirmed</span>
-              <div class="qa-a-text">The 6% identity-graph gap means our treatment effect estimate is conditional on matched users only. If the unmatched 6% respond differently, the true population effect could be higher or lower than what we measure.</div>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <p class="no-actions">No action items for this node.</p>
-    </section>
+    <div id="node-reports"></div>
 
     <!-- ————— Consolidated workplan ————— -->
     <section class="workplan-section">
@@ -714,50 +361,7 @@
         <thead><tr>
           <th></th><th>Node</th><th>Action item</th><th>Owner</th><th>Approval</th>
         </tr></thead>
-        <tbody>
-          <tr>
-            <td class="wp-num">1</td>
-            <td class="wp-node">Metric</td>
-            <td>Document the primary metric definition and share with stakeholders before the experiment begins.</td>
-            <td class="wp-owner">Euphie</td>
-            <td class="wp-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="wp-num">2</td>
-            <td class="wp-node">Metric</td>
-            <td>Add plan-upgrade tracking alongside net-new MRR.</td>
-            <td class="wp-owner unassigned">Unassigned</td>
-            <td class="wp-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="wp-num">3</td>
-            <td class="wp-node">Drivers</td>
-            <td>Design a novelty-decay analysis into the experiment plan.</td>
-            <td class="wp-owner">Euphie</td>
-            <td class="wp-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="wp-num">4</td>
-            <td class="wp-node">Drivers</td>
-            <td>Instrument incremental vs. redirected discovery tracking.</td>
-            <td class="wp-owner unassigned">Unassigned</td>
-            <td class="wp-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="wp-num">5</td>
-            <td class="wp-node">Data</td>
-            <td>Verify exposure event timestamps reflect trigger time, not ETL batch time.</td>
-            <td class="wp-owner">Euphie</td>
-            <td class="wp-approval">None needed</td>
-          </tr>
-          <tr>
-            <td class="wp-num">6</td>
-            <td class="wp-node">Data</td>
-            <td>Profile the 6% unmatched users to determine if missingness is random or patterned.</td>
-            <td class="wp-owner unassigned">Unassigned</td>
-            <td class="wp-approval">None needed</td>
-          </tr>
-        </tbody>
+        <tbody id="workplan-tbody"></tbody>
       </table>
     </section>
 
@@ -774,20 +378,297 @@
     <div class="row">
       <a href="step-1-home.html" class="btn btn-ghost">&larr; Start a new problem</a>
       <span class="spacer"></span>
-      <button class="btn btn-primary" id="save-library">Save to history</button>
+      <button class="btn btn-primary" id="save-library">Mark complete</button>
     </div>
 
   </main>
 </div>
 
 <script>
-  // Cmd+S shortcut
-  document.addEventListener('keydown', function (e) {
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const problemId = params.get('problem_id');
+  if (!problemId) {
+    window.location.href = '/';
+    return;
+  }
+
+  const titleEl = document.querySelector('h1.title');
+  const statusChip = document.getElementById('status-chip');
+  const metaType = document.getElementById('meta-type');
+  const metaNodes = document.getElementById('meta-nodes');
+  const metaOwner = document.getElementById('meta-owner');
+  const metaCreated = document.getElementById('meta-created');
+  const execText = document.getElementById('exec-summary-text');
+  const nodeReports = document.getElementById('node-reports');
+  const workplanBody = document.getElementById('workplan-tbody');
+  const saveBtn = document.getElementById('save-library');
+
+  const TYPE_LABEL = {
+    descriptive: 'Descriptive',
+    predictive: 'Predictive modeling',
+    causal: 'Experiment / causal',
+    optimization: 'Operational optimization',
+  };
+
+  document.querySelectorAll('.side-step, a.btn-ghost').forEach(a => {
+    try {
+      const u = new URL(a.getAttribute('href'), window.location.origin);
+      if (u.pathname.endsWith('.html')) {
+        u.searchParams.set('problem_id', problemId);
+        a.setAttribute('href', u.pathname + u.search);
+      }
+    } catch (e) {}
+  });
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+  }
+
+  function init() {
+    fetch('/problems/' + encodeURIComponent(problemId) + '/summary', { credentials: 'same-origin' })
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.error || 'Could not load summary.');
+        }
+        return r.json();
+      })
+      .then(render)
+      .catch(err => {
+        window.alert(err.message || 'Could not load summary.');
+        window.location.href = '/';
+      });
+  }
+
+  function render(data) {
+    if (titleEl) {
+      titleEl.textContent = data.question || 'Untitled problem';
+    }
+    if (statusChip) {
+      const isComplete = data.status === 'complete';
+      statusChip.className = 'chip ' + (isComplete ? 'ok' : 'active');
+      statusChip.innerHTML = '<span class="dot"></span> ' + (isComplete ? 'Complete' : 'In progress');
+    }
+
+    if (metaType) metaType.textContent = TYPE_LABEL[data.problem_type] || 'Not classified';
+    if (metaNodes) {
+      const total = (data.nodes || []).length;
+      const settled = (data.nodes || []).filter(n => n.status === 'settled').length;
+      metaNodes.textContent = settled + ' of ' + total + ' settled';
+    }
+    if (metaOwner) metaOwner.textContent = data.owner || 'Unassigned';
+    if (metaCreated) metaCreated.textContent = formatDate(data.created_at) || '—';
+
+    if (execText) execText.textContent = data.executive_summary || '';
+
+    renderNodeReports(data.nodes || []);
+    renderWorkplan(data.workplan || []);
+    bindSave(data);
+  }
+
+  function renderNodeReports(nodes) {
+    if (!nodeReports) return;
+    nodeReports.innerHTML = '';
+    nodes.forEach(node => {
+      const sec = document.createElement('section');
+      sec.className = 'node-report';
+      const num = String(node.position || 1).padStart(2, '0');
+      const status = node.status || 'open';
+      let chipClass = '';
+      let chipLabel = '';
+      if (status === 'settled') { chipClass = 'ok'; chipLabel = 'Settled'; }
+      else if (status === 'in_progress') { chipClass = 'warn'; chipLabel = (node.questions_answered || 0) + ' of ' + (node.questions_total || 0); }
+      else { chipClass = ''; chipLabel = 'Pending'; }
+
+      const answered = (node.questions || []).filter(q => q.answer);
+      const totalQs = (node.questions || []).length;
+      const disclosureLabel = answered.length === totalQs
+        ? answered.length + ' questions answered'
+        : answered.length + ' answered, ' + (totalQs - answered.length) + ' remaining';
+
+      let qaHtml = '';
+      (node.questions || []).forEach(q => {
+        qaHtml += '<div class="qa-exchange">';
+        qaHtml += '<span class="qa-q-label">Q</span>';
+        qaHtml += '<div class="qa-q-text">' + escapeHtml(q.text || '') + '</div>';
+        if (q.answer) {
+          const type = q.response_type || 'confirmed';
+          qaHtml += '<span class="qa-a-label">A</span><div>';
+          qaHtml += '<span class="qa-type ' + escapeHtml(type) + '">' + escapeHtml(type.charAt(0).toUpperCase() + type.slice(1)) + '</span>';
+          qaHtml += '<div class="qa-a-text">' + escapeHtml(q.answer) + '</div>';
+          qaHtml += '</div>';
+          if (q.followup) {
+            qaHtml += '<span></span><div class="qa-followup">' + escapeHtml(q.followup) + '</div>';
+          }
+        } else {
+          qaHtml += '<span></span><div class="qa-unanswered">Not yet answered</div>';
+        }
+        qaHtml += '</div>';
+      });
+
+      let actionsHtml = '';
+      if ((node.actions || []).length === 0) {
+        actionsHtml = '<p class="no-actions">No action items for this node.</p>';
+      } else {
+        let rows = '';
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        (node.actions || []).forEach((a, i) => {
+          rows += '<tr>'
+            + '<td class="at-num">' + escapeHtml(letters[i] || '?') + '</td>'
+            + '<td class="at-action">' + escapeHtml(a.title || '') + (a.detail ? '<br><span style="color:var(--muted);font-size:var(--text-xs);">' + escapeHtml(a.detail) + '</span>' : '') + '</td>'
+            + '<td class="at-owner' + (a.owner ? '' : ' unassigned') + '">' + escapeHtml(a.owner || 'Unassigned') + '</td>'
+            + '<td class="at-approval">' + escapeHtml(a.approval || 'No approval needed') + '</td>'
+          + '</tr>';
+        });
+        actionsHtml = '<table class="actions-table">'
+          + '<thead><tr><th></th><th>Action item</th><th>Owner</th><th>Approval</th></tr></thead>'
+          + '<tbody>' + rows + '</tbody>'
+        + '</table>';
+      }
+
+      sec.innerHTML = '<div class="nr-header">'
+        + '<span class="nr-num">' + escapeHtml(num) + '</span>'
+        + '<h2>' + escapeHtml(node.name || '') + '</h2>'
+        + '<span class="spacer"></span>'
+        + '<span class="chip ' + chipClass + '"><span class="dot"></span> ' + escapeHtml(chipLabel) + '</span>'
+      + '</div>'
+      + '<p class="nr-summary">' + escapeHtml(node.summary || '') + '</p>'
+      + (totalQs > 0
+        ? '<details class="qa-disclosure"><summary><span class="chev">›</span> ' + escapeHtml(disclosureLabel) + '</summary><div class="qa-thread">' + qaHtml + '</div></details>'
+        : '')
+      + actionsHtml;
+
+      nodeReports.appendChild(sec);
+    });
+  }
+
+  function renderWorkplan(items) {
+    if (!workplanBody) return;
+    workplanBody.innerHTML = '';
+    if (items.length === 0) {
+      workplanBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:var(--s-5);">No action items yet.</td></tr>';
+      return;
+    }
+    items.forEach((a, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td class="wp-num">' + (i + 1) + '</td>'
+        + '<td class="wp-node">' + escapeHtml(a.node_name || '') + '</td>'
+        + '<td>' + escapeHtml(a.title || '') + '</td>'
+        + '<td class="wp-owner' + (a.owner ? '' : ' unassigned') + '">' + escapeHtml(a.owner || 'Unassigned') + '</td>'
+        + '<td class="wp-approval">' + escapeHtml(a.approval || 'No approval needed') + '</td>';
+      workplanBody.appendChild(tr);
+    });
+  }
+
+  function showUnsettledModal(unsettled) {
+    return new Promise(resolve => {
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(20,20,20,0.42);display:grid;place-items:center;z-index:100;padding:var(--s-4);';
+
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background:var(--surface);border-radius:var(--radius);border:1px solid var(--line);padding:var(--s-6) var(--s-7);max-width:480px;width:100%;box-shadow:0 12px 48px rgba(0,0,0,0.18);';
+
+      const items = unsettled.map(n => {
+        const total = n.questions_total || 0;
+        const answered = n.questions_answered || 0;
+        const detail = total > 0 ? answered + ' of ' + total + ' answered' : 'not started';
+        return '<li style="margin-bottom:4px;"><strong>' + escapeHtml(n.name || 'Untitled') + '</strong> <span style="color:var(--muted);">— ' + escapeHtml(detail) + '</span></li>';
+      }).join('');
+
+      dialog.innerHTML = '<h3 style="margin:0 0 var(--s-3);font-size:var(--text-lg);font-weight:var(--w-medium);letter-spacing:-0.01em;">'
+        + unsettled.length + ' node' + (unsettled.length !== 1 ? 's' : '') + ' still open</h3>'
+        + '<p style="color:var(--ink-soft);font-size:var(--text-sm);line-height:var(--leading-relaxed);margin:0 0 var(--s-3);">Marking this brief complete now will close it out and move it out of your active list. You can still revisit it later, but the prompt to keep working will disappear.</p>'
+        + '<ul style="margin:0 0 var(--s-5);padding-left:var(--s-5);font-size:var(--text-sm);line-height:var(--leading-relaxed);color:var(--ink-soft);">' + items + '</ul>'
+        + '<div style="display:flex;gap:var(--s-3);justify-content:flex-end;">'
+          + '<button class="btn btn-ghost" data-modal-cancel>Stay in workspace</button>'
+          + '<button class="btn btn-primary" data-modal-confirm>Mark complete anyway</button>'
+        + '</div>';
+
+      backdrop.append(dialog);
+      document.body.append(backdrop);
+
+      const cancelBtn = dialog.querySelector('[data-modal-cancel]');
+      const confirmBtn = dialog.querySelector('[data-modal-confirm]');
+      cancelBtn.focus();
+
+      function close(result) {
+        document.body.removeChild(backdrop);
+        document.removeEventListener('keydown', onKey);
+        resolve(result);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') close(false);
+        if (e.key === 'Enter' && document.activeElement === confirmBtn) close(true);
+      }
+      cancelBtn.addEventListener('click', () => close(false));
+      confirmBtn.addEventListener('click', () => close(true));
+      backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
+      document.addEventListener('keydown', onKey);
+    });
+  }
+
+  function bindSave(data) {
+    if (!saveBtn) return;
+    if (data.status === 'complete') {
+      saveBtn.textContent = 'Marked complete ✓';
+      saveBtn.disabled = true;
+    }
+    saveBtn.addEventListener('click', async () => {
+      if (saveBtn.disabled) return;
+      const nodes = data.nodes || [];
+      const unsettled = nodes.filter(n => n.status !== 'settled');
+      if (unsettled.length > 0) {
+        const ok = await showUnsettledModal(unsettled);
+        if (!ok) return;
+      }
+      const original = saveBtn.textContent;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const res = await fetch('/problems/' + encodeURIComponent(problemId) + '/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (!res.ok) {
+          window.alert('Could not mark complete.');
+          saveBtn.disabled = false;
+          saveBtn.textContent = original;
+          return;
+        }
+        saveBtn.textContent = 'Marked complete ✓';
+        if (statusChip) {
+          statusChip.className = 'chip ok';
+          statusChip.innerHTML = '<span class="dot"></span> Complete';
+        }
+        data.status = 'complete';
+      } catch (e) {
+        window.alert('Network error. Please try again.');
+        saveBtn.disabled = false;
+        saveBtn.textContent = original;
+      }
+    });
+  }
+
+  document.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.key === 's') {
       e.preventDefault();
-      document.getElementById('save-library').click();
+      if (saveBtn && !saveBtn.disabled) saveBtn.click();
     }
   });
+
+  init();
+})();
 </script>
 </body>
 </html>
