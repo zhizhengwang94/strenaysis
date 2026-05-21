@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strenaysis — Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* Two-column workspace for question + assessment */
+  .twocol {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: var(--s-5);
+    margin-bottom: var(--s-7);
+  }
+  @media (max-width: 900px) { .twocol { grid-template-columns: 1fr; } }
+
+  /* Problem-type radio entries */
+  .types { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .types label {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: var(--s-3);
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .types label:hover { border-color: var(--faint); }
+  .types input { appearance: none; width: 14px; height: 14px; border: 1.5px solid var(--faint); border-radius: 50%; margin: 0; }
+  .types input:checked { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 45%, transparent 48%); }
+  .types li:has(input:checked) label {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .type-name { font-size: 14px; font-weight: 500; }
+  .type-desc { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .types li:has(input:checked) .type-name { color: var(--accent-ink); }
+  .recommended {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent); white-space: nowrap;
+  }
+
+  /* Assessment explanation */
+  .assessment-why {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+    border-left: 1px solid var(--accent);
+    padding: var(--s-4) var(--s-5);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin: 0 0 var(--s-4);
+  }
+
+  /* ————— Node list ————— */
+  .nodes {
+    list-style: none; padding: 0; margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .node {
+    display: grid;
+    grid-template-columns: 24px 36px 1fr auto auto;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-4) var(--s-5);
+    border-top: 1px solid var(--line-soft);
+    transition: background 120ms ease, box-shadow 120ms ease;
+    user-select: none;
+  }
+  .node:first-child { border-top: none; }
+  .node:hover { background: var(--surface-2); }
+
+  /* Drag handle */
+  .node .grip {
+    cursor: grab;
+    color: var(--faint);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    transition: color 120ms ease, background 120ms ease;
+  }
+  .node:hover .grip { color: var(--muted); }
+  .node .grip:active { cursor: grabbing; color: var(--ink); background: var(--surface-2); }
+
+  /* Drag states */
+  .node.dragging {
+    opacity: 0.4;
+    background: var(--accent-bg);
+  }
+  .node.drag-over {
+    box-shadow: 0 -2px 0 0 var(--accent);
+  }
+
+  .node-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-align: center;
+  }
+  .node.settled .node-num { color: var(--success); }
+  .node.unsettled .node-num { color: var(--warning); }
+
+  .node-body { min-width: 0; }
+  .node-body .ntitle { font-size: 15px; font-weight: 500; color: var(--ink); margin: 0; }
+  .node-body .nsub { font-size: 13px; color: var(--muted); margin: 2px 0 0; line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .node-state {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .node.settled .node-state { color: var(--success); }
+  .node.unsettled .node-state { color: var(--warning); }
+  .node-state .mark {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--faint);
+  }
+  .node.settled .node-state .mark { background: var(--success); }
+  .node.unsettled .node-state .mark { background: var(--warning); }
+
+  .node-open {
+    font-size: 13px; font-weight: 500;
+    color: var(--muted);
+    background: transparent; border: none;
+    padding: 6px 10px; border-radius: 4px;
+    cursor: pointer;
+    transition: color 120ms, background 120ms;
+  }
+  .node:hover .node-open { color: var(--ink); background: var(--surface); }
+
+  /* Add-node footer */
+  .addnode {
+    width: 100%;
+    padding: 14px var(--s-5);
+    background: transparent;
+    border: none;
+    border-top: 1px dashed var(--line);
+    text-align: left;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .addnode:hover { background: var(--surface-2); color: var(--ink); }
+  .addnode .plus { color: var(--accent); font-weight: 500; margin-right: 6px; }
+
+  /* ————— Node modal (two-column) ————— */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
+  .modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-card {
+    background: var(--bg);
+    border-radius: var(--radius);
+    width: min(1020px, calc(100vw - 48px));
+    max-height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    transform: translateY(12px);
+    transition: transform 180ms ease;
+    overflow: hidden;
+  }
+  .modal-backdrop.open .modal-card { transform: translateY(0); }
+
+  /* Header */
+  .modal-header {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-5) var(--s-6);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .modal-header .modal-num {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .modal-header h2 {
+    font-size: 17px; font-weight: 500; margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .modal-header .spacer { flex: 1; }
+  .modal-lede {
+    font-size: 13px; color: var(--muted);
+    max-width: 40ch;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .modal-close {
+    background: transparent; border: none;
+    color: var(--muted); font-size: 18px;
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .modal-close:hover { background: var(--surface-2); color: var(--ink); }
+
+  /* Two-column body */
+  .modal-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    overflow: hidden;
+  }
+  @media (max-width: 740px) { .modal-body { grid-template-columns: 1fr; } }
+
+  /* Left: Node brief */
+  .modal-brief {
+    padding: var(--s-5) var(--s-6);
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+  }
+  .brief-section {}
+  .brief-section .brief-label {
+    font-family: var(--mono);
+    font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .brief-section textarea {
+    font-size: 14px; line-height: 1.55;
+    min-height: 56px;
+  }
+  .brief-section .brief-text {
+    font-size: 14px; line-height: 1.55;
+    color: var(--ink);
+  }
+  .breakdown-list {
+    list-style: none; padding: 0; margin: 8px 0 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .breakdown-list li {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 13.5px; line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .breakdown-list .bd-num {
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--muted); flex-shrink: 0;
+    width: 16px; text-align: right;
+  }
+
+  /* Right: Follow-up coverage */
+  .modal-coverage {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .coverage-header {
+    padding: var(--s-4) var(--s-5);
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: var(--s-3);
+    flex-shrink: 0;
+  }
+  .coverage-header .cov-label {
+    font-family: var(--mono);
+    font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .coverage-header .spacer { flex: 1; }
+
+  /* Saved responses */
+  .saved-responses {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-4) var(--s-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+  .saved-empty {
+    padding: var(--s-5);
+    text-align: center;
+    color: var(--faint);
+    font-size: 13px;
+    line-height: 1.55;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-sm);
+  }
+  .response-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--s-4);
+  }
+  .response-card .rc-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .response-card .rc-type {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .response-card .rc-type.confirmed { color: var(--success); background: var(--success-bg, oklch(96% 0.03 160)); }
+  .response-card .rc-type.assumption { color: var(--warning); background: var(--warning-bg); }
+  .response-card .rc-type.hypothesis { color: var(--accent); background: var(--accent-bg); }
+  .response-card .rc-prompt {
+    font-size: 12.5px; color: var(--muted); line-height: 1.45;
+    margin-bottom: 6px;
+  }
+  .response-card .rc-answer {
+    font-size: 14px; line-height: 1.5; color: var(--ink);
+  }
+
+  /* Follow-up prompt + input area */
+  .followup-area {
+    padding: var(--s-4) var(--s-5);
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+  .followup-prompt {
+    font-size: 14px; line-height: 1.55;
+    color: var(--ink);
+    background: var(--surface-2);
+    padding: var(--s-4);
+    border-radius: var(--radius-sm);
+  }
+  .followup-prompt .fp-label {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .followup-reply {
+    width: 100%;
+    font-size: 14px;
+    min-height: 44px;
+    max-height: 100px;
+    resize: none;
+    padding: 10px 12px;
+  }
+  .followup-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+  .followup-actions select {
+    width: 148px;
+    font-size: 13px;
+    padding: 8px 10px;
+    height: 38px;
+  }
+  .followup-actions .spacer { flex: 1; }
+  .followup-actions .btn {
+    height: 38px;
+    white-space: nowrap;
+  }
+
+  /* Modal footer */
+  .modal-footer {
+    padding: var(--s-3) var(--s-6);
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    font-size: 12.5px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .modal-footer .q-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .modal-footer .spacer { flex: 1; }
+
+  /* ————— Inline status + Sticky ————— */
+  .status-line {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .spinner {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1.5px solid var(--line);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sticky-actions {
+    position: sticky;
+    bottom: 0;
+    margin: var(--s-6) calc(-1 * var(--s-9)) calc(-1 * var(--s-8));
+    padding: var(--s-4) var(--s-9);
+    background: color-mix(in oklch, var(--bg) 88%, transparent);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid var(--line);
+    display: flex; gap: var(--s-3); align-items: center;
+  }
+  .sticky-actions .spacer { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <aside class="side" aria-label="Primary">
+    <div class="brand">
+      <div class="brand-glyph">S</div>
+      <div>
+        <div class="brand-name">Strenaysis</div>
+        <div class="brand-sub">Decision workspace</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">Current problem</div>
+      <div class="side-steps">
+        <a href="step-1-home.html" class="side-step done"><span class="snum">&#10003;</span> Question</a>
+        <a href="step-2-roadmap.html" class="side-step on"><span class="snum">2</span> Roadmap</a>
+        <a href="step-3-buildup.html" class="side-step"><span class="snum">3</span> Buildup</a>
+        <a href="step-4-summary.html" class="side-step"><span class="snum">4</span> Summary</a>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">Workspace</div>
+      <nav class="side-nav">
+        <a href="step-1-home.html"><span class="side-ico">&#9998;</span> New problem</a>
+        <a href="#"><span class="side-ico">&#9649;</span> History <span class="badge">12</span></a>
+        <a href="#"><span class="side-ico">&#9673;</span> Actions <span class="badge">3</span></a>
+        <a href="#"><span class="side-ico">&#9651;</span> Portfolio</a>
+      </nav>
+    </div>
+
+    <div class="side-foot">
+      <button>Settings</button>
+      <button>Feedback</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <span class="crumb">Current problem</span>
+      <span class="sep">/</span>
+      <span class="crumb active">Roadmap</span>
+      <span class="spacer"></span>
+      <span class="status-line"><span class="spinner"></span> Up to date</span>
+    </div>
+
+    <p class="eyebrow"><span class="dot"></span> Step 2 of 4 &middot; Your analytical roadmap</p>
+    <h1 class="title">Seven things to work through. Start with whatever's clearest.</h1>
+    <p class="lede">Tighten the question up top, then open any node below to start a conversation with the system. Nodes settle when all questions are addressed.</p>
+
+    <!-- Question + Assessment -->
+    <div class="twocol">
+      <section class="panel">
+        <div class="panel-title">
+          Your question
+          <span class="tag">auto-saves</span>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost">Refresh</button>
+        </div>
+        <p class="panel-sub">Keep tightening this while you work. Nodes will reference the latest version.</p>
+        <textarea rows="5">How should we evaluate whether launching a premium recommendation feature will actually move subscription revenue &mdash; and what would change our mind?</textarea>
+
+        <details style="margin-top: var(--s-4);">
+          <summary style="cursor:pointer; font-size:13px; color: var(--muted); font-weight:500;">Supporting context</summary>
+          <textarea rows="3" style="margin-top: var(--s-3)" placeholder="Who's asking, what prompted it, what decision hangs on the answer."></textarea>
+        </details>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          Problem assessment
+          <span class="spacer"></span>
+          <span class="chip active"><span class="dot"></span> Causal</span>
+        </div>
+        <p class="assessment-why">
+          This reads as a <strong>causal</strong> question &mdash; whether a new capability <em>causes</em> revenue to move. You'll need a credible comparison group and a plan for the case where launch and lift are both real but unrelated.
+        </p>
+
+        <ul class="types">
+          <li><label>
+            <input type="radio" name="ptype" />
+            <div><div class="type-name">Descriptive</div><div class="type-desc">Explain what happened and for whom.</div></div>
+            <span></span>
+          </label></li>
+          <li><label>
+            <input type="radio" name="ptype" />
+            <div><div class="type-name">Predictive modeling</div><div class="type-desc">Estimate an outcome from observed inputs.</div></div>
+            <span></span>
+          </label></li>
+          <li><label>
+            <input type="radio" name="ptype" checked />
+            <div><div class="type-name">Experiment / causal question</div><div class="type-desc">Isolate the effect of an intervention against a counterfactual.</div></div>
+            <span class="recommended">Recommended</span>
+          </label></li>
+          <li><label>
+            <input type="radio" name="ptype" />
+            <div><div class="type-name">Operational optimization</div><div class="type-desc">Choose the action that minimizes regret under constraints.</div></div>
+            <span></span>
+          </label></li>
+        </ul>
+
+        <div class="row" style="margin-top: var(--s-4);">
+          <button class="btn" id="apply-type">Rebuild nodes for this type</button>
+          <span class="field-hint" id="type-hint" style="margin:0;">Changing type regenerates the nodes below.</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Node list -->
+    <section>
+      <div class="row" style="margin-bottom: var(--s-4);">
+        <div>
+          <div class="field-label" style="margin: 0 0 4px;">Nodes</div>
+          <h2 style="font-size: 18px; font-weight: 500; margin: 0; letter-spacing: -0.01em;">7 nodes &middot; 2 of 7 settled</h2>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost">Full log</button>
+      </div>
+
+      <ul class="nodes" id="node-list">
+        <li class="node settled" draggable="true" data-id="metric">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">01</div>
+          <div class="node-body">
+            <p class="ntitle">Metric</p>
+            <p class="nsub">The single revenue outcome that would settle the debate, plus guardrails.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Settled</div>
+          <button class="node-open" data-node="metric">Review</button>
+        </li>
+        <li class="node settled" draggable="true" data-id="drivers">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">02</div>
+          <div class="node-body">
+            <p class="ntitle">Drivers</p>
+            <p class="nsub">Mechanisms by which the feature could plausibly move the metric &mdash; and silently fail.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Settled</div>
+          <button class="node-open" data-node="drivers">Review</button>
+        </li>
+        <li class="node unsettled" draggable="true" data-id="data">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">03</div>
+          <div class="node-body">
+            <p class="ntitle">Data</p>
+            <p class="nsub">Tables, event logs, identity graph; what's recent, what's stale, what's missing.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Unsettled</div>
+          <button class="node-open" data-node="data">Resume</button>
+        </li>
+        <li class="node" draggable="true" data-id="model">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">04</div>
+          <div class="node-body">
+            <p class="ntitle">Model</p>
+            <p class="nsub">A/B design, sample size, power, handling of network effects.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Unopened</div>
+          <button class="node-open" data-node="model">Open</button>
+        </li>
+        <li class="node" draggable="true" data-id="decision">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">05</div>
+          <div class="node-body">
+            <p class="ntitle">Decision</p>
+            <p class="nsub">The decision rule, a written pre-commitment, and an escalation path.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Unopened</div>
+          <button class="node-open" data-node="decision">Open</button>
+        </li>
+        <li class="node" draggable="true" data-id="result">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">06</div>
+          <div class="node-body">
+            <p class="ntitle">Result</p>
+            <p class="nsub">What we observed, what surprised us, what we now believe.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Unopened</div>
+          <button class="node-open" data-node="result">Open</button>
+        </li>
+        <li class="node" draggable="true" data-id="takeaway">
+          <span class="grip">&#8942;&#8942;</span>
+          <div class="node-num">07</div>
+          <div class="node-body">
+            <p class="ntitle">Takeaway</p>
+            <p class="nsub">The one sentence a colleague will remember a month from now.</p>
+          </div>
+          <div class="node-state"><span class="mark"></span> Unopened</div>
+          <button class="node-open" data-node="takeaway">Open</button>
+        </li>
+        <button class="addnode"><span class="plus">+</span> Add a custom node when the framework is missing something you know matters</button>
+      </ul>
+    </section>
+
+    <!-- Sticky actions -->
+    <div class="sticky-actions">
+      <span class="status-line" id="settle-status">2 of 7 nodes settled</span>
+      <span class="spacer"></span>
+      <a href="step-1-home.html" class="btn btn-ghost">&larr; Back to question</a>
+      <a href="step-4-summary.html" class="btn btn-primary" id="to-summary" style="opacity:0.42; pointer-events:none;">Continue to summary</a>
+    </div>
+
+  </main>
+</div>
+
+<!-- ————— Two-column node modal ————— -->
+<div class="modal-backdrop" id="modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-labelledby="modal-title">
+
+    <div class="modal-header">
+      <span class="modal-num" id="modal-num">03</span>
+      <h2 id="modal-title">Data</h2>
+      <span class="spacer"></span>
+      <span class="modal-lede" id="modal-lede"></span>
+      <span class="chip" id="modal-chip"><span class="dot"></span> <span id="modal-chip-label">Unsettled</span></span>
+      <button class="modal-close" id="modal-close-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Left: Node brief -->
+      <div class="modal-brief">
+        <div class="brief-section">
+          <div class="brief-label">Node description</div>
+          <textarea id="modal-desc" rows="3" placeholder="Describe what this node covers and why it matters to the problem."></textarea>
+        </div>
+
+        <div class="brief-section">
+          <div class="brief-label">Breakdown</div>
+          <p class="brief-text" style="font-size:12.5px; color:var(--muted); margin:0 0 4px;">The system breaks this node into sub-questions. Each one needs a response before the node can settle.</p>
+          <ol class="breakdown-list" id="modal-breakdown">
+            <!-- Populated by JS -->
+          </ol>
+        </div>
+      </div>
+
+      <!-- Right: Follow-up coverage -->
+      <div class="modal-coverage">
+        <div class="coverage-header">
+          <span class="cov-label">Responses</span>
+          <span class="spacer"></span>
+          <span class="q-count" id="modal-q-count">0 of 0 addressed</span>
+        </div>
+
+        <div class="saved-responses" id="modal-responses">
+          <div class="saved-empty" id="modal-empty">No responses yet. Answer the first follow-up below to get started.</div>
+        </div>
+
+        <div class="followup-area">
+          <div class="followup-prompt" id="modal-followup-prompt">
+            <div class="fp-label">Next question</div>
+            <span id="modal-current-q">Loading...</span>
+          </div>
+          <textarea class="followup-reply" id="modal-reply" placeholder="Your response..." rows="2"></textarea>
+          <div class="followup-actions">
+            <select id="modal-answer-type">
+              <option value="confirmed">Confirmed</option>
+              <option value="assumption">Assumption</option>
+              <option value="hypothesis">Hypothesis</option>
+            </select>
+            <span class="spacer"></span>
+            <button class="btn btn-primary" id="modal-send">Add response</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <span style="font-size: 12px; color: var(--faint);">Close anytime. Progress is saved automatically.</span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" id="modal-close-bottom">Done</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  // ————— Drag and drop reordering —————
+  var list = document.getElementById('node-list');
+  var dragItem = null;
+
+  list.addEventListener('dragstart', function (e) {
+    var node = e.target.closest('.node');
+    if (!node) return;
+    dragItem = node;
+    node.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  });
+
+  list.addEventListener('dragend', function () {
+    if (dragItem) dragItem.classList.remove('dragging');
+    list.querySelectorAll('.node').forEach(function (n) { n.classList.remove('drag-over'); });
+    dragItem = null;
+    renumber();
+  });
+
+  list.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var target = e.target.closest('.node');
+    if (!target || target === dragItem) return;
+    list.querySelectorAll('.node').forEach(function (n) { n.classList.remove('drag-over'); });
+    target.classList.add('drag-over');
+  });
+
+  list.addEventListener('drop', function (e) {
+    e.preventDefault();
+    var target = e.target.closest('.node');
+    if (!target || target === dragItem) return;
+    var nodes = Array.from(list.querySelectorAll('.node'));
+    var dragIdx = nodes.indexOf(dragItem);
+    var targetIdx = nodes.indexOf(target);
+    if (dragIdx < targetIdx) {
+      target.after(dragItem);
+    } else {
+      target.before(dragItem);
+    }
+    target.classList.remove('drag-over');
+  });
+
+  function renumber() {
+    list.querySelectorAll('.node').forEach(function (node, i) {
+      node.querySelector('.node-num').textContent = String(i + 1).padStart(2, '0');
+    });
+  }
+
+  // ————— Node data (mock LLM breakdown per node) —————
+  var nodeData = {
+    metric: {
+      desc: 'The single revenue outcome that would settle the debate, plus guardrails to catch false positives.',
+      breakdown: [
+        'What is the primary metric and how is it defined?',
+        'What guardrail metrics should we watch alongside it?',
+        'Over what time window should the metric be measured?',
+        'Where does the metric data live and how fresh is it?'
+      ],
+      responses: [
+        { type: 'confirmed', q: 'What is the primary metric?', a: 'Net-new paid subscriptions within 14 days of first exposure.' },
+        { type: 'confirmed', q: 'What guardrail metrics?', a: 'Unsubscribe rate inside the first billing cycle, plus support ticket volume.' },
+        { type: 'confirmed', q: 'Measurement window?', a: '14-day attribution window from first exposure event.' },
+        { type: 'confirmed', q: 'Where does data live?', a: 'Stripe webhook events joined to our internal subscription table.' }
+      ]
+    },
+    drivers: {
+      desc: 'Mechanisms by which the feature could plausibly move the metric, and ways it could silently fail.',
+      breakdown: [
+        'What causal mechanisms connect the feature to the metric?',
+        'What self-selection artifacts could mimic real lift?',
+        'What does the null case look like if the feature has no effect?'
+      ],
+      responses: [
+        { type: 'confirmed', q: 'Causal mechanisms?', a: 'Discovery lift (users see premium content they would not have found), salience effects (premium badge creates perceived value), and opt-in self-selection.' },
+        { type: 'assumption', q: 'Self-selection artifacts?', a: 'Users who click premium recommendations are already more likely to subscribe. Need to separate intent from treatment.' },
+        { type: 'hypothesis', q: 'Null case shape?', a: 'If feature does nothing, we expect a flat trend in the control vs. treatment gap over the exposure window.' }
+      ]
+    },
+    data: {
+      desc: 'Tables, event logs, and identity graph required. What is recent, what is stale, what is missing.',
+      breakdown: [
+        'What tables record feature exposure events?',
+        'How do exposure events join to subscription outcomes?',
+        'How many weeks of pre-period baseline exist?',
+        'Are there known gaps or staleness issues?'
+      ],
+      responses: [
+        { type: 'confirmed', q: 'Exposure event tables?', a: 'warehouse.events.exposures, one row per user per session. Refreshed nightly, ~18h worst-case staleness.' },
+        { type: 'assumption', q: 'Join to subscription outcomes?', a: 'Join through the canonical identity graph on user_id. Match rate is ~94% but drops for anonymous sessions.' }
+      ]
+    },
+    model: {
+      desc: 'Experimental design: A/B structure, randomization unit, sample size, power, and handling of network effects.',
+      breakdown: [
+        'What is the randomization unit (user, account, session)?',
+        'What is the minimum detectable effect you need to power for?',
+        'How long should the experiment run?',
+        'Are there network effects or spillover risks?'
+      ],
+      responses: []
+    },
+    decision: {
+      desc: 'The decision rule, a written pre-commitment, and the escalation path if results are ambiguous.',
+      breakdown: [
+        'What is the ship/no-ship threshold?',
+        'Is the decision rule pre-registered before launch?',
+        'What happens if results are ambiguous or guardrails trip?',
+        'Who has final authority on the call?'
+      ],
+      responses: []
+    },
+    result: {
+      desc: 'What we observed once the experiment concluded, what surprised us, what we now believe.',
+      breakdown: [
+        'What was the observed lift on the primary metric?',
+        'Did any guardrail metrics trip?',
+        'Were there surprising patterns in subgroup analysis?'
+      ],
+      responses: []
+    },
+    takeaway: {
+      desc: 'The one sentence a colleague will remember a month from now, and the reasoning behind it.',
+      breakdown: [
+        'What is the single-sentence takeaway?',
+        'What caveats or conditions apply?',
+        'What should happen next based on this finding?'
+      ],
+      responses: []
+    }
+  };
+
+  var currentNodeId = null;
+
+  // ————— Modal open / close —————
+  var modal = document.getElementById('modal');
+  var closeBtn = document.getElementById('modal-close-btn');
+  var closeBtnBottom = document.getElementById('modal-close-bottom');
+
+  document.querySelectorAll('.node-open').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var node = btn.closest('.node');
+      var id = node.getAttribute('data-id');
+      var title = node.querySelector('.ntitle').textContent;
+      var num = node.querySelector('.node-num').textContent;
+      var sub = node.querySelector('.nsub').textContent;
+      var state = node.classList.contains('settled') ? 'Settled'
+                : node.classList.contains('unsettled') ? 'Unsettled'
+                : 'Unopened';
+
+      currentNodeId = id;
+
+      // Header
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-num').textContent = num;
+      document.getElementById('modal-lede').textContent = sub;
+
+      var chipLabel = document.getElementById('modal-chip-label');
+      var chip = document.getElementById('modal-chip');
+      chipLabel.textContent = state;
+      chip.className = 'chip' + (state === 'Settled' ? ' ok' : state === 'Unsettled' ? ' warn' : '');
+
+      // Populate brief (left column)
+      var data = nodeData[id];
+      document.getElementById('modal-desc').value = data ? data.desc : '';
+
+      var bdList = document.getElementById('modal-breakdown');
+      bdList.innerHTML = '';
+      if (data && data.breakdown) {
+        data.breakdown.forEach(function (q, i) {
+          var li = document.createElement('li');
+          li.innerHTML = '<span class="bd-num">' + (i + 1) + '</span><span>' + escapeHtml(q) + '</span>';
+          bdList.appendChild(li);
+        });
+      }
+
+      // Populate responses (right column)
+      renderResponses(id);
+      updateFollowUp(id);
+      updateQCount(id);
+
+      // Mark unopened nodes as unsettled on first open
+      if (!node.classList.contains('settled') && !node.classList.contains('unsettled')) {
+        node.classList.add('unsettled');
+        node.querySelector('.node-state').innerHTML = '<span class="mark"></span> Unsettled';
+        node.querySelector('.node-open').textContent = 'Resume';
+        updateStickyBar();
+      }
+
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.getElementById('modal-reply').focus();
+    });
+  });
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    currentNodeId = null;
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  closeBtnBottom.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  // ————— Render saved responses —————
+  function renderResponses(id) {
+    var container = document.getElementById('modal-responses');
+    var emptyMsg = document.getElementById('modal-empty');
+    var data = nodeData[id];
+    container.innerHTML = '';
+
+    if (!data || !data.responses || data.responses.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'saved-empty';
+      empty.id = 'modal-empty';
+      empty.textContent = 'No responses yet. Answer the first follow-up below to get started.';
+      container.appendChild(empty);
+      return;
+    }
+
+    data.responses.forEach(function (r, i) {
+      var card = document.createElement('div');
+      card.className = 'response-card';
+      card.innerHTML =
+        '<div class="rc-head">' +
+          '<span class="rc-type ' + r.type + '">' + r.type + '</span>' +
+        '</div>' +
+        '<div class="rc-prompt">' + escapeHtml(r.q) + '</div>' +
+        '<div class="rc-answer">' + escapeHtml(r.a) + '</div>';
+      container.appendChild(card);
+    });
+
+    // Auto-scroll to bottom
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // ————— Follow-up prompt —————
+  function updateFollowUp(id) {
+    var data = nodeData[id];
+    var promptEl = document.getElementById('modal-current-q');
+    var area = document.querySelector('.followup-area');
+
+    if (!data) return;
+
+    var answered = data.responses ? data.responses.length : 0;
+    var total = data.breakdown ? data.breakdown.length : 0;
+
+    if (answered >= total) {
+      promptEl.textContent = 'All questions addressed. This node is settled.';
+      area.style.opacity = '0.5';
+      area.style.pointerEvents = 'none';
+    } else {
+      promptEl.textContent = data.breakdown[answered];
+      area.style.opacity = '';
+      area.style.pointerEvents = '';
+    }
+  }
+
+  // ————— Question count —————
+  function updateQCount(id) {
+    var data = nodeData[id];
+    if (!data) return;
+    var answered = data.responses ? data.responses.length : 0;
+    var total = data.breakdown ? data.breakdown.length : 0;
+    document.getElementById('modal-q-count').textContent = answered + ' of ' + total + ' addressed';
+  }
+
+  // ————— Add response —————
+  var sendBtn = document.getElementById('modal-send');
+  var replyInput = document.getElementById('modal-reply');
+  var typeSelect = document.getElementById('modal-answer-type');
+
+  sendBtn.addEventListener('click', function () {
+    var text = replyInput.value.trim();
+    if (!text || !currentNodeId) return;
+
+    var data = nodeData[currentNodeId];
+    if (!data) return;
+
+    var answered = data.responses ? data.responses.length : 0;
+    var total = data.breakdown ? data.breakdown.length : 0;
+    if (answered >= total) return;
+
+    // Add the response
+    data.responses.push({
+      type: typeSelect.value,
+      q: data.breakdown[answered],
+      a: text
+    });
+
+    replyInput.value = '';
+    typeSelect.value = 'confirmed';
+
+    // Re-render
+    renderResponses(currentNodeId);
+    updateFollowUp(currentNodeId);
+    updateQCount(currentNodeId);
+
+    // Check if node is now settled
+    if (data.responses.length >= total) {
+      settleNode(currentNodeId);
+    }
+  });
+
+  replyInput.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      sendBtn.click();
+    }
+  });
+
+  // ————— Settle a node —————
+  function settleNode(id) {
+    var nodeEl = list.querySelector('.node[data-id="' + id + '"]');
+    if (!nodeEl) return;
+    nodeEl.classList.remove('unsettled');
+    nodeEl.classList.add('settled');
+    nodeEl.querySelector('.node-state').innerHTML = '<span class="mark"></span> Settled';
+    nodeEl.querySelector('.node-open').textContent = 'Review';
+
+    // Update modal chip
+    document.getElementById('modal-chip-label').textContent = 'Settled';
+    document.getElementById('modal-chip').className = 'chip ok';
+
+    updateStickyBar();
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ————— Sticky bar state —————
+  function updateStickyBar() {
+    var settled = list.querySelectorAll('.node.settled').length;
+    var totalNodes = list.querySelectorAll('.node').length;
+    document.getElementById('settle-status').textContent = settled + ' of ' + totalNodes + ' nodes settled';
+    var btn = document.getElementById('to-summary');
+    if (settled >= 4) {
+      btn.style.opacity = '';
+      btn.style.pointerEvents = '';
+    } else {
+      btn.style.opacity = '0.42';
+      btn.style.pointerEvents = 'none';
+    }
+  }
+  updateStickyBar();
+
+  // Type hint on radio change
+  document.querySelectorAll('input[name="ptype"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      var hint = document.getElementById('type-hint');
+      hint.textContent = 'Click "Rebuild nodes for this type" to regenerate the nodes below.';
+      hint.classList.add('warn');
+    });
+  });
+
+  // Ctrl/Cmd+Enter global shortcut
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !modal.classList.contains('open')) {
+      var btn = document.getElementById('to-summary');
+      if (btn.style.pointerEvents !== 'none') btn.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
