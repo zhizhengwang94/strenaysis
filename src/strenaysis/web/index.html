@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strenaysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<div class="frame">
+
+  <aside class="side" aria-label="Primary">
+    <div class="brand">
+      <div class="brand-glyph">S</div>
+      <div>
+        <div class="brand-name">Strenaysis</div>
+        <div class="brand-sub">Decision workspace</div>
+      </div>
+    </div>
+
+    <!-- Sidebar variant: Step 1 (Workspace + Recent) -->
+    <div id="side-step1">
+      <div style="margin-bottom: var(--s-6);">
+        <div class="side-label">Workspace</div>
+        <nav class="side-nav">
+          <a href="#" data-nav="home" class="on"><span class="side-ico">✎</span> New problem <span class="badge">N</span></a>
+          <a href="#" class="is-disabled" aria-disabled="true"><span class="side-ico">◱</span> History <span class="badge" id="side-history-count">—</span></a>
+          <a href="#" class="is-disabled" aria-disabled="true"><span class="side-ico">◉</span> Actions</a>
+          <a href="#" class="is-disabled" aria-disabled="true"><span class="side-ico">△</span> Portfolio</a>
+        </nav>
+      </div>
+
+      <div>
+        <div class="side-label">Recent</div>
+        <nav class="side-nav" id="side-recent-nav">
+          <div class="recent-empty" style="padding: 6px var(--s-3); text-align: left;">Loading…</div>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Sidebar variant: Step 2+ (Current problem stepper + Workspace) -->
+    <div id="side-current-problem" hidden>
+      <div style="margin-bottom: var(--s-6);">
+        <div class="side-label">Current problem</div>
+        <div class="side-steps">
+          <a href="#" data-step="1" class="side-step" id="cp-step-1"><span class="snum">1</span> Question</a>
+          <a href="#" data-step="2" class="side-step" id="cp-step-2"><span class="snum">2</span> Analysis path</a>
+          <a href="#" data-step="3" class="side-step" id="cp-step-3"><span class="snum">3</span> Workspace</a>
+          <a href="#" data-step="4" class="side-step" id="cp-step-4"><span class="snum">4</span> Review</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="side-label">Workspace</div>
+        <nav class="side-nav">
+          <a href="#" data-nav="home"><span class="side-ico">✎</span> New problem</a>
+          <a href="#" class="is-disabled" aria-disabled="true"><span class="side-ico">◱</span> History</a>
+          <a href="#" class="is-disabled" aria-disabled="true"><span class="side-ico">◉</span> Actions</a>
+          <a href="#" class="is-disabled" aria-disabled="true"><span class="side-ico">△</span> Portfolio</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="side-foot">
+      <button type="button">Settings</button>
+      <button type="button">Feedback</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============== View: Home (Step 1) ============== -->
+    <section id="view-home" class="view" aria-label="New problem">
+
+      <div class="topbar">
+        <span class="crumb">Workspace</span>
+        <span class="sep">/</span>
+        <span class="crumb active">New problem</span>
+        <span class="spacer"></span>
+      </div>
+
+      <p class="eyebrow"><span class="dot"></span> Step 1 of 4 · Start with a question</p>
+      <h1 class="title">What business question are you trying to answer?</h1>
+      <p class="lede">
+        Write it the way a colleague would ask you over coffee — plain language, one sentence, the real thing.
+        We'll turn it into a defensible analytical roadmap in the next step.
+      </p>
+
+      <section class="composer" aria-label="Problem">
+        <label class="composer-label" for="problem-input">
+          Your question
+          <span class="tag">required</span>
+        </label>
+        <textarea
+          id="problem-input"
+          placeholder="e.g. How should we evaluate whether launching a premium recommendation feature will actually move subscription revenue?"
+        ></textarea>
+
+        <details class="context" id="context-details">
+          <summary>Add context — who's asking and what hangs on the answer</summary>
+          <textarea
+            id="problem-details-input"
+            placeholder="Who's asking, what prompted it, what decision hangs on the answer, and by when."
+          ></textarea>
+        </details>
+
+        <div class="composer-foot">
+          <span class="counter" id="char-counter">Type a question to continue</span>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" id="save-draft-btn">Save as draft</button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="structure-problem-btn"
+            aria-disabled="true"
+          >
+            Structure the problem
+          </button>
+        </div>
+      </section>
+
+      <section class="recent" aria-label="Recent problems">
+        <div class="recent-head">
+          <h3>Pick up where you left off</h3>
+          <span class="count" id="recent-count">—</span>
+          <span class="spacer"></span>
+          <a href="#" class="view-link is-disabled" aria-disabled="true" style="pointer-events:none; opacity:0.55;">View history →</a>
+        </div>
+        <div id="recent-list">
+          <div class="recent-empty">Loading…</div>
+        </div>
+      </section>
+
+    </section>
+
+    <!-- ============== View: Roadmap (Step 2) ============== -->
+    <section id="view-roadmap" class="view" hidden aria-label="Analysis path">
+
+      <div class="topbar">
+        <span class="crumb">Current problem</span>
+        <span class="sep">/</span>
+        <span class="crumb active">Analysis path</span>
+        <span class="spacer"></span>
+      </div>
+
+      <p class="eyebrow"><span class="dot"></span> Step 2 of 4 · Choose an analysis path</p>
+      <h1 class="title" id="roadmap-title">Work them in any order.</h1>
+      <p class="lede">Each node is a conversation with the system that forces you to think through one aspect of the problem. Pick whichever feels clearest and start there.</p>
+
+      <!-- Question + Assessment -->
+      <div class="twocol">
+        <section class="panel">
+          <div class="panel-title">
+            Your question
+            <span class="tag">auto-saves</span>
+          </div>
+          <textarea id="roadmap-question" rows="3"></textarea>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            Problem assessment
+            <span class="spacer"></span>
+            <span class="chip active" id="roadmap-type-chip"><span class="dot"></span> —</span>
+          </div>
+          <p class="assessment-why" id="assessment-why">—</p>
+
+          <ul class="types" id="problem-types">
+            <li><label>
+              <input type="radio" name="ptype" value="descriptive_analysis" />
+              <div><div class="type-name">Descriptive</div><div class="type-desc">Explain what happened and for whom.</div></div>
+              <span class="recommended-slot" data-type="descriptive_analysis"></span>
+            </label></li>
+            <li><label>
+              <input type="radio" name="ptype" value="predictive_modeling" />
+              <div><div class="type-name">Predictive modeling</div><div class="type-desc">Estimate an outcome from observed inputs.</div></div>
+              <span class="recommended-slot" data-type="predictive_modeling"></span>
+            </label></li>
+            <li><label>
+              <input type="radio" name="ptype" value="experiment_causal_question" />
+              <div><div class="type-name">Experiment / causal question</div><div class="type-desc">Isolate the effect of an intervention against a counterfactual.</div></div>
+              <span class="recommended-slot" data-type="experiment_causal_question"></span>
+            </label></li>
+            <li><label>
+              <input type="radio" name="ptype" value="operational_optimization" />
+              <div><div class="type-name">Operational optimization</div><div class="type-desc">Choose the action that minimizes regret under constraints.</div></div>
+              <span class="recommended-slot" data-type="operational_optimization"></span>
+            </label></li>
+          </ul>
+
+          <button class="btn btn-primary" id="update-path-btn" style="display:none; margin-top: var(--s-4); width: 100%;">
+            Update analysis path
+          </button>
+        </section>
+      </div>
+
+      <!-- Node grid header -->
+      <div style="margin-bottom: var(--s-4);">
+        <div class="field-label" style="margin-bottom: 4px;">Nodes</div>
+        <p style="font-size: var(--text-sm); color: var(--muted); margin: 0 0 var(--s-4);">Drag to reorder. Click any node to start a guided conversation. Nodes settle when all questions are addressed.</p>
+      </div>
+
+      <div class="node-list" id="node-list">
+        <!-- node rows rendered by app.js -->
+      </div>
+
+      <!-- Add custom node -->
+      <button type="button" class="add-node-trigger" id="add-node-trigger">
+        <span class="plus">+</span> Add a custom node
+      </button>
+
+      <div class="add-node-form" id="add-node-form">
+        <div class="anf-title">
+          New node
+          <span class="tag">custom</span>
+        </div>
+        <div class="anf-fields">
+          <div>
+            <label class="field-label" for="new-node-name">Node name</label>
+            <input type="text" id="new-node-name" placeholder="e.g. Stakeholder alignment, Ethics review, Cost model" />
+          </div>
+          <div>
+            <label class="field-label" for="new-node-desc">Description</label>
+            <textarea id="new-node-desc" rows="2" placeholder="What should this node force you to think through? One or two sentences."></textarea>
+          </div>
+        </div>
+        <div class="anf-actions">
+          <p class="anf-hint">Coaching questions will be generated for this node when you open it in the workspace.</p>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" id="cancel-node-btn">Cancel</button>
+          <button type="button" class="btn btn-primary" id="save-node-btn" disabled>Add node</button>
+        </div>
+      </div>
+
+      <!-- Sticky bar -->
+      <div class="sticky-actions">
+        <span class="settled-count" id="settled-count">0 of 0 settled</span>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" id="back-to-home-btn">← Back to question</button>
+        <button type="button" class="btn btn-primary" id="to-workspace-btn">Continue to workspace</button>
+      </div>
+
+    </section>
+
+    <!-- ============== View: Workspace (Step 3) ============== -->
+    <section id="view-buildup" class="view" hidden aria-label="Workspace">
+
+      <div class="topbar">
+        <span class="crumb">Current problem</span>
+        <span class="sep">/</span>
+        <span class="crumb">Workspace</span>
+        <span class="sep">/</span>
+        <span class="crumb active" id="crumb-node">—</span>
+        <span class="spacer"></span>
+      </div>
+
+      <p class="eyebrow"><span class="dot"></span> Step 3 of 4 · Guided workspace</p>
+      <h1 class="title" id="buildup-title">Working node title</h1>
+      <p class="lede">Answer the follow-up questions below. Each one forces a concrete position. As you go, the system suggests action items for your workplan.</p>
+
+      <!-- Node tabs (rendered by JS) -->
+      <nav class="node-tabs" id="node-tabs" aria-label="Nodes"></nav>
+
+      <!-- Node brief: description + guidance + collapsible thinking -->
+      <div class="node-brief" id="node-brief">
+        <div class="nb-row">
+          <span class="nb-label">Description</span>
+          <span class="nb-text" id="nb-desc">—</span>
+        </div>
+        <div class="nb-row">
+          <span class="nb-label">Guidance</span>
+          <span class="nb-text" id="nb-guidance">—</span>
+        </div>
+        <details class="nb-thinking" id="nb-thinking">
+          <summary><span class="chev">›</span> How I'm breaking this down</summary>
+          <div class="thinking-body" id="nb-thinking-body"></div>
+        </details>
+      </div>
+
+      <!-- Conversation thread (rendered by JS) -->
+      <div class="thread" id="buildup-thread"></div>
+
+      <!-- Suggested action items -->
+      <section class="actions-section" id="actions-section">
+        <div class="actions-head">
+          <h2>Workplan</h2>
+          <span class="actions-count" id="actions-count">no items yet</span>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-ghost" id="add-action-btn">+ Add item</button>
+        </div>
+        <p class="actions-hint">Action items appear as you answer follow-up questions. Review and refine them before finalizing your workplan.</p>
+
+        <div class="action-list" id="action-list">
+          <div class="actions-empty">No action items yet. Answer follow-up questions to generate suggested items for your workplan.</div>
+        </div>
+      </section>
+
+      <!-- Sticky bar -->
+      <div class="sticky-actions">
+        <div>
+          <span class="save-indicator" id="save-indicator"><span class="saved-dot"></span> All changes saved</span>
+          <div class="progress-strip" id="progress-strip" aria-label="Node progress">
+            <span class="progress-counter" id="progress-counter">0 of 0 settled</span>
+          </div>
+        </div>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-ghost" id="back-to-roadmap-btn">← Back to analysis path</button>
+        <button type="button" class="btn btn-primary" id="to-summary-btn">Continue to summary</button>
+      </div>
+
+    </section>
+
+    <!-- ============== View: Summary (Step 4) ============== -->
+    <section id="view-summary" class="view" hidden aria-label="Review">
+
+      <div class="topbar">
+        <span class="crumb">Current problem</span>
+        <span class="sep">/</span>
+        <span class="crumb active">Review</span>
+        <span class="spacer"></span>
+        <span class="chip" id="summary-status-chip"><span class="dot"></span> In progress</span>
+      </div>
+
+      <p class="eyebrow"><span class="dot"></span> Step 4 of 4 · Review and export</p>
+      <h1 class="title" id="summary-title">Problem review</h1>
+      <p class="lede" id="summary-lede" hidden></p>
+
+      <!-- Why this template — the AI's classification reasoning (when present) -->
+      <aside class="assessment-why summary-callout" id="summary-assessment-callout" hidden>
+        <p class="summary-callout-label">Why this template</p>
+        <p class="summary-callout-lead" id="summary-assessment-title"></p>
+        <p class="summary-callout-body" id="summary-assessment-recap"></p>
+      </aside>
+
+      <!-- Meta strip -->
+      <section class="summary-meta" aria-label="Problem meta">
+        <div>
+          <p class="k">Problem type</p>
+          <p class="v" id="meta-type">—</p>
+        </div>
+        <div>
+          <p class="k">Nodes</p>
+          <p class="v" id="meta-nodes">—</p>
+        </div>
+        <div>
+          <p class="k">Action items</p>
+          <p class="v" id="meta-actions">—</p>
+        </div>
+        <div>
+          <p class="k">Generated</p>
+          <p class="v small" id="meta-date">—</p>
+        </div>
+      </section>
+
+      <!-- Executive summary -->
+      <section class="exec-summary">
+        <p class="es-label">Executive summary</p>
+        <p class="es-text" id="exec-summary-text">—</p>
+      </section>
+
+      <!-- Node-by-node reports (rendered by JS) -->
+      <div id="node-reports"></div>
+
+      <!-- Consolidated workplan -->
+      <section class="workplan-section" id="workplan-section">
+        <h2>Workplan</h2>
+        <p class="wp-sub">All action items across nodes, consolidated for sign-off.</p>
+        <table class="workplan-table" id="workplan-table">
+          <thead>
+            <tr><th></th><th>Node</th><th>Action item</th><th>Owner</th><th>Approval</th></tr>
+          </thead>
+          <tbody id="workplan-tbody"></tbody>
+        </table>
+      </section>
+
+      <!-- Export -->
+      <section class="export-bar">
+        <span class="info">Export includes all nodes, action items, and the assessment recap.</span>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="export-docx-btn">Download .docx</button>
+        <button type="button" class="btn" id="export-pptx-btn">Download .pptx</button>
+      </section>
+
+      <div class="row">
+        <button type="button" class="btn btn-ghost" id="back-to-buildup-btn">← Back to workspace</button>
+        <button type="button" class="btn btn-ghost" id="start-new-btn">Start a new problem</button>
+        <span class="spacer"></span>
+        <span class="save-toast" id="save-toast" role="status" aria-live="polite"></span>
+        <button type="button" class="btn btn-primary" id="save-history-btn">Save to history</button>
+      </div>
+
+    </section>
+
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
