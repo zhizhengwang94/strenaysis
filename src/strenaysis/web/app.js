@@ -228,6 +228,11 @@
     try {
       const payload = await callRoadmap("");
       ingestRoadmapResponse(payload);
+      /* First submit: pin "Recommended" to the LLM's classification.
+         The backend's `inferred_problem_type` (a pre-LLM heuristic guess)
+         can disagree with `problem_type` (the LLM's actual pick); when it
+         does, trust the LLM since it had more context. */
+      state.inferredProblemType = state.problemType;
       state.nodeBuilds = {}; // fresh problem → fresh per-node state
       renderRoadmap();
       showView("roadmap");
@@ -472,7 +477,10 @@
     state.problem = payload.problem || state.problem;
     state.problemDetails = payload.problem_details || state.problemDetails;
     state.problemType = String(payload.problem_type || "").trim();
-    state.inferredProblemType = String(payload.inferred_problem_type || "").trim();
+    /* Note: we intentionally do NOT overwrite state.inferredProblemType here.
+       The "Recommended" marker should stay pinned to the system's ORIGINAL
+       suggestion across re-generate calls. submitProblem() seeds it; the
+       second call (from "Update analysis path") preserves it. */
     state.assessmentTitle = String(payload.assessment_title || "").trim();
     state.assessmentRecap = String(payload.assessment_recap || "").trim();
 
