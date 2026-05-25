@@ -4,127 +4,69 @@ Use this file as a practical project handoff for the next person working in the 
 
 ## Repo And Context
 
-- Main working repo:
-  `C:\Users\zhizh\Documents\GitHub\strenaysis`
-- Existing context file:
-  `C:\Users\zhizh\OneDrive\Document\GitHub\strenaysis\PROJECT_CONTEXT.md`
 - GitHub repo:
   `https://github.com/zhizhengwang94/strenaysis`
-- Current branch:
-  `main`
-
-Important note:
-- the populated checkout is in `Documents\GitHub\strenaysis`
-- the `OneDrive\Document\GitHub\strenaysis` path currently holds the handoff/context file, not the active code checkout
+- Production deploy:
+  `https://strenaysis.onrender.com/`
+- Active development branch:
+  `style/spa-rebuild` (as of 2026-05-21)
 
 ## What Strenaysis Is
 
-Strenaysis is a business-to-analytics translation workspace.
+Strenaysis is a guided analytical coaching tool for data scientists. It turns vague business questions into structured analysis plans by walking the user through a series of nodes — each node is a focused sub-problem with LLM-generated coaching questions.
 
-Its job is to:
-- turn vague business asks into structured analytical roadmaps
-- surface missing context before analysis starts
-- keep business framing visible while moving toward execution
-- bridge ambiguous stakeholder questions into DA/DS-ready work
+**Users:** data science students, interview candidates, practicing DS/analytics professionals.
 
-## Current Product Flow
+**Core loop:** ask a question → get a structured roadmap → work through each node in guided Q&A → review and export the full analysis.
 
-Primary nav:
-1. `Problems`
-2. `Library`
-3. `Actions`
-4. `Portfolio`
+## Frontend Architecture
 
-Current emphasis:
-- `Problems` is still the main active workflow
-- `Library`, `Actions`, and `Portfolio` exist in the UI directionally, but the core product focus remains the problem-structuring flow
+The frontend is a **single-page application** served as static assets by the Python backend.
 
-Problem flow:
-1. `Main Question`
-2. `Roadmap Workspace`
-3. `Roadmap Buildup`
-4. `Workflow Summary`
+Three files do all the work:
 
-## What Changed Most Recently
+- `src/strenaysis/web/index.html` — the SPA shell. Two persistent sidebar variants (`#side-step1` for the home view; `#side-current-problem` with a 4-step stepper for Steps 2+) and four view sections (`#view-home`, `#view-roadmap`, `#view-buildup`, `#view-summary`).
+- `src/strenaysis/web/styles.css` — the prototype's `_shared.css` design tokens (oklch palette, type scale, spacing, radius, frame, sidebar, buttons, panels) plus Step 1/2/3/4 component styles. One consolidated file.
+- `src/strenaysis/web/app.js` — single SPA driver. View switcher, all 4 step renderers, state management.
 
-Latest pushed commit before this handoff refresh:
-- `beb4e99` - `Add updated project handoff`
+The design system was ported from a separate prototype (loose HTML files outside this repo) into the SPA in a four-session rewrite that landed 2026-05-21. The reference prototype's location is documented in the Claude session memory file.
 
-What was updated:
-- `src/strenaysis/web/index.html`
-- `src/strenaysis/web/styles.css`
-- `src/strenaysis/web/app.js`
+`src/strenaysis/web/_legacy/` contains the rolled-back SPA from a previous design iteration. Kept for reference; not served.
 
-Summary of the recent frontend work:
-- Step 1 was pushed much closer to the prototype entry experience
-- Step 1 now has:
-  - more compact spacing and a more editorial composer layout
-  - a recent/local history area with shortened synthesized problem titles instead of full problem statements
-  - an unsaved draft row that can resume the in-progress workspace, including unfinished detail work
-  - `Ctrl + Enter` continue behavior and draft-aware “pick up where you left off” behavior
-  - `History`, `Actions`, and `Portfolio` in the Step 1 sidebar are intentionally unavailable again
-- Step 2 was substantially reworked toward the prototype roadmap workspace
-- Step 2 now has:
-  - a forced `45% / 10% / 45%` top layout for `Current Question` and `Problem Assessment`
-  - compact matched top panels with internal scrolling where needed
-  - an `Additional Context` entry point in the question panel
-  - problem-type cards with recommendation framing and `Update Analysis Path` behavior based on the currently applied path
-  - a compact roadmap buildup list more aligned with the prototype row treatment
-  - a sticky bottom CTA bar with `Continue to Workspace`
-- Step 4 was rebuilt into a report-style summary page
-- Step 4 now has:
-  - an `Executive Summary` section
-  - a node-by-node breakdown section
-  - a consolidated `Work Plan` table at the bottom
-  - no duplicate per-node action tables anymore
-  - sticky summary actions for `Save This Problem Framing`, `Download Word`, and `Download PowerPoint`
-  - later `Problems` pages now inherit the newer Step 1-style shell and title treatment instead of the older generic workspace framing
+## Backend Architecture
 
-## Current UX Direction
+The backend is a stdlib `http.server` Python app. Routes:
 
-### Step 1
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/` | Serves `index.html` (gated by passcode cookie) |
+| GET | `/api/problem-framings` | List saved framings |
+| GET | `/api/problem-framings/{filename}` | Load a saved framing |
+| POST | `/api/save-problem-framing` | Persist a framing to disk |
+| POST | `/api/roadmap` | Generate / regenerate the roadmap (accepts `problem_type` override) |
+| POST | `/api/node-build` | Generate per-node breakdown (workstreams + open_questions + execution_items) |
+| POST | `/api/polish-node` | Refine a user-written node draft |
+| POST | `/api/node-output` | Synthesize per-node final output |
+| POST | `/api/refresh-followups` | Regenerate follow-ups for the whole roadmap |
+| POST | `/api/export` | Generate .docx or .pptx from the full framing |
+| GET | `/api/action-problems` | List action-tracker problems |
+| GET | `/api/pipeline-overview` | Action-tracker summary stats |
+| POST | `/unlock` | Submit passcode |
 
-Current intent:
-- keep Step 1 focused on the single main question
-- keep the main composer compact and calm rather than spacious/form-heavy
-- allow users to quickly resume unfinished work from the recent section
-- keep non-active directional areas in the Step 1 sidebar unavailable unless product direction changes
-- make the entry feel editorial, deliberate, and product-led rather than form-heavy
+All `/api/*` endpoints require the passcode cookie set via `/unlock`. The current SPA does not call `/api/polish-node`, `/api/node-output`, `/api/refresh-followups`, `/api/action-problems`, or `/api/pipeline-overview`; they're available for future use.
 
-### Step 2
+## Product Flow
 
-Current intent:
-- keep the main question editable
-- make the problem type legible and opinionated
-- keep the top question/assessment panels tightly aligned and compact
-- keep roadmap nodes compact and scannable
-- keep the later `Problems` steps visually aligned with the upgraded Step 1 shell
-- preserve the wide node modal pattern
-- preserve shared roadmap memory and follow-up thread behavior
+Primary nav: `Problems` is the main workflow. `History`, `Actions`, `Portfolio` are directional placeholders.
 
-Important rule:
-- do not simplify Step 2 into a fake checklist where "all breakdown items answered" automatically means the logic is complete
-- follow-up prompting should still depend on:
-  - the node
-  - the shared roadmap log
-  - actual saved user answers
+Problem flow (the four SPA views):
 
-### Step 3
+1. **Step 1 — Question** (`#view-home`): composer with character counter, optional context, recent-framings list with click-to-load.
+2. **Step 2 — Analysis path** (`#view-roadmap`): editable question, problem-type assessment with radio override and "Update analysis path" regenerate, drag-and-drop node list, custom-node inline form.
+3. **Step 3 — Workspace** (`#view-buildup`): per-node guided Q&A. Tab bar, node brief (description / guidance / collapsible thinking breakdown), conversation thread, action items accordion, sticky save indicator + progress strip.
+4. **Step 4 — Review** (`#view-summary`): meta strip, "Why this template" callout, executive summary (composed locally from state), per-node reports with collapsible Q&A and action tables, consolidated workplan table, .docx/.pptx export, save to history.
 
-Current intent:
-- left side is the node brief
-- right side is review/build execution work
-- keep Step 3 as the build/review workspace, not a second roadmap prompting page
-
-### Step 4
-
-Current intent:
-- summary/review page with:
-  - executive summary first
-  - node-by-node breakdown second
-  - consolidated work plan last
-- keep summary export/save actions visible while scrolling
-- save button remains intentionally disabled unless product direction changes
+Answer response types in Step 3: **Confirmed / Assumption / Hypothesis** — these tags carry through to Step 4's per-node Q&A disclosure.
 
 ## Files That Matter Most
 
@@ -138,71 +80,54 @@ Backend:
 - `src/strenaysis/openai_client.py`
 - `src/strenaysis/exporter.py`
 
-## Run Info
+## Run Locally
 
-Python:
-- use `C:\Users\zhizh\anaconda3\python.exe`
+The server reads `OPENAI_API_KEY` from env. Without it, every LLM endpoint falls back to deterministic templates — the UI still works end-to-end but the content is generic.
 
-Run locally:
+**macOS / Linux:**
+```bash
+PYTHONPATH=src PORT=8765 python3 -m strenaysis
+```
 
+**Windows (PowerShell):**
 ```powershell
+$env:PYTHONPATH = "src"
+$env:PORT = "8765"
 & 'C:\Users\zhizh\anaconda3\python.exe' -m strenaysis
 ```
 
-Local URL:
-- `http://127.0.0.1:8000/`
+Local URL: `http://127.0.0.1:8765/`
 
-Important:
-- after frontend changes, use `Ctrl + F5`
-- there is a simple passcode gate in the app/server flow
+`.claude/launch.json` is configured for Claude Code's preview server on port 8765.
+
+After frontend changes, hard-reload with `Cmd+Shift+R` (macOS) or `Ctrl+F5` (Windows).
+
+The passcode gate is defined as `ACCESS_CODE` in `server.py`.
 
 ## Deploy Info
 
-Production:
-- `https://strenaysis.onrender.com/`
+1. Push to GitHub `main`.
+2. In Render, use **Manual Deploy** on the latest commit.
 
-Deploy flow:
-1. push to GitHub `main`
-2. in Render, use `Manual Deploy`
-3. deploy the latest commit
+Render env should already have `OPENAI_API_KEY` set.
 
 ## Local Data And Worktree Notes
 
-Do not accidentally commit:
-- local saved JSON data
-- generated `egg-info` churn unless explicitly intended
-- mock/reference files unless explicitly intended
+- `saved_problem_structures/` — tracked. Saved framings are persisted here as JSON. Two seed files (`2026-04-13_*`) are intentionally tracked as reference data.
+- `problems/` — gitignored. Transient working data from some other code path.
+- `active_problem_structures/` — directory used by the action-tracker endpoints.
+- `external/`, `.tmp-edge-codex/`, `.claude/` (except `launch.json`) — gitignored.
 
-Current local worktree state after the last push:
-- modified:
-  - `src/strenaysis.egg-info/PKG-INFO`
-  - `src/strenaysis.egg-info/SOURCES.txt`
-- modified or newly updated for the next push:
-  - `HANDOFF.md`
-  - `src/strenaysis/web/app.js`
-  - `src/strenaysis/web/index.html`
-  - `src/strenaysis/web/styles.css`
-- untracked:
-  - `external/`
-  - `.tmp-edge-codex/`
-  - `src/strenaysis.egg-info/requires.txt`
-
-Interpretation:
-- the last pushed state is through commit `beb4e99`
-- the active local frontend diff currently includes the newer problem-flow shell alignment and the restored disabled Step 1 sidebar items
-- the remaining dirty files are local/generated/reference artifacts, not part of the pushed UI change
+When committing, prefer adding specific files; avoid `git add -A` so transient data doesn't sneak in.
 
 ## Suggested Next Steps
 
-Reasonable next areas to work on:
-- continue refining Step 3 so its visual language catches up to Step 1 and Step 2
-- simplify and stabilize Step 2 CSS once the current layout direction is considered “locked”
-- validate Step 4 export flows against the upgraded summary layout
-- decide whether `Library`, `Actions`, and `Portfolio` remain directional or become active workflow areas
-- eventually split the large frontend into more step-oriented modules if maintainability becomes painful
+- **Test against a real `OPENAI_API_KEY`.** Smoke tests so far have used the fallback path only. Real LLM responses will surface different `open_questions` shapes and longer text that the UI hasn't been visually verified against.
+- **Polish the followup model in Step 3.** Currently, answer submissions push a stub followup string locally. Could be wired to `POST /api/polish-node` for real LLM feedback.
+- **Accessibility pass.** Keyboard nav, focus management, ARIA on chip dots and drag handles.
+- **Decide whether `History`, `Actions`, `Portfolio` graduate to real workflows.** They're directional in the sidebar today.
+- **Remove `src/strenaysis/web/_legacy/`** once the SPA is considered stable. Roughly 200KB of reference code.
 
 ## Best Prompt For A New Chat
 
-Use something like:
-
-`Read PROJECT_CONTEXT.md and HANDOFF.md first, then launch Strenaysis locally at http://127.0.0.1:8000/ and continue from the current version.`
+> Read HANDOFF.md first, then launch Strenaysis locally on port 8765 and continue from the current version. See `~/.claude/projects/.../memory/` for prior session context if available.

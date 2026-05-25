@@ -1,3433 +1,1784 @@
-const state = {
-  problem: "",
-  problemDetails: "",
-  problemTypeKey: "",
-  appliedProblemTypeKey: "",
-  inferredProblemTypeKey: "",
-  problemType: "",
-  assessmentTitle: "",
-  assessmentRecap: "",
-  roadmap: [],
-  nodeBuilds: {},
-  currentIndex: 0,
-  nextNodeId: 1,
-  polishedDraft: null,
-  sequenceEditMode: false,
-  dragNodeId: null,
-  activeNodeId: null,
-  activeProblemPanel: "problem",
-};
+/* Strenaysis SPA core — Steps 1, 2, 3 end-to-end. Step 4 stubbed.
+   Backend contract (unchanged):
+     GET  /api/problem-framings  → { items: [...] }
+     POST /api/roadmap           → { problem, problem_details, roadmap, source,
+                                     problem_type, inferred_problem_type,
+                                     assessment_title, assessment_recap }
+     POST /api/node-build        → { execution_summary, key_question, workstreams,
+                                     extracted_context, open_questions,
+                                     execution_items, output }
+   Step 3 maps the backend's node-build into the prototype's Q&A model:
+     open_questions[]   → thread questions
+     execution_items[]  → action items accordion
+     execution_summary  → Guidance line
+     workstreams[]      → "How I'm breaking this down" labeled list
+   Answers, response-type tags, and followups are local-only — no persistence yet. */
 
-const panels = {
-  intro: document.getElementById("step-intro"),
-  problem: document.getElementById("step-problem"),
-  roadmap: document.getElementById("step-roadmap"),
-  details: document.getElementById("step-details"),
-  summary: document.getElementById("step-summary"),
-  actions: document.getElementById("step-actions"),
-  review: document.getElementById("step-review"),
-  profile: document.getElementById("step-profile"),
-};
-const workspaceShell = document.querySelector(".workspace-shell");
-const appShell = document.querySelector(".app-shell");
+(function () {
+  "use strict";
 
-const problemInput = document.getElementById("problem-input");
-const problemDetailsInput = document.getElementById("problem-details-input");
-const problemDetailsPreview = document.getElementById("problem-details-preview");
-const openProblemDetailsButton = document.getElementById("open-problem-details");
-const startRoadmapButton = document.getElementById("start-roadmap");
-const problemCharCounter = document.getElementById("problem-char-counter");
-const problemRecentCount = document.getElementById("problem-recent-count");
-const problemRecentList = document.getElementById("problem-recent-list");
-const step1SidebarRecent = document.getElementById("step1-sidebar-recent");
-const step1SidebarIntroButton = document.getElementById("step1-sidebar-intro");
-const step1SidebarNewProblemButton = document.getElementById("step1-sidebar-new-problem");
-const step1SidebarHistoryButton = document.getElementById("step1-sidebar-history");
-const step1SidebarActionsButton = document.getElementById("step1-sidebar-actions");
-const step1SidebarPortfolioButton = document.getElementById("step1-sidebar-portfolio");
-const introStartProblemButton = document.getElementById("intro-start-problem");
-const problemViewHistoryButton = document.getElementById("problem-view-history");
-const roadmapList = document.getElementById("roadmap-list");
-const confirmRoadmapButton = document.getElementById("confirm-roadmap");
-const openRoadmapLogButton = document.getElementById("open-roadmap-log");
-const confirmRoadmapBottomButton = document.getElementById("confirm-roadmap-bottom");
-const backRoadmapBottomButton = document.getElementById("back-roadmap-bottom");
-const roadmapProgressCopyBottom = document.getElementById("roadmap-progress-copy-bottom");
-const editSequenceButton = document.getElementById("edit-sequence");
-const saveSequenceButton = document.getElementById("save-sequence");
-const deleteSequenceZone = document.getElementById("delete-sequence-zone");
-const roadmapSource = document.getElementById("roadmap-source");
-const roadmapProgressCopy = document.getElementById("roadmap-progress-copy");
-const roadmapProblemInput = document.getElementById("roadmap-problem-input");
-const roadmapProblemDetailsInput = document.getElementById("roadmap-problem-details-input");
-const roadmapProblemDetailsPreview = document.getElementById("roadmap-problem-details-preview");
-const openRoadmapProblemDetailsButton = document.getElementById("open-roadmap-problem-details");
-const refreshQuestionButton = document.getElementById("refresh-question");
-const assessmentType = document.getElementById("assessment-type");
-const updateRoadbuildButton = document.getElementById("update-roadbuild");
-const assessmentRecommendationNote = document.getElementById("assessment-recommendation-note");
-const assessmentTitle = document.getElementById("assessment-title");
-const assessmentRecap = document.getElementById("assessment-recap");
-const assessmentRecapPopoverCopy = document.getElementById("assessment-recap-popover-copy");
-const assessmentHighPriority = document.getElementById("assessment-high-priority");
-const assessmentMediumPriority = document.getElementById("assessment-medium-priority");
-const assessmentLowPriority = document.getElementById("assessment-low-priority");
-const assessmentChoiceButtons = Array.from(document.querySelectorAll(".assessment-choice-card"));
-  const newNodeDraft = document.getElementById("new-node-draft");
-  const addNodeCard = document.getElementById("add-node-card");
-  const openAddNodeButton = document.getElementById("open-add-node");
-  const polishNodeButton = document.getElementById("polish-node");
-  const confirmAddNodeButton = document.getElementById("confirm-add-node");
-const newNodePreview = document.getElementById("new-node-preview");
-const newNodeAdvisory = document.getElementById("new-node-advisory");
-const newNodeTitleInput = document.getElementById("new-node-title-input");
-const newNodeWhyInput = document.getElementById("new-node-why-input");
-const newNodeBreakdownInput = document.getElementById("new-node-breakdown-input");
-const newNodeContextInput = document.getElementById("new-node-context-input");
-const detailTitle = document.getElementById("detail-title");
-const detailBreadcrumbNode = document.getElementById("detail-breadcrumb-node");
-const detailStepTitle = document.getElementById("detail-step-title");
-const detailSubtitle = document.getElementById("detail-subtitle");
-const detailProgress = document.getElementById("detail-progress");
-const detailNodeSwitcher = document.getElementById("detail-node-switcher");
-const detailBottomProgressTrack = document.getElementById("detail-bottom-progress-track");
-const detailBottomProgressCopy = document.getElementById("detail-bottom-progress-copy");
-const detailBottomBackButton = document.getElementById("detail-bottom-back");
-const detailBottomNextButton = document.getElementById("detail-bottom-next");
-const detailNodeName = document.getElementById("detail-node-name");
-const detailNodeDescriptionPreview = document.getElementById("detail-node-description-preview");
-const detailNodeBreakdownPreview = document.getElementById("detail-node-breakdown-preview");
-const detailNodeDescription = document.getElementById("detail-node-description");
-const detailNodeBreakdown = document.getElementById("detail-node-breakdown");
-const detailCoverageReview = document.getElementById("detail-coverage-review");
-const refreshNodeBuildButton = document.getElementById("refresh-node-build");
-const openDetailBriefModalButton = document.getElementById("open-detail-brief-modal");
-const detailExecutionSummary = document.getElementById("detail-execution-summary");
-const detailExecutionSummaryPreview = document.getElementById("detail-execution-summary-preview");
-const detailKeyQuestion = document.getElementById("detail-key-question");
-const detailWorkstreams = document.getElementById("detail-workstreams");
-const detailExtractedContext = document.getElementById("detail-extracted-context");
-const detailOpenQuestions = document.getElementById("detail-open-questions");
-const detailFollowUpPrompt = document.getElementById("detail-followup-prompt");
-const detailFollowUpSupport = document.getElementById("detail-followup-support");
-const detailFollowUpResponses = document.getElementById("detail-followup-responses");
-const detailFollowUpType = document.getElementById("detail-followup-type");
-const detailFollowUpInput = document.getElementById("detail-followup-input");
-const addFollowUpResponseButton = document.getElementById("add-followup-response");
-const addWorkItemButton = document.getElementById("add-work-item");
-const detailWorkItems = document.getElementById("detail-work-items");
-const executionItemsPreview = document.getElementById("execution-items-preview");
-const detailOutputFocus = document.getElementById("detail-output-focus");
-const detailOutputWork = document.getElementById("detail-output-work");
-const detailOutputOwners = document.getElementById("detail-output-owners");
-const detailOutputRisks = document.getElementById("detail-output-risks");
-const detailOutput = document.getElementById("detail-output");
-const prevNodeButton = document.getElementById("prev-node");
-const nextNodeButton = document.getElementById("next-node");
-const summaryContent = document.getElementById("summary-content");
-const restartFlowButton = document.getElementById("restart-flow");
-const saveProblemFramingButton = document.getElementById("save-problem-framing");
-const exportDocxButton = document.getElementById("export-docx");
-const exportPptxButton = document.getElementById("export-pptx");
-const nodeTemplate = document.getElementById("roadmap-node-template");
-const workItemTemplate = document.getElementById("work-item-template");
-const detailsModal = document.getElementById("details-modal");
-const detailsModalBackdrop = document.getElementById("details-modal-backdrop");
-const closeDetailsModalButton = document.getElementById("close-details-modal");
-const saveDetailsModalButton = document.getElementById("save-details-modal");
-const detailsModalInput = document.getElementById("details-modal-input");
-const nodeModal = document.getElementById("node-modal");
-const nodeModalBackdrop = document.getElementById("node-modal-backdrop");
-const closeNodeModalButton = document.getElementById("close-node-modal");
-const saveNodeModalButton = document.getElementById("save-node-modal");
-const nodeModalName = document.getElementById("node-modal-name");
-const nodeModalWhy = document.getElementById("node-modal-why");
-const nodeModalBreakdown = document.getElementById("node-modal-breakdown");
-const nodeModalContext = document.getElementById("node-modal-context");
-const nodeModalFollowUpResponses = document.getElementById("node-modal-followup-responses");
-const nodeModalFollowUpType = document.getElementById("node-modal-followup-type");
-const nodeModalFollowUpInput = document.getElementById("node-modal-followup-input");
-const nodeModalAddFollowUpButton = document.getElementById("node-modal-add-followup");
-const detailBriefModal = document.getElementById("detail-brief-modal");
-const detailBriefModalBackdrop = document.getElementById("detail-brief-modal-backdrop");
-const closeDetailBriefModalButton = document.getElementById("close-detail-brief-modal");
-const saveDetailBriefModalButton = document.getElementById("save-detail-brief-modal");
-const detailBriefModalName = document.getElementById("detail-brief-modal-name");
-const detailBriefModalDescription = document.getElementById("detail-brief-modal-description");
-const detailBriefModalBreakdown = document.getElementById("detail-brief-modal-breakdown");
-const executionModal = document.getElementById("execution-modal");
-const executionModalBackdrop = document.getElementById("execution-modal-backdrop");
-const openExecutionModalButton = document.getElementById("open-execution-modal");
-const closeExecutionModalButton = document.getElementById("close-execution-modal");
-const agentNoteModal = document.getElementById("agent-note-modal");
-const agentNoteModalBackdrop = document.getElementById("agent-note-modal-backdrop");
-const closeAgentNoteModalButton = document.getElementById("close-agent-note-modal");
-const agentNoteModalTitle = document.getElementById("agent-note-modal-title");
-const agentNoteModalCopy = document.getElementById("agent-note-modal-copy");
-const agentNoteModalContent = document.getElementById("agent-note-modal-content");
-const summaryNodeModal = document.getElementById("summary-node-modal");
-const summaryNodeModalBackdrop = document.getElementById("summary-node-modal-backdrop");
-const closeSummaryNodeModalButton = document.getElementById("close-summary-node-modal");
-const summaryNodeModalTitle = document.getElementById("summary-node-modal-title");
-const summaryNodeModalCopy = document.getElementById("summary-node-modal-copy");
-const summaryNodeModalBody = document.getElementById("summary-node-modal-body");
-const summaryProblemModal = document.getElementById("summary-problem-modal");
-const summaryProblemModalBackdrop = document.getElementById("summary-problem-modal-backdrop");
-const closeSummaryProblemModalButton = document.getElementById("close-summary-problem-modal");
-const summaryProblemModalBody = document.getElementById("summary-problem-modal-body");
-const roadmapLogModal = document.getElementById("roadmap-log-modal");
-const roadmapLogModalBackdrop = document.getElementById("roadmap-log-modal-backdrop");
-const closeRoadmapLogModalButton = document.getElementById("close-roadmap-log-modal");
-const roadmapLogModalBody = document.getElementById("roadmap-log-modal-body");
-const profileStatus = document.getElementById("profile-status");
-const profileHistoryList = document.getElementById("profile-history-list");
-const actionsStatus = document.getElementById("actions-status");
-const actionsOverview = document.getElementById("actions-overview");
-const actionsCalendar = document.getElementById("actions-calendar");
-const actionsList = document.getElementById("actions-list");
-const addActionProblemButton = document.getElementById("add-action-problem");
-const pipelineStatus = document.getElementById("pipeline-status");
-const pipelineOverview = document.getElementById("pipeline-overview");
-const pipelineStages = document.getElementById("pipeline-stages");
-const pipelineActivity = document.getElementById("pipeline-activity");
-const profileItemModal = document.getElementById("profile-item-modal");
-const profileItemModalBackdrop = document.getElementById("profile-item-modal-backdrop");
-const closeProfileItemModalButton = document.getElementById("close-profile-item-modal");
-const profileItemModalTitle = document.getElementById("profile-item-modal-title");
-const profileItemModalBody = document.getElementById("profile-item-modal-body");
-const loadProfileHistoryButton = document.getElementById("load-profile-history");
-const saveProblemModal = document.getElementById("save-problem-modal");
-const saveProblemModalBackdrop = document.getElementById("save-problem-modal-backdrop");
-const closeSaveProblemModalButton = document.getElementById("close-save-problem-modal");
-const confirmSaveProblemButton = document.getElementById("confirm-save-problem");
-const saveProblemNameInput = document.getElementById("save-problem-name");
-const saveProblemDateInput = document.getElementById("save-problem-date");
-const saveProblemPriorityInput = document.getElementById("save-problem-priority");
-const addNodeModal = document.getElementById("add-node-modal");
-const addNodeModalBackdrop = document.getElementById("add-node-modal-backdrop");
-const closeAddNodeModalButton = document.getElementById("close-add-node-modal");
-const appToast = document.getElementById("app-toast");
-const appToastEyebrow = document.getElementById("app-toast-eyebrow");
-const appToastMessage = document.getElementById("app-toast-message");
-const appToastCloseButton = document.getElementById("app-toast-close");
-const startRoadmapStatus = document.getElementById("start-roadmap-status");
-const glossaryStatus = document.getElementById("glossary-status");
-const assessmentStatus = document.getElementById("assessment-status");
-const frameworkStatus = document.getElementById("framework-status");
-const customNodeStatus = document.getElementById("custom-node-status");
-const detailBuildStatus = document.getElementById("detail-build-status");
-const outputStatus = document.getElementById("output-status");
-const sidebarNavItems = Array.from(document.querySelectorAll(".nav-item"));
-const problemSubsteps = Array.from(document.querySelectorAll(".nav-substep"));
-const stepExampleButtons = Array.from(document.querySelectorAll(".step-example"));
-const sectionToggles = Array.from(document.querySelectorAll(".section-toggle"));
-const contextHelpButtons = Array.from(document.querySelectorAll(".context-help-button"));
-const NO_ADDITIONAL_SUGGESTED_ITEM = "No Additional Suggested Item";
-const STEP_ONE_MAX_CHARS = 600;
+  /* ============ Constants ============ */
+  const MAX_QUESTION_CHARS = 600;
+  const MIN_ANSWER_CHARS = 10;
+  const DRAFT_KEY = "strenaysis.draft.v1";
 
-const analysisStatusMap = {
-  startRoadmap: startRoadmapStatus,
-  glossary: glossaryStatus,
-  assessment: assessmentStatus,
-  framework: frameworkStatus,
-  customNode: customNodeStatus,
-  detailBuild: detailBuildStatus,
-  output: outputStatus,
-  actions: actionsStatus,
-  review: pipelineStatus,
-  profile: profileStatus,
-};
+  const TYPE_LABELS = {
+    descriptive_analysis: "Descriptive",
+    predictive_modeling: "Predictive modeling",
+    experiment_causal_question: "Experiment / causal",
+    operational_optimization: "Operational optimization",
+  };
 
-let detailsModalTarget = "problem";
-let appToastTimer = null;
+  const NUMBER_WORDS = [
+    "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+    "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen",
+  ];
 
-refreshNodeBuildButton.addEventListener("click", async () => {
-  await loadNodeBuild(state.roadmap[state.currentIndex], true);
-});
+  const APPROVAL_OPTIONS = [
+    "No approval needed",
+    "Business owner sign-off",
+    "Leadership review",
+    "Data access approval",
+    "Legal or compliance review",
+    "Finance approval",
+    "Product Strategy Lead approval required",
+  ];
 
-if (openDetailBriefModalButton) {
-  openDetailBriefModalButton.addEventListener("click", openDetailBriefModal);
-}
-if (closeDetailBriefModalButton) {
-  closeDetailBriefModalButton.addEventListener("click", closeDetailBriefModal);
-}
-if (detailBriefModalBackdrop) {
-  detailBriefModalBackdrop.addEventListener("click", closeDetailBriefModal);
-}
-if (saveDetailBriefModalButton) {
-  saveDetailBriefModalButton.addEventListener("click", saveDetailBriefModal);
-}
-openExecutionModalButton.addEventListener("click", openExecutionModal);
-closeExecutionModalButton.addEventListener("click", closeExecutionModal);
-executionModalBackdrop.addEventListener("click", closeExecutionModal);
-closeAgentNoteModalButton.addEventListener("click", closeAgentNoteModal);
-agentNoteModalBackdrop.addEventListener("click", closeAgentNoteModal);
-closeSummaryNodeModalButton.addEventListener("click", closeSummaryNodeModal);
-summaryNodeModalBackdrop.addEventListener("click", closeSummaryNodeModal);
-closeSummaryProblemModalButton.addEventListener("click", closeSummaryProblemModal);
-summaryProblemModalBackdrop.addEventListener("click", closeSummaryProblemModal);
-openRoadmapLogButton?.addEventListener("click", openRoadmapLogModal);
-backRoadmapBottomButton?.addEventListener("click", () => showPanel("problem"));
-closeRoadmapLogModalButton.addEventListener("click", closeRoadmapLogModal);
-roadmapLogModalBackdrop.addEventListener("click", closeRoadmapLogModal);
-  closeProfileItemModalButton.addEventListener("click", closeProfileItemModal);
-  profileItemModalBackdrop.addEventListener("click", closeProfileItemModal);
-  closeSaveProblemModalButton.addEventListener("click", closeSaveProblemModal);
-  saveProblemModalBackdrop.addEventListener("click", closeSaveProblemModal);
-  closeAddNodeModalButton.addEventListener("click", closeAddNodeModal);
-  addNodeModalBackdrop.addEventListener("click", closeAddNodeModal);
-  loadProfileHistoryButton.addEventListener("click", loadProfileHistory);
-appToastCloseButton.addEventListener("click", hideAppToast);
-addActionProblemButton.addEventListener("click", () => {
-  showAppToast("Action conversion is the next step. For now, this workspace is a high-level tracker.", "Actions workspace");
-});
-addFollowUpResponseButton.addEventListener("click", () => {
-  const response = detailFollowUpInput.value.trim();
-  if (!response) {
-    window.alert("Please add a response before saving it to the node.");
-    return;
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  /* ============ State ============ */
+  const state = {
+    view: "home", // "home" | "roadmap" | "buildup" | "summary"
+    problem: "",
+    problemDetails: "",
+    problemType: "",
+    inferredProblemType: "",
+    assessmentTitle: "",
+    assessmentRecap: "",
+    nodes: [],
+    nextCustomIdx: 1,
+    draggingNodeId: null,
+    isDragFromGrip: false,
+    justDragged: false,
+    activeNodeId: null,
+    /* Per-node build cache:
+       { [nodeId]: { loading, error, brief: {summary, thinking:[{label,text}]},
+                     questions:[{id,text,answer?,responseType?,followup?}],
+                     actions:[{id,title,detail,owner,collaborator,source,artifact,approval,blockers,fromQ}],
+                     nextActionIdx } } */
+    nodeBuilds: {},
+    editingQid: null, // question id currently in edit mode (Step 3)
+  };
+
+  /* ============ DOM refs ============ */
+  let problemInput, problemDetailsInput, contextDetails, charCounter,
+    structureBtn, saveDraftBtn, recentCount, recentList, sideRecentNav,
+    sideHistoryCount, sideStep1, sideCurrentProblem, cpSteps,
+    homeView, roadmapView, buildupView, summaryStubView,
+    roadmapTitle, roadmapQuestion, roadmapTypeChip, assessmentWhy,
+    problemTypes, updatePathBtn, nodeListEl,
+    addNodeTrigger, addNodeForm, newNodeName, newNodeDesc, saveNodeBtn,
+    cancelNodeBtn, settledCountEl, backToHomeBtn, toWorkspaceBtn,
+    /* Step 3 */
+    crumbNode, buildupTitle, nodeTabsEl, nbDesc, nbGuidance, nbThinking,
+    nbThinkingBody, threadEl, actionsCountEl, actionListEl, addActionBtn,
+    saveIndicator, progressStripEl, progressCounter,
+    backToRoadmapBtn, toSummaryBtn,
+    /* Step 4 */
+    summaryView, summaryStatusChip, summaryTitle, metaType, metaNodes,
+    metaActions, metaDate, execSummaryText, nodeReportsEl, workplanSectionEl,
+    workplanTbody, exportDocxBtn, exportPptxBtn, backToBuildupBtn,
+    startNewBtn, saveHistoryBtn, saveToast;
+
+  /* ============ Utilities ============ */
+  function escapeHtml(str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return;
+  function truncate(str, max) {
+    const s = String(str || "");
+    return s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s;
   }
-  const existingBuild = state.nodeBuilds[currentNode.id] || {};
-  const nextResponses = [...(existingBuild.follow_up_responses || []), {
-    type: detailFollowUpType.value,
-    text: response,
-  }];
-  existingBuild.follow_up_responses = nextResponses;
-  state.nodeBuilds[currentNode.id] = existingBuild;
-  detailFollowUpInput.value = "";
-  renderFollowUpResponses(nextResponses);
-  autoResize(detailFollowUpInput);
-});
-sectionToggles.forEach((button) => {
-  button.addEventListener("click", () => {
-    const target = button.dataset.target;
-    const section = document.querySelector(`.collapsible-section[data-section="${target}"]`);
-    if (!section) {
-      return;
+  function pad2(n) { return n < 10 ? "0" + n : String(n); }
+  function slugify(s) {
+    return String(s || "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+      .slice(0, 40);
+  }
+  function formatProblemType(raw) {
+    const key = String(raw || "").trim();
+    if (TYPE_LABELS[key]) return TYPE_LABELS[key];
+    if (!key || key.toLowerCase() === "not set") return "—";
+    return key.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  function formatRelativeDate(saved_at) {
+    const raw = String(saved_at || "").trim();
+    if (!raw) return "—";
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    const now = new Date();
+    const sameDay = d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    if (sameDay) return "Today";
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    if (d.getFullYear() === yest.getFullYear() &&
+        d.getMonth() === yest.getMonth() && d.getDate() === yest.getDate())
+      return "Yesterday";
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  /* Split a thesis statement into headline + supporting context at the first
+     sentence boundary. Used by Step 4's h1/lede pair. If the remainder is
+     trivially short, returns the full thesis as the lead with no trail. */
+  function splitThesis(problem) {
+    const text = String(problem || "").trim();
+    if (!text) return { lead: "", trail: "" };
+    /* Match "first chunk ending in .!? followed by whitespace and more text".
+       Non-greedy so we stop at the FIRST boundary, not the last. */
+    const m = text.match(/^([\s\S]+?[.!?])\s+([\s\S]+)$/);
+    if (!m) return { lead: text, trail: "" };
+    const lead = m[1].trim();
+    const trail = m[2].trim();
+    /* If trail is trivially short (single trailing fragment), keep the full
+       thesis in the lead instead of awkwardly splitting. */
+    if (trail.length < 30) return { lead: text, trail: "" };
+    return { lead, trail };
+  }
+
+  function deriveSavedStatus(item) {
+    const total = Number(item.node_count) || 0;
+    const ready = Number(item.ready_count) || 0;
+    if (total > 0 && ready >= total) return "done";
+    return "in-progress";
+  }
+
+  /* ============ Node status (derived from nodeBuilds) ============ */
+  function nodeStatus(nodeId) {
+    const build = state.nodeBuilds[nodeId];
+    if (!build || !build.questions || !build.questions.length) return "open";
+    const total = build.questions.length;
+    const answered = build.questions.filter((q) => q.answer && q.answer.trim()).length;
+    if (answered >= total) return "settled";
+    if (answered > 0) return "in-progress";
+    return "open";
+  }
+
+  /* ============ View / sidebar routing ============ */
+  function showView(name) {
+    state.view = name;
+    homeView.hidden = name !== "home";
+    roadmapView.hidden = name !== "roadmap";
+    buildupView.hidden = name !== "buildup";
+    summaryView.hidden = name !== "summary";
+
+    const isStep1 = name === "home";
+    sideStep1.hidden = !isStep1;
+    sideCurrentProblem.hidden = isStep1;
+
+    if (!isStep1) {
+      const activeStep = name === "roadmap" ? 2 : name === "buildup" ? 3 : 4;
+      cpSteps.forEach((el) => {
+        const step = Number(el.dataset.step);
+        el.classList.remove("on", "done");
+        if (step < activeStep) el.classList.add("done");
+        if (step === activeStep) el.classList.add("on");
+      });
     }
-    section.classList.toggle("is-open");
-    button.textContent = section.classList.contains("is-open") ? "Collapse" : "Expand";
-  });
-});
-contextHelpButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const target = button.dataset.helpTarget;
-    if (target === "guiding-question") {
-      openAgentNoteModal(
-        "Guiding Question",
-        "This is the agent's distilled question behind the node.",
-        [detailKeyQuestion.value.trim() || "No guiding question yet."],
-      );
-      return;
+
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  /* ============ Step 1 — composer ============ */
+  function updateComposer() {
+    const raw = problemInput.value;
+    const trimmedLen = raw.trim().length;
+    const len = raw.length;
+    const hasContent = trimmedLen > 0;
+    const overLimit = len > MAX_QUESTION_CHARS;
+
+    if (!hasContent) {
+      charCounter.textContent = "Type a question to continue";
+      charCounter.style.color = "var(--muted)";
+    } else if (overLimit) {
+      charCounter.textContent = len + " / " + MAX_QUESTION_CHARS + " — over the limit";
+      charCounter.style.color = "var(--accent-ink)";
+    } else {
+      charCounter.textContent = len + " / " + MAX_QUESTION_CHARS;
+      charCounter.style.color = "var(--muted)";
     }
-    if (target === "open-questions") {
-      openAgentNoteModal(
-        "Open Questions",
-        "These are the unresolved questions the agent still sees around this node.",
-        parseList(detailOpenQuestions.value),
-      );
-    }
-  });
-});
-
-addWorkItemButton.addEventListener("click", () => {
-  renderWorkItemCard({
-    action: "",
-    owner: "",
-    collaborator: "",
-    source: "",
-    artifact: "",
-    approval: "No approval needed",
-    blockers: "No blocker identified yet.",
-  });
-  autoResizeAll();
-});
-
-if (problemInput) {
-  problemInput.addEventListener("input", updateStepOneComposerState);
-}
-
-stepExampleButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const example = button.dataset.problemExample || "";
-    problemInput.value = example;
-    updateStepOneComposerState();
-    problemInput.focus();
-  });
-});
-
-if (problemViewHistoryButton) {
-  problemViewHistoryButton.addEventListener("click", () => {
-    showPanel("profile");
-  });
-}
-
-if (step1SidebarNewProblemButton) {
-  step1SidebarNewProblemButton.addEventListener("click", () => showPanel("problem"));
-}
-
-if (step1SidebarIntroButton) {
-  step1SidebarIntroButton.addEventListener("click", () => showPanel("intro"));
-}
-
-if (introStartProblemButton) {
-  introStartProblemButton.addEventListener("click", () => showPanel("problem"));
-}
-
-if (step1SidebarHistoryButton) {
-  step1SidebarHistoryButton.addEventListener("click", () => showPanel("profile"));
-}
-
-if (step1SidebarActionsButton) {
-  step1SidebarActionsButton.addEventListener("click", () => showPanel("actions"));
-}
-
-if (step1SidebarPortfolioButton) {
-  step1SidebarPortfolioButton.addEventListener("click", () => showPanel("review"));
-}
-
-assessmentChoiceButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const value = button.dataset.problemTypeOption;
-    if (!value || !assessmentType) {
-      return;
-    }
-    assessmentType.value = value;
-    state.problemTypeKey = value;
-    updateAssessmentFields();
-  });
-});
-
-startRoadmapButton.addEventListener("click", async () => {
-  const problem = problemInput.value.trim();
-  const rawLength = problemInput.value.length;
-  const problemDetails = problemDetailsInput?.value.trim() || state.problemDetails || "";
-  if (!problem) {
-    window.alert("Please add a problem to solve first.");
-    return;
-  }
-  if (rawLength > STEP_ONE_MAX_CHARS) {
-    window.alert(`Please keep the main question under ${STEP_ONE_MAX_CHARS} characters before continuing.`);
-    return;
+    const enabled = hasContent && !overLimit;
+    if (enabled) { structureBtn.removeAttribute("aria-disabled"); structureBtn.disabled = false; }
+    else { structureBtn.setAttribute("aria-disabled", "true"); structureBtn.disabled = true; }
   }
 
-  await generateRoadmap(problem, {
-    problemDetails,
-    problemType: state.problemTypeKey,
-    button: startRoadmapButton,
-    loadingText: "Building...",
-    idleText: "Structure the problem",
-    statusKeys: ["startRoadmap"],
-    statusText: "Analyzing question",
-    resetNotes: true,
-    showRoadmap: true,
-  });
-});
+  async function submitProblem() {
+    if (structureBtn.disabled || structureBtn.getAttribute("aria-disabled") === "true") return;
+    const problem = problemInput.value.trim();
+    const problemDetails = problemDetailsInput.value.trim();
+    if (!problem) return;
 
-refreshQuestionButton.addEventListener("click", async () => {
-  const problem = roadmapProblemInput.value.trim();
-  const problemDetails = roadmapProblemDetailsInput.value.trim();
-  if (!problem) {
-    window.alert("Please keep a problem statement before refreshing the glossary.");
-    return;
-  }
+    state.problem = problem;
+    state.problemDetails = problemDetails;
+    const originalText = structureBtn.textContent;
+    structureBtn.disabled = true; structureBtn.textContent = "Structuring…";
 
-  await generateRoadmap(problem, {
-    problemDetails,
-    problemType: assessmentType.value,
-    button: refreshQuestionButton,
-    loadingText: "Refreshing...",
-    idleText: "Refresh Question",
-    statusKeys: ["glossary", "assessment", "framework"],
-    statusText: "Refreshing question",
-    resetNotes: false,
-    showRoadmap: false,
-  });
-});
-
-updateRoadbuildButton.addEventListener("click", async () => {
-  const problem = roadmapProblemInput.value.trim();
-  if (!problem) {
-    return;
-  }
-  await generateRoadmap(problem, {
-    problemDetails: roadmapProblemDetailsInput.value.trim(),
-    problemType: assessmentType.value,
-    button: updateRoadbuildButton,
-    loadingText: "Updating...",
-    idleText: "Update Analysis Path",
-    statusKeys: ["assessment", "framework"],
-    statusText: "Updating approach",
-    resetNotes: false,
-    showRoadmap: false,
-  });
-});
-
-  if (openAddNodeButton) {
-    openAddNodeButton.addEventListener("click", () => {
-      if (state.sequenceEditMode) {
-        return;
-      }
-      openAddNodeModal();
-    });
-  }
-
-  editSequenceButton.addEventListener("click", () => {
-    state.sequenceEditMode = true;
-    closeAddNodeModal();
-    renderRoadmapEditor();
-  });
-
-saveSequenceButton.addEventListener("click", () => {
-  state.sequenceEditMode = false;
-  renderRoadmapEditor();
-});
-
-deleteSequenceZone.addEventListener("dragover", (event) => {
-  if (!state.sequenceEditMode || !state.dragNodeId) {
-    return;
-  }
-  event.preventDefault();
-  deleteSequenceZone.classList.add("is-active");
-});
-
-deleteSequenceZone.addEventListener("dragleave", () => {
-  deleteSequenceZone.classList.remove("is-active");
-});
-
-deleteSequenceZone.addEventListener("drop", (event) => {
-  if (!state.sequenceEditMode) {
-    return;
-  }
-  event.preventDefault();
-  deleteSequenceZone.classList.remove("is-active");
-  if (!state.dragNodeId) {
-    return;
-  }
-  state.roadmap = state.roadmap.filter((node) => node.id !== state.dragNodeId);
-  state.dragNodeId = null;
-  renderRoadmapEditor();
-});
-
-if (openProblemDetailsButton) {
-  openProblemDetailsButton.addEventListener("click", () => {
-    openDetailsModal("problem");
-  });
-}
-
-if (openRoadmapProblemDetailsButton) {
-  openRoadmapProblemDetailsButton.addEventListener("click", () => {
-    openDetailsModal("roadmap");
-  });
-}
-
-closeDetailsModalButton.addEventListener("click", closeDetailsModal);
-detailsModalBackdrop.addEventListener("click", closeDetailsModal);
-saveDetailsModalButton.addEventListener("click", () => {
-  const value = detailsModalInput.value.trim();
-  setProblemDetails(value);
-  closeDetailsModal();
-});
-document.addEventListener("keydown", (event) => {
-  if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && state.activeProblemPanel === "problem") {
-    if (!startRoadmapButton.disabled) {
-      event.preventDefault();
-      startRoadmapButton.click();
-      return;
-    }
-  }
-  if (event.key === "Escape" && !detailsModal.hidden) {
-    closeDetailsModal();
-  }
-  if (event.key === "Escape" && !nodeModal.hidden) {
-    closeNodeModal();
-  }
-  if (event.key === "Escape" && !detailBriefModal.hidden) {
-    closeDetailBriefModal();
-  }
-  if (event.key === "Escape" && !executionModal.hidden) {
-    closeExecutionModal();
-  }
-  if (event.key === "Escape" && !agentNoteModal.hidden) {
-    closeAgentNoteModal();
-  }
-  if (event.key === "Escape" && !summaryNodeModal.hidden) {
-    closeSummaryNodeModal();
-  }
-  if (event.key === "Escape" && !summaryProblemModal.hidden) {
-    closeSummaryProblemModal();
-  }
-  if (event.key === "Escape" && !roadmapLogModal.hidden) {
-    closeRoadmapLogModal();
-  }
-  if (event.key === "Escape" && !profileItemModal.hidden) {
-    closeProfileItemModal();
-  }
-  if (event.key === "Escape" && !saveProblemModal.hidden) {
-    closeSaveProblemModal();
-  }
-  if (event.key === "Escape" && !addNodeModal.hidden) {
-    closeAddNodeModal();
-  }
-});
-closeNodeModalButton.addEventListener("click", closeNodeModal);
-nodeModalBackdrop.addEventListener("click", closeNodeModal);
-saveNodeModalButton.addEventListener("click", saveNodeModal);
-nodeModalAddFollowUpButton.addEventListener("click", async () => {
-  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
-  if (!node) {
-    return;
-  }
-  const nodeIndex = state.roadmap.findIndex((item) => item.id === node.id);
-  const response = nodeModalFollowUpInput.value.trim();
-  if (!response) {
-    window.alert("Please add a response before saving it to the node.");
-    return;
-  }
-  const prompt = nodeModalContext.value.trim();
-  const threads = normalizeNodeFollowUpThreads(node);
-  threads.push({
-    prompt: prompt || "No Additional Suggested Item",
-    responses: [{
-      type: nodeModalFollowUpType.value,
-      text: response,
-    }],
-  });
-  node.follow_up_threads = threads;
-  node.follow_up_responses = [];
-  nodeModalFollowUpInput.value = "";
-  nodeModalFollowUpType.value = "Confirmed fact";
-  renderNodeModalFollowUpResponses(node.follow_up_threads);
-  nodeModalAddFollowUpButton.disabled = true;
-  nodeModalAddFollowUpButton.textContent = "Saving...";
-  try {
-    await refreshRoadmapFollowUps(nodeIndex);
-    const refreshedNode = state.roadmap.find((item) => item.id === node.id);
-    nodeModalContext.value = refreshedNode?.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM;
-  } catch (error) {
-    window.alert(error.message);
-    nodeModalContext.value = getNextNodeFollowUpPrompt(node, threads);
-  } finally {
-    nodeModalAddFollowUpButton.disabled = false;
-    nodeModalAddFollowUpButton.textContent = "Add Response";
-    autoResize(nodeModalFollowUpInput);
-    autoResize(nodeModalContext);
-  }
-});
-
-function handleConfirmRoadmap() {
-  const cleaned = state.roadmap
-    .map((node) => ({
-      id: node.id ?? makeNodeId(),
-      title: node.title.trim(),
-      why: node.why.trim(),
-      breakdown: node.breakdown.trim(),
-      suggested_context: node.suggested_context.trim(),
-      follow_up_threads: normalizeNodeFollowUpThreads(node),
-    }))
-    .filter((node) => node.title && node.why && node.breakdown && node.suggested_context);
-
-  if (!cleaned.length) {
-    window.alert("Please keep at least one roadmap node with a title, explanation, breakdown, and suggested context.");
-    return;
-  }
-
-  const updatedProblem = roadmapProblemInput.value.trim();
-  const updatedProblemDetails = roadmapProblemDetailsInput.value.trim();
-  if (!updatedProblem) {
-    window.alert("Please keep a problem statement on the glossary page.");
-    return;
-  }
-
-    state.problem = updatedProblem;
-    state.problemDetails = updatedProblemDetails;
-    problemInput.value = updatedProblem;
-  if (problemDetailsInput) {
-    problemDetailsInput.value = updatedProblemDetails;
-  }
-  updateProblemDetailsPreviews();
-  state.roadmap = cleaned;
-  state.currentIndex = 0;
-  for (const key of Object.keys(state.nodeBuilds)) {
-    if (!state.roadmap.some((node) => node.id === key)) {
-      delete state.nodeBuilds[key];
-    }
-  }
-  showPanel("details");
-  loadDetailStep();
-}
-
-confirmRoadmapButton?.addEventListener("click", handleConfirmRoadmap);
-confirmRoadmapBottomButton?.addEventListener("click", handleConfirmRoadmap);
-
-polishNodeButton.addEventListener("click", async () => {
-  const draft = buildPolishDraft();
-  if (!draft) {
-    window.alert("Please describe what the new roadmap step should cover.");
-    return;
-  }
-
-  polishNodeButton.disabled = true;
-    polishNodeButton.textContent = "Generating...";
-  setAnalysisStatus(["customNode"], true, "Polishing node");
-  try {
-    const response = await fetch("/api/polish-node", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        problem: state.problem,
-        problem_details: state.problemDetails,
-        draft,
-        roadmap_titles: state.roadmap.map((node) => node.title),
-      }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to polish this node.");
-    }
-    state.polishedDraft = {
-      id: state.polishedDraft?.id || makeNodeId(),
-      title: payload.title.trim(),
-      why: payload.why.trim(),
-      breakdown: payload.breakdown.trim(),
-      suggested_context: payload.suggested_context.trim(),
-      recommendation: String(payload.recommendation || "recommended").trim(),
-      advisory: String(payload.advisory || "").trim(),
-    };
-    newNodeTitleInput.value = state.polishedDraft.title;
-    newNodeWhyInput.value = state.polishedDraft.why;
-    newNodeBreakdownInput.value = state.polishedDraft.breakdown;
-    newNodeContextInput.value = state.polishedDraft.suggested_context;
-    renderNewNodeAdvisory(state.polishedDraft);
-    newNodePreview.hidden = false;
-    confirmAddNodeButton.disabled = false;
-      confirmAddNodeButton.textContent = state.polishedDraft.recommendation === "caution" ? "Add Anyway" : "Confirm Add Node";
-      autoResizeAll();
-    } catch (error) {
-      window.alert(error.message);
-    } finally {
-      setAnalysisStatus(["customNode"], false);
-      polishNodeButton.disabled = false;
-      polishNodeButton.textContent = "Polish and Generate Node Info";
-    }
-  });
-
-  confirmAddNodeButton.addEventListener("click", () => {
-    if (!state.polishedDraft) {
-      return;
-  }
-  const cleaned = readCustomNodeDraft();
-  if (!cleaned) {
-    window.alert("Please keep the custom node title, explanation, breakdown, and suggested context filled in before adding it.");
-    return;
-  }
-  state.polishedDraft = { ...state.polishedDraft, ...cleaned };
-  if (!state.polishedDraft.recommendation) {
-    state.polishedDraft.recommendation = "recommended";
-    }
-    state.roadmap.push(state.polishedDraft);
-    renderRoadmapEditor();
-    resetNewNodeDraft();
-    closeAddNodeModal();
-    autoResizeAll();
-  });
-
-function goToPreviousDetailStep() {
-  saveCurrentNote();
-  if (state.currentIndex > 0) {
-    state.currentIndex -= 1;
-    loadDetailStep();
-    scrollWorkspaceToTop();
-  } else {
-    showPanel("roadmap");
-  }
-}
-
-function goToNextDetailStep() {
-  saveCurrentNote();
-  if (state.currentIndex < state.roadmap.length - 1) {
-    state.currentIndex += 1;
-    loadDetailStep();
-    scrollWorkspaceToTop();
-  } else {
-    renderSummary();
-    showPanel("summary");
-  }
-}
-
-prevNodeButton.addEventListener("click", goToPreviousDetailStep);
-nextNodeButton.addEventListener("click", goToNextDetailStep);
-detailBottomBackButton?.addEventListener("click", () => {
-  saveCurrentNote();
-  showPanel("roadmap");
-});
-detailBottomNextButton?.addEventListener("click", goToNextDetailStep);
-
-restartFlowButton.addEventListener("click", () => {
-  state.problem = "";
-  state.problemDetails = "";
-  state.problemTypeKey = "";
-  state.appliedProblemTypeKey = "";
-  state.inferredProblemTypeKey = "";
-  state.problemType = "";
-  state.assessmentTitle = "";
-  state.assessmentRecap = "";
-  state.roadmap = [];
-  state.nodeBuilds = {};
-  state.currentIndex = 0;
-  state.nextNodeId = 1;
-  state.sequenceEditMode = false;
-  state.dragNodeId = null;
-  state.activeNodeId = null;
-  problemInput.value = "";
-  if (problemDetailsInput) {
-    problemDetailsInput.value = "";
-  }
-  roadmapProblemInput.value = "";
-  roadmapProblemDetailsInput.value = "";
-  roadmapList.innerHTML = "";
-  detailWorkItems.innerHTML = "";
-  summaryContent.innerHTML = "";
-  updateAssessmentFields();
-  updateProblemDetailsPreviews();
-  resetNewNodeDraft();
-  refreshRoadmapCompletionState();
-  updateAssessmentPrioritySummary();
-  showPanel("problem");
-});
-
-saveProblemFramingButton.addEventListener("click", openSaveProblemModal);
-
-confirmSaveProblemButton.addEventListener("click", async () => {
-  const selectedDate = saveProblemDateInput.value || new Date().toISOString().slice(0, 10);
-  const displayName = saveProblemNameInput.value.trim() || `Problem_${selectedDate}`;
-
-  confirmSaveProblemButton.disabled = true;
-  confirmSaveProblemButton.textContent = "Saving...";
-  try {
-    const response = await fetch("/api/save-problem-framing", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        problem: state.problem,
-        problem_name: displayName,
-        problem_details: state.problemDetails,
-        problem_type: state.problemType,
-        assessment_title: state.assessmentTitle,
-        assessment_recap: state.assessmentRecap,
-        priority: saveProblemPriorityInput.value,
-        saved_date: selectedDate,
-        nodes: state.roadmap.map((node) => ({
-          title: node.title,
-          why: node.why,
-          breakdown: node.breakdown,
-          suggested_context: node.suggested_context,
-          build: state.nodeBuilds[node.id] || {},
-        })),
-      }),
-    });
-    const raw = await response.text();
-    let payload = {};
     try {
-      payload = raw ? JSON.parse(raw) : {};
-    } catch {
-      throw new Error(raw || "Unable to save this problem framing.");
+      const payload = await callRoadmap("");
+      ingestRoadmapResponse(payload);
+      state.nodeBuilds = {}; // fresh problem → fresh per-node state
+      renderRoadmap();
+      showView("roadmap");
+    } catch (err) {
+      alert("Could not generate roadmap: " + err.message);
+    } finally {
+      structureBtn.disabled = false; structureBtn.textContent = originalText;
+      updateComposer();
     }
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to save this problem framing.");
-    }
-    closeSaveProblemModal();
-    showAppToast(`Saved locally: ${payload.problem_name || payload.problem}`, "Problem framing saved");
-    showPanel("profile");
-    await loadProfileHistory();
-  } catch (error) {
-    window.alert(error.message);
-  } finally {
-    confirmSaveProblemButton.disabled = false;
-    confirmSaveProblemButton.textContent = "Save Locally";
   }
-});
 
-exportDocxButton.addEventListener("click", () => exportWorkflow("docx", exportDocxButton, "Download .docx"));
-exportPptxButton.addEventListener("click", () => exportWorkflow("pptx", exportPptxButton, "Download .pptx"));
+  function saveDraft() {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        problem: problemInput.value,
+        problemDetails: problemDetailsInput.value,
+        saved_at: new Date().toISOString(),
+      }));
+      saveDraftBtn.textContent = "Draft saved";
+      setTimeout(() => { saveDraftBtn.textContent = "Save as draft"; }, 1500);
+    } catch (e) { /* localStorage unavailable */ }
+  }
 
-sidebarNavItems.forEach((item) => {
-  item.addEventListener("click", async () => {
-    const nav = item.dataset.nav;
-    if (nav === "actions") {
-      showPanel("actions");
-      await loadActionProblems();
-      return;
-    }
-    if (nav === "review") {
-      showPanel("review");
-      await loadPipelineOverview();
-      return;
-    }
-    if (nav === "profile") {
-      showPanel("profile");
-      return;
-    }
-    showPanel(state.activeProblemPanel || "problem");
-  });
-});
+  function restoreDraft() {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft && typeof draft === "object") {
+        if (draft.problem) problemInput.value = draft.problem;
+        if (draft.problemDetails) {
+          problemDetailsInput.value = draft.problemDetails;
+          if (draft.problemDetails.trim()) contextDetails.open = true;
+        }
+      }
+    } catch (e) { /* ignore corrupt draft */ }
+  }
 
-problemSubsteps.forEach((item) => {
-  item.addEventListener("click", () => {
-    const target = item.dataset.problemStep;
-    if (!target || !["problem", "roadmap", "details", "summary"].includes(target)) {
+  /* ============ Step 1 — recent list ============ */
+  async function loadRecent() {
+    try {
+      const response = await fetch("/api/problem-framings");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to load saved problems.");
+      renderRecent(payload.items || []);
+    } catch (err) {
+      recentCount.textContent = "Unavailable";
+      recentList.innerHTML = '<div class="recent-empty">' + escapeHtml(err.message) + "</div>";
+      sideRecentNav.innerHTML =
+        '<div class="recent-empty" style="padding: 6px var(--s-3); text-align: left;">Unavailable</div>';
+    }
+  }
+
+  function renderRecent(items) {
+    const total = items.length;
+    const inProgressCount = items.filter((i) => deriveSavedStatus(i) !== "done").length;
+    const completeCount = total - inProgressCount;
+    sideHistoryCount.textContent = total ? String(total) : "—";
+
+    if (!total) {
+      recentCount.textContent = "No saved items";
+      recentList.innerHTML =
+        '<div class="recent-empty">No saved problem framings yet. Once you save one, it will show up here.</div>';
+      sideRecentNav.innerHTML =
+        '<div class="recent-empty" style="padding: 6px var(--s-3); text-align: left;">Nothing saved yet.</div>';
       return;
     }
-    showPanel(target);
-    if (target === "details" && state.roadmap.length) {
-      loadDetailStep();
-    }
-    if (target === "summary" && state.roadmap.length) {
+    recentCount.textContent = inProgressCount > 0
+      ? inProgressCount + " in progress" + (completeCount ? " · " + completeCount + " complete" : "")
+      : total + " complete";
+
+    const top = items.slice(0, 5);
+    recentList.innerHTML = top.map((item) => {
+      const status = deriveSavedStatus(item);
+      /* Prefer the full thesis (item.problem) for display; problem_name is a
+         truncated label that, in older saves, was sourced from the AI's
+         commentary instead of the thesis. */
+      const title = (item.problem || item.problem_name || "").trim() || "Untitled problem";
+      const type = formatProblemType(item.problem_type);
+      const date = formatRelativeDate(item.saved_at);
+      const tot = Number(item.node_count) || 0;
+      const ready = Number(item.ready_count) || 0;
+      const progress = status === "done" ? "complete"
+        : tot > 0 ? "in progress · " + ready + " of " + tot + " settled" : "in progress";
+      return (
+        '<a class="recent-row ' + status + '" href="#" data-filename="' +
+        escapeHtml(item.filename) + '" tabindex="0">' +
+        '<span class="status" aria-label="' + status + '"></span>' +
+        '<span class="rtitle">' + escapeHtml(truncate(title, 110)) + "</span>" +
+        '<span class="rtype">' + escapeHtml(type) + "</span>" +
+        '<span class="rdate">' + escapeHtml(date) + " · " + progress + "</span>" +
+        "</a>"
+      );
+    }).join("");
+
+    const sidebarItems = items.slice(0, 4);
+    sideRecentNav.innerHTML = sidebarItems.map((item) => {
+      const title = (item.problem || item.problem_name || "").trim() || "Untitled";
+      const status = deriveSavedStatus(item);
+      const dotColor = status === "done" ? "var(--success)" : "var(--accent)";
+      return (
+        '<a href="#" style="font-weight:400;" data-filename="' +
+        escapeHtml(item.filename) + '">' +
+        '<span class="side-ico" style="color:' + dotColor + ';">●</span> ' +
+        escapeHtml(truncate(title, 28)) +
+        "</a>"
+      );
+    }).join("");
+
+    recentList.querySelectorAll(".recent-row").forEach((row) => {
+      row.addEventListener("click", (e) => {
+        e.preventDefault();
+        loadSavedFraming(row.dataset.filename);
+      });
+    });
+    sideRecentNav.querySelectorAll("a[data-filename]").forEach((row) => {
+      row.addEventListener("click", (e) => {
+        e.preventDefault();
+        loadSavedFraming(row.dataset.filename);
+      });
+    });
+  }
+
+  /* ============ Load a saved framing ============ */
+  async function loadSavedFraming(filename) {
+    if (!filename) return;
+    const hasWork = !!state.problem || Object.keys(state.nodeBuilds).length > 0;
+    if (hasWork && !window.confirm(
+      "Loading this saved framing will replace your current in-memory work. " +
+      "(The framings on disk are unaffected.) Continue?"
+    )) return;
+
+    try {
+      const r = await fetch("/api/problem-framings/" + encodeURIComponent(filename));
+      const payload = await r.json();
+      if (!r.ok) throw new Error(payload.error || "Could not load framing.");
+      hydrateFromSaved(payload);
       renderSummary();
+      showView("summary");
+    } catch (err) {
+      alert("Could not load saved framing: " + (err.message || "unknown error"));
     }
-  });
-});
+  }
 
-  function renderRoadmapEditor() {
-    roadmapList.innerHTML = "";
-  editSequenceButton.hidden = state.roadmap.length === 0 || state.sequenceEditMode;
-  saveSequenceButton.hidden = !state.sequenceEditMode;
-  deleteSequenceZone.hidden = !state.sequenceEditMode;
-  deleteSequenceZone.classList.remove("is-active");
-  state.roadmap.forEach((node, index) => {
-    const fragment = nodeTemplate.content.cloneNode(true);
-    const row = fragment.querySelector(".roadmap-node");
-    const shell = fragment.querySelector(".roadmap-node-shell");
-    const order = fragment.querySelector(".node-order");
-    const titleText = fragment.querySelector(".node-title-text");
-    const summaryCopy = fragment.querySelector(".node-summary-copy");
-    const followupChip = fragment.querySelector(".node-followup-chip");
-    const stateChip = fragment.querySelector(".node-state-chip");
-    const openNode = fragment.querySelector(".open-node");
+  function hydrateFromSaved(payload) {
+    state.problem = String(payload.problem || "").trim();
+    state.problemDetails = String(payload.problem_details || "").trim();
+    state.problemType = String(payload.problem_type || "").trim();
+    state.inferredProblemType = String(payload.problem_type || "").trim();
+    state.assessmentTitle = String(payload.assessment_title || "").trim();
+    state.assessmentRecap = String(payload.assessment_recap || "").trim();
 
-    const isComplete = isNoAdditionalSuggestedItem(node.suggested_context || "");
-    const followUpCount = normalizeNodeFollowUpThreads(node).reduce(
-      (total, thread) => total + (Array.isArray(thread.responses) ? thread.responses.length : 0),
-      0,
-    );
-    const isInProgress = !isComplete && followUpCount > 0;
-    const stateLabel = isComplete ? "Settled" : (isInProgress ? "In Progress" : "Not Started");
-    const actionLabel = state.sequenceEditMode
-      ? "Reorder"
-      : (isComplete ? "Review →" : (isInProgress ? "Continue →" : "Start →"));
-    row.classList.toggle("is-draggable", state.sequenceEditMode);
-    row.draggable = state.sequenceEditMode;
-    row.dataset.nodeId = node.id;
-    shell.classList.toggle("is-complete", isComplete);
-    shell.classList.toggle("in-progress", isInProgress);
-    shell.classList.toggle("needs-attention", !isComplete && !isInProgress);
-    order.textContent = `${index + 1}`;
-    titleText.textContent = node.title;
-    summaryCopy.textContent = compactFollowUpText(node.why || "Open this node to review its framing and saved follow-up coverage.", 132);
-    followupChip.hidden = true;
-    stateChip.textContent = stateLabel;
-    stateChip.classList.toggle("is-complete", isComplete);
-    stateChip.classList.toggle("in-progress", isInProgress);
-    stateChip.classList.toggle("needs-attention", !isComplete && !isInProgress);
-    openNode.textContent = actionLabel;
-    openNode.disabled = state.sequenceEditMode;
-    openNode.addEventListener("click", () => openNodeModal(node.id));
-    shell.addEventListener("click", (event) => {
-      if (state.sequenceEditMode || event.target.closest(".open-node")) {
-        return;
-      }
-      openNodeModal(node.id);
-    });
-    row.addEventListener("dragstart", (event) => {
-      if (!state.sequenceEditMode) {
-        return;
-      }
-      state.dragNodeId = node.id;
-      row.classList.add("is-dragging");
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", node.id);
-    });
-    row.addEventListener("dragend", () => {
-      state.dragNodeId = null;
-      row.classList.remove("is-dragging");
-      roadmapList.querySelectorAll(".roadmap-node").forEach((item) => item.classList.remove("drag-target"));
-      deleteSequenceZone.classList.remove("is-active");
-    });
-    row.addEventListener("dragover", (event) => {
-      if (!state.sequenceEditMode || state.dragNodeId === node.id) {
-        return;
-      }
-      event.preventDefault();
-      row.classList.add("drag-target");
-    });
-    row.addEventListener("dragleave", () => {
-      row.classList.remove("drag-target");
-    });
-    row.addEventListener("drop", (event) => {
-      if (!state.sequenceEditMode) {
-        return;
-      }
-      event.preventDefault();
-      row.classList.remove("drag-target");
-      const fromId = state.dragNodeId || event.dataTransfer.getData("text/plain");
-      reorderNodeById(fromId, node.id);
+    const seen = new Set();
+    const rawNodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+    state.nodes = rawNodes.map((raw, i) => {
+      const baseId = "n_" + (i + 1) + "_" + (slugify(raw.title) || "node");
+      let id = baseId, n = 1;
+      while (seen.has(id)) { n++; id = baseId + "_" + n; }
+      seen.add(id);
+      return {
+        id,
+        title: String(raw.title || ("Node " + (i + 1))).trim(),
+        description: String(raw.why || "").trim(),
+        breakdown: String(raw.breakdown || "").trim(),
+        isCustom: !!raw.is_custom,
+      };
     });
 
-      roadmapList.appendChild(row);
+    state.nodeBuilds = {};
+    state.nodes.forEach((node, i) => {
+      const raw = rawNodes[i] || {};
+      const build = raw.build && typeof raw.build === "object" ? raw.build : {};
+      const workstreams = Array.isArray(build.workstreams) ? build.workstreams : [];
+      const thinking = workstreams.map((w) => ({
+        label: String(w.name || "").trim() || "Workstream",
+        text: String(w.purpose || "").trim(),
+      }));
+      const items = Array.isArray(build.execution_items) ? build.execution_items : [];
+      const actions = items.map((item, k) => {
+        const actionText = String(item.action || "").trim();
+        return {
+          id: "a_" + node.id + "_" + (k + 1),
+          title: actionText ? truncate(actionText, 80) : ("Action " + (k + 1)),
+          detail: actionText,
+          owner: String(item.owner || "").trim(),
+          collaborator: String(item.collaborator || "").trim(),
+          source: String(item.source || "").trim(),
+          artifact: String(item.artifact || "").trim(),
+          approval: APPROVAL_OPTIONS.includes(String(item.approval || "").trim())
+            ? String(item.approval).trim()
+            : APPROVAL_OPTIONS[0],
+          blockers: String(item.blockers || "").trim(),
+          fromQ: null,
+        };
+      });
+      const rawQs = Array.isArray(raw.questions) ? raw.questions : [];
+      const questions = rawQs.map((q, k) => {
+        const ans = String(q.answer || "").trim();
+        return {
+          id: "q_" + node.id + "_" + (k + 1),
+          text: String(q.text || "").trim(),
+          answer: ans,
+          responseType: ans ? (String(q.response_type || "").trim() || "assumption") : "",
+          followup: String(q.followup || "").trim(),
+        };
+      });
+      state.nodeBuilds[node.id] = {
+        loading: false,
+        loaded: true,
+        error: null,
+        brief: {
+          summary: String(build.execution_summary || "").trim(),
+          thinking,
+        },
+        questions,
+        actions,
+        nextActionIdx: actions.length,
+      };
     });
-    if (addNodeCard) {
-      addNodeCard.classList.toggle("is-disabled", state.sequenceEditMode);
-      roadmapList.appendChild(addNodeCard);
-    }
-    if (roadmapProgressCopy) {
-      const total = state.roadmap.length;
-      const ready = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
-      const inProgress = state.roadmap.filter((node) => {
-        const responses = normalizeNodeFollowUpThreads(node).reduce(
-          (total, thread) => total + (Array.isArray(thread.responses) ? thread.responses.length : 0),
-          0,
-        );
-        return !isNoAdditionalSuggestedItem(node.suggested_context || "") && responses > 0;
-      }).length;
-      const progressText = total
-        ? `${ready} of ${total} nodes settled${inProgress ? ` · ${inProgress} in progress` : ""}.`
-        : "No roadmap yet.";
-      roadmapProgressCopy.textContent = progressText;
-      if (roadmapProgressCopyBottom) {
-        roadmapProgressCopyBottom.textContent = total ? `${ready} of ${total} settled` : progressText;
-      }
-    }
-    refreshRoadmapCompletionState();
-    updateAssessmentPrioritySummary();
+    state.activeNodeId = state.nodes[0] ? state.nodes[0].id : null;
+    state.editingQid = null;
+    state.nextCustomIdx = state.nodes.length + 1;
   }
 
-function getRoadmapPosition(index) {
-  const row = Math.floor(index / 3) + 1;
-  const offset = index % 3;
-  const column = row % 2 === 1 ? offset + 1 : 3 - offset;
-  return { row, column };
-}
-
-function getRoadmapConnector(index, total) {
-  const nextIndex = index + 1;
-  if (nextIndex >= total) {
-    return "none";
-  }
-  const current = getRoadmapPosition(index);
-  const next = getRoadmapPosition(nextIndex);
-  if (current.row === next.row) {
-    return next.column > current.column ? "right" : "left";
-  }
-  return "down";
-}
-
-function moveNode(from, to) {
-  if (to < 0 || to >= state.roadmap.length) {
-    return;
-  }
-  const [item] = state.roadmap.splice(from, 1);
-  state.roadmap.splice(to, 0, item);
-  renderRoadmapEditor();
-}
-
-function reorderNodeById(fromId, toId) {
-  if (!fromId || !toId || fromId === toId) {
-    return;
-  }
-  const fromIndex = state.roadmap.findIndex((node) => node.id === fromId);
-  const toIndex = state.roadmap.findIndex((node) => node.id === toId);
-  if (fromIndex === -1 || toIndex === -1) {
-    return;
-  }
-  const [item] = state.roadmap.splice(fromIndex, 1);
-  state.roadmap.splice(toIndex, 0, item);
-  renderRoadmapEditor();
-}
-
-function loadDetailStep() {
-  const currentNode = state.roadmap[state.currentIndex];
-  resetDetailSections();
-  renderDetailNodeSwitcher();
-  detailTitle.textContent = `What must be true of ${currentNode.title.toLowerCase()}?`;
-  if (detailBreadcrumbNode) {
-    detailBreadcrumbNode.textContent = currentNode.title || "Node";
-  }
-  if (detailStepTitle) {
-    detailStepTitle.textContent = currentNode.title;
-  }
-  detailNodeName.textContent = currentNode.title;
-  detailNodeDescription.value = currentNode.why;
-  detailNodeBreakdown.value = currentNode.breakdown;
-  syncBriefPreviews();
-  detailSubtitle.textContent = `Pressure-test the ${currentNode.title.toLowerCase()} lens, define the evidence needed, and convert it into research workstreams before moving to the next part of the roadmap. ${currentNode.why}`;
-  detailProgress.textContent = `${state.currentIndex + 1} of ${state.roadmap.length}`;
-  nextNodeButton.textContent =
-    state.currentIndex === state.roadmap.length - 1 ? "Finalize Brief" : "Save and Continue";
-  updateDetailBottomBar();
-  loadNodeBuild(currentNode, false);
-}
-
-function updateDetailBottomBar() {
-  if (detailBottomProgressTrack) {
-    detailBottomProgressTrack.innerHTML = "";
-    state.roadmap.forEach((node, index) => {
-      const segment = document.createElement("span");
-      segment.className = "detail-bottom-progress-segment";
-      if (isNoAdditionalSuggestedItem(node.suggested_context || "")) {
-        segment.classList.add("is-settled");
-      }
-      if (index === state.currentIndex) {
-        segment.classList.add("is-active");
-      }
-      detailBottomProgressTrack.appendChild(segment);
-    });
-  }
-  if (detailBottomProgressCopy) {
-    const settled = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
-    detailBottomProgressCopy.textContent = `${settled} of ${state.roadmap.length} settled`;
-  }
-  if (detailBottomNextButton) {
-    detailBottomNextButton.textContent =
-      state.currentIndex === state.roadmap.length - 1 ? "Continue to summary" : "Save and continue";
-  }
-}
-
-function renderDetailNodeSwitcher() {
-  if (!detailNodeSwitcher) {
-    return;
-  }
-  detailNodeSwitcher.innerHTML = "";
-  state.roadmap.forEach((node, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "detail-node-switcher-button";
-    if (index === state.currentIndex) {
-      button.classList.add("is-active");
-    }
-    const isSettled = isNoAdditionalSuggestedItem(node.suggested_context || "");
-    if (isSettled) {
-      button.classList.add("is-settled");
-    }
-    button.innerHTML = `
-      <span class="detail-node-switcher-index">${isSettled ? "✓" : String(index + 1).padStart(2, "0")}</span>
-      <span>${escapeHtml(node.title || `Node ${index + 1}`)}</span>
-    `;
-    button.addEventListener("click", () => {
-      if (index === state.currentIndex) {
-        return;
-      }
-      saveCurrentNote();
-      state.currentIndex = index;
-      loadDetailStep();
-      scrollWorkspaceToTop();
-    });
-    detailNodeSwitcher.appendChild(button);
-  });
-}
-
-async function loadNodeBuild(node, forceRefresh) {
-  if (!node) {
-    return;
-  }
-  const existing = state.nodeBuilds[node.id];
-  if (existing && !forceRefresh) {
-    hydrateNodeBuild(existing);
-    return;
-  }
-
-  setAnalysisStatus(["detailBuild"], true, forceRefresh ? "Refreshing node analysis" : "Preparing node analysis");
-  refreshNodeBuildButton.disabled = true;
-  refreshNodeBuildButton.textContent = forceRefresh ? "Refreshing..." : "Loading...";
-  try {
-    const response = await fetch("/api/node-build", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        problem: state.problem,
-        problem_details: state.problemDetails,
-        problem_type: state.problemTypeKey,
-        node_title: node.title,
-        node_why: node.why,
-        node_breakdown: node.breakdown,
-      }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to prepare this node build.");
-    }
-    const scaffold = {
-      node_name: node.title,
-      node_description: node.why,
-      node_breakdown: node.breakdown,
-      execution_summary: payload.execution_summary || "",
-      key_question: payload.key_question || "",
-      workstreams: Array.isArray(payload.workstreams) ? payload.workstreams : [],
-      extracted_context: payload.extracted_context || "",
-      open_questions: Array.isArray(payload.open_questions) ? payload.open_questions : [],
-      execution_items: Array.isArray(payload.execution_items) ? payload.execution_items : [],
-      output: payload.output || "",
-      output_sections: normalizeOutputSections(payload.output_sections || parseStructuredOutput(payload.output || "")),
-    };
-    state.nodeBuilds[node.id] = scaffold;
-    hydrateNodeBuild(scaffold);
-  } catch (error) {
-    window.alert(error.message);
-  } finally {
-    setAnalysisStatus(["detailBuild"], false);
-    refreshNodeBuildButton.disabled = false;
-    refreshNodeBuildButton.textContent = "Refresh Node Draft";
-  }
-}
-
-function hydrateNodeBuild(build) {
-  detailNodeName.textContent = build.node_name || "";
-  detailNodeDescription.value = build.node_description || "";
-  detailNodeBreakdown.value = build.node_breakdown || "";
-  syncBriefPreviews();
-  detailExecutionSummary.value = build.execution_summary || "";
-  detailKeyQuestion.value = build.key_question || "";
-  detailWorkstreams.value = formatWorkstreams(build.workstreams || []);
-  detailExtractedContext.value = build.extracted_context || "";
-  detailOpenQuestions.value = formatList(build.open_questions || []);
-  renderDetailCoverageReview();
-  renderFollowUpPrompt();
-  renderFollowUpResponses(build.follow_up_responses || []);
-  applyStructuredOutput(build.output || "", build.output_sections || parseStructuredOutput(build.output || ""));
-  detailWorkItems.innerHTML = "";
-  (build.execution_items || []).forEach((item) => renderWorkItemCard(item));
-  refreshExecutionPreview();
-  autoResizeAll();
-}
-
-function renderWorkItemCard(item) {
-  const fragment = workItemTemplate.content.cloneNode(true);
-  const card = fragment.querySelector(".work-item-card");
-  const summaryButton = fragment.querySelector(".work-item-summary");
-  const summaryTitle = fragment.querySelector(".work-item-summary-title");
-  const summaryMeta = fragment.querySelector(".work-item-summary-meta");
-  const summaryToggle = fragment.querySelector(".work-item-summary-toggle");
-  const actionInput = fragment.querySelector(".work-item-action");
-  const ownerInput = fragment.querySelector(".work-item-owner");
-  const collaboratorInput = fragment.querySelector(".work-item-collaborator");
-  const sourceInput = fragment.querySelector(".work-item-source");
-  const artifactInput = fragment.querySelector(".work-item-artifact");
-  const approvalInput = fragment.querySelector(".work-item-approval");
-  const blockersInput = fragment.querySelector(".work-item-blockers");
-  const removeButton = fragment.querySelector(".remove-work-item");
-  actionInput.value = item.action || "";
-  ownerInput.value = item.owner || "";
-  collaboratorInput.value = item.collaborator || "";
-  sourceInput.value = item.source || "";
-  artifactInput.value = item.artifact || "";
-  const approvalValue = item.approval || "No approval needed";
-  if (!Array.from(approvalInput.options).some((option) => option.value === approvalValue)) {
-    const option = document.createElement("option");
-    option.value = approvalValue;
-    option.textContent = approvalValue;
-    approvalInput.appendChild(option);
-  }
-  approvalInput.value = approvalValue;
-  blockersInput.value = item.blockers || "";
-  const refreshSummary = () => {
-    const action = actionInput.value.trim() || "New workstream item";
-    const owner = ownerInput.value.trim() || "Owner not set";
-    const source = sourceInput.value.trim() || "Evidence source not set";
-    summaryTitle.textContent = action;
-    summaryMeta.textContent = `${owner} | ${source}`;
-  };
-  [actionInput, ownerInput, sourceInput].forEach((input) => {
-    input.addEventListener("input", () => {
-      refreshSummary();
-      refreshExecutionPreview();
-    });
-  });
-  summaryButton.addEventListener("click", () => {
-    const shouldOpen = !card.classList.contains("is-open");
-    detailWorkItems.querySelectorAll(".work-item-card").forEach((itemCard) => {
-      itemCard.classList.remove("is-open");
-      const toggle = itemCard.querySelector(".work-item-summary-toggle");
-      if (toggle) {
-        toggle.textContent = "Expand";
-      }
-    });
-    if (shouldOpen) {
-      card.classList.add("is-open");
-      summaryToggle.textContent = "Collapse";
-    }
-  });
-  removeButton.addEventListener("click", () => {
-    card.remove();
-    refreshExecutionPreview();
-  });
-  refreshSummary();
-  detailWorkItems.appendChild(card);
-}
-
-function saveCurrentNote() {
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return;
-  }
-  currentNode.title = detailNodeName.textContent.trim() || currentNode.title;
-  currentNode.why = detailNodeDescription.value.trim();
-  currentNode.breakdown = detailNodeBreakdown.value.trim();
-
-  const workItems = collectWorkItems();
-
-    state.nodeBuilds[currentNode.id] = {
-      node_name: detailNodeName.textContent.trim() || currentNode.title,
-      node_description: detailNodeDescription.value.trim(),
-      node_breakdown: detailNodeBreakdown.value.trim(),
-      execution_summary: detailExecutionSummary.value.trim(),
-      key_question: detailKeyQuestion.value.trim(),
-      workstreams: parseWorkstreams(detailWorkstreams.value),
-      extracted_context: detailExtractedContext.value.trim(),
-      open_questions: parseList(detailOpenQuestions.value),
-      follow_up_responses: collectFollowUpResponses(),
-      execution_items: workItems,
-      output: buildStructuredOutput(),
-      output_sections: normalizeOutputSections({
-        focus: detailOutputFocus.value.trim(),
-        work_to_complete: detailOutputWork.value.trim(),
-      owners_and_sources: detailOutputOwners.value.trim(),
-      risks_and_handoff: detailOutputRisks.value.trim(),
-    }),
-    };
-    syncBriefPreviews();
-    renderFollowUpPrompt();
-    renderFollowUpResponses(state.nodeBuilds[currentNode.id].follow_up_responses || []);
-    refreshExecutionPreview();
-  }
-
-function renderSummary() {
-  summaryContent.innerHTML = "";
-  const readyCount = state.roadmap.filter((node) => isNoAdditionalSuggestedItem(node.suggested_context || "")).length;
-  const allActions = state.roadmap.flatMap((node) =>
-    ((state.nodeBuilds[node.id]?.execution_items || []).map((item, index) => ({
-      ...item,
-      node_id: node.id,
-      node_title: node.title,
-      order: index + 1,
-    }))),
-  );
-  const unansweredCount = state.roadmap.reduce((total, node) => {
-    const threads = normalizeNodeFollowUpThreads(node);
-    return total + threads.filter((thread) => !(thread.responses || []).length).length;
-  }, 0);
-  const metaStrip = document.createElement("section");
-  metaStrip.className = "summary-meta-strip";
-  metaStrip.innerHTML = `
-    <article class="summary-meta-card">
-      <p class="summary-meta-label">Strategic Question</p>
-      <p class="summary-meta-value">${escapeHtml(summarizeProblemTitle("", state.problem || "", "Current problem"))}</p>
-    </article>
-    <article class="summary-meta-card">
-      <p class="summary-meta-label">Lenses Reviewed</p>
-      <p class="summary-meta-value">${readyCount}/${state.roadmap.length || 0}</p>
-    </article>
-    <article class="summary-meta-card">
-      <p class="summary-meta-label">Workstreams</p>
-      <p class="summary-meta-value">${allActions.length}</p>
-    </article>
-    <article class="summary-meta-card">
-      <p class="summary-meta-label">Evidence Gaps</p>
-      <p class="summary-meta-value">${unansweredCount}</p>
-    </article>
-  `;
-  summaryContent.appendChild(metaStrip);
-
-  const executiveSummary = document.createElement("section");
-  executiveSummary.className = "summary-executive";
-  const leadNodeTitles = state.roadmap.slice(0, 3).map((node) => node.title).filter(Boolean).join(", ");
-  const executiveCopy = [
-    state.problem
-      ? `This strategy brief frames the question "${state.problem}" into ${state.roadmap.length || 0} analytical lens${state.roadmap.length === 1 ? "" : "es"}.`
-      : `This strategy brief is organized into ${state.roadmap.length || 0} analytical lenses.`,
-    readyCount
-      ? `${readyCount} lens${readyCount === 1 ? " is" : "es are"} settled enough to move into work planning.`
-      : "The diagnostic roadmap still needs more evidence coverage before it is fully settled.",
-    leadNodeTitles
-      ? `The diagnosis currently centers on ${leadNodeTitles}.`
-      : "",
-    allActions.length
-      ? `${allActions.length} concrete workstream item${allActions.length === 1 ? "" : "s"} have already been captured.`
-      : "No concrete workstream items have been captured yet.",
-  ].filter(Boolean).join(" ");
-  executiveSummary.innerHTML = `
-    <p class="summary-executive-label">Executive Summary</p>
-    <p class="summary-executive-text">${escapeHtml(executiveCopy)}</p>
-  `;
-  summaryContent.appendChild(executiveSummary);
-
-  const nodeReports = document.createElement("section");
-  nodeReports.className = "summary-node-reports";
-  state.roadmap.forEach((node, index) => {
-    const nodeBuild = state.nodeBuilds[node.id] || {};
-    const outputSections = normalizeOutputSections(nodeBuild.output_sections || parseStructuredOutput(nodeBuild.output || ""));
-    const threads = normalizeNodeFollowUpThreads(node);
-    const actions = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items : [];
-    const isReady = isNoAdditionalSuggestedItem(node.suggested_context || "");
-    const report = document.createElement("article");
-    report.className = "summary-node-report";
-    const qaMarkup = threads.length
-      ? threads
-          .map((thread) => {
-            const responseMarkup = (thread.responses || []).length
-              ? thread.responses
-                  .map(
-                    (response) => `
-                      <div class="summary-node-qa-item">
-                        <span class="summary-node-qa-tag type-${escapeHtml(String(response.type || "confirmed").toLowerCase())}">${escapeHtml(response.type || "confirmed")}</span>
-                        <p>${escapeHtml(response.text || "No response captured.")}</p>
-                      </div>
-                    `,
-                  )
-                  .join("")
-              : `<div class="summary-node-qa-item unanswered"><p>No answer captured yet.</p></div>`;
-            return `
-              <details class="summary-node-thread">
-                <summary>${escapeHtml(thread.prompt || "Follow-up prompt")}</summary>
-                <div class="summary-node-thread-body">${responseMarkup}</div>
-              </details>
-            `;
-          })
-          .join("")
-      : `<p class="summary-node-empty">No follow-up discussion captured for this node yet.</p>`;
-    report.innerHTML = `
-      <div class="summary-node-report-head">
-        <span class="summary-node-report-num">Lens ${index + 1}</span>
-        <h3>${escapeHtml(node.title)}</h3>
-        <span class="status-chip">${escapeHtml(isReady ? "Evidence Settled" : "Evidence Gap")}</span>
-      </div>
-      <p class="summary-node-report-copy">${escapeHtml(nodeBuild.execution_summary || node.why || "No lens synthesis written yet.")}</p>
-      <div class="summary-node-report-grid">
-        <div class="summary-node-report-block">
-          <h4>Hypothesis Tree</h4>
-          <p>${escapeHtml(node.breakdown || "No hypothesis breakdown added yet.")}</p>
-        </div>
-        <div class="summary-node-report-block">
-          <h4>Strategic Implication</h4>
-          <p>${escapeHtml(outputSections.focus || "No strategic implication captured yet.")}</p>
-        </div>
-        <div class="summary-node-report-block">
-          <h4>Recommended Workstream</h4>
-          <p>${escapeHtml(outputSections.work_to_complete || "No workstream summary captured yet.")}</p>
-        </div>
-        <div class="summary-node-report-block">
-          <h4>Evidence Path</h4>
-          <p>${escapeHtml(outputSections.owners_and_sources || "No evidence path or owner summary captured yet.")}</p>
-        </div>
-      </div>
-      <div class="summary-node-report-section">
-        <div class="summary-node-report-section-head">
-          <h4>Evidence and Assumption Coverage</h4>
-          <button class="ghost-button summary-review-button" type="button">Review Lens</button>
-        </div>
-        <div class="summary-node-thread-list">${qaMarkup}</div>
-      </div>
-    `;
-    report.querySelector(".summary-review-button")?.addEventListener("click", () => openSummaryNodeModal(node, nodeBuild));
-    nodeReports.appendChild(report);
-  });
-  summaryContent.appendChild(nodeReports);
-
-  const workplanSection = document.createElement("section");
-  workplanSection.className = "summary-workplan";
-  const workplanRows = allActions.length
-    ? `
-      <table class="summary-workplan-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Lens</th>
-            <th>Workstream Item</th>
-            <th>Owner</th>
-            <th>Approval</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${allActions
-            .map(
-              (item, index) => `
-                <tr>
-                  <td>${index + 1}</td>
-                  <td>${escapeHtml(item.node_title || "Unknown node")}</td>
-                  <td>${escapeHtml(item.action || "No action title")}</td>
-                  <td>${escapeHtml(item.owner || "Unassigned")}</td>
-                  <td>${escapeHtml(item.approval || "Not set")}</td>
-                </tr>
-              `,
-            )
-            .join("")}
-        </tbody>
-      </table>
-    `
-    : `<p class="summary-node-empty">No workstream items have been collected yet.</p>`;
-  workplanSection.innerHTML = `
-    <p class="summary-executive-label">Consolidated Work Plan</p>
-    <h3>Operating Plan</h3>
-    <p class="section-copy">A single list of workstream items pulled from across the diagnostic lenses, organized for decision and execution handoff.</p>
-    ${workplanRows}
-  `;
-  summaryContent.appendChild(workplanSection);
-}
-
-async function loadProfileHistory() {
-  setAnalysisStatus(["profile"], true, "Loading history");
-  profileHistoryList.innerHTML = `<article class="profile-history-card"><div class="profile-history-meta">Loading saved structures...</div></article>`;
-  try {
-    const response = await fetch("/api/problem-framings");
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to load saved problem structures.");
-    }
-    renderProfileHistory(payload.items || []);
-  } catch (error) {
-    profileHistoryList.innerHTML = `<article class="profile-history-card"><div class="profile-history-meta">${escapeHtml(error.message)}</div></article>`;
-  } finally {
-    setAnalysisStatus(["profile"], false);
-  }
-}
-
-async function loadStepOneRecentProblems() {
-  if (!problemRecentList || !problemRecentCount) {
-    return;
-  }
-  problemRecentCount.textContent = "Loading...";
-  problemRecentList.innerHTML = `
-    <article class="step-recent-empty">
-      Loading saved problem structures...
-    </article>
-  `;
-  try {
-    const response = await fetch("/api/problem-framings");
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to load saved problem structures.");
-    }
-    renderStepOneRecentProblems(payload.items || []);
-  } catch (error) {
-    problemRecentCount.textContent = "Unavailable";
-    problemRecentList.innerHTML = `
-      <article class="step-recent-empty">${escapeHtml(error.message)}</article>
-    `;
-  }
-}
-
-function renderStepOneRecentProblems(items) {
-  if (!problemRecentList || !problemRecentCount) {
-    return;
-  }
-  const draftProblem = (state.problem || problemInput?.value || "").trim();
-  const hasDraft = Boolean(draftProblem);
-  const recentItems = items.slice(0, 3);
-  const inProgressCount = items.filter((item) => String(item.status || "").trim().toLowerCase() !== "complete").length;
-  problemRecentCount.textContent = inProgressCount ? `${inProgressCount} in progress` : (items.length ? `${items.length} saved` : "No saved items");
-  if (!recentItems.length && !hasDraft) {
-    problemRecentList.innerHTML = `
-      <article class="step-recent-empty">
-        No saved problem structures yet. Once you save a framing locally, it will show up here.
-      </article>
-    `;
-    if (step1SidebarRecent) {
-      step1SidebarRecent.innerHTML = `<div class="step1-sidebar-recent-empty">No recent problem framings yet.</div>`;
-    }
-    return;
-  }
-
-  problemRecentList.innerHTML = "";
-  if (step1SidebarRecent) {
-    step1SidebarRecent.innerHTML = "";
-  }
-  if (hasDraft) {
-    const draftTitle = summarizeProblemTitle("", draftProblem, "Current workspace");
-    const draftRow = document.createElement("button");
-    draftRow.type = "button";
-    draftRow.className = "step-recent-row is-draft";
-    draftRow.innerHTML = `
-      <span class="step-recent-status is-draft" aria-hidden="true"></span>
-      <span class="step-recent-main">
-        <span class="step-recent-title">${escapeHtml(draftTitle)}</span>
-      </span>
-      <span class="step-recent-type">Draft</span>
-      <span class="step-recent-date">Unsaved - resume draft</span>
-    `;
-    draftRow.addEventListener("click", resumeDraftWorkspace);
-    problemRecentList.appendChild(draftRow);
-
-    if (step1SidebarRecent) {
-      const draftLink = document.createElement("button");
-      draftLink.type = "button";
-      draftLink.className = "step1-sidebar-recent-link is-active";
-      draftLink.textContent = draftTitle;
-      draftLink.addEventListener("click", resumeDraftWorkspace);
-      step1SidebarRecent.appendChild(draftLink);
-    }
-  }
-  recentItems.forEach((item) => {
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = "step-recent-row";
-    const problemType = escapeHtml(item.problem_type || "Not set");
-    const isComplete = String(item.status || "").trim().toLowerCase() === "complete";
-    const itemTitle = summarizeProblemTitle(item.problem_name, item.problem);
-    row.innerHTML = `
-      <span class="step-recent-status${isComplete ? " is-complete" : ""}" aria-hidden="true"></span>
-      <span class="step-recent-main">
-        <span class="step-recent-title">${escapeHtml(itemTitle)}</span>
-      </span>
-      <span class="step-recent-type">${problemType}</span>
-      <span class="step-recent-date">${escapeHtml(formatSavedDate(item.saved_at))}${isComplete ? " - complete" : ""}</span>
-    `;
-    row.addEventListener("click", () => openProfileItem(item.filename));
-    problemRecentList.appendChild(row);
-
-    if (step1SidebarRecent) {
-      const recentLink = document.createElement("button");
-      recentLink.type = "button";
-      recentLink.className = `step1-sidebar-recent-link${!isComplete && step1SidebarRecent.children.length === 0 ? " is-active" : ""}`;
-      recentLink.textContent = itemTitle;
-      recentLink.addEventListener("click", () => openProfileItem(item.filename));
-      step1SidebarRecent.appendChild(recentLink);
-    }
-  });
-}
-
-async function loadActionProblems() {
-  setAnalysisStatus(["actions"], true, "Loading action workspace");
-  actionsOverview.innerHTML = "";
-  actionsCalendar.innerHTML = `<article class="action-calendar-item">Loading calendar...</article>`;
-  actionsList.innerHTML = `<article class="action-list-card">Loading action problems...</article>`;
-  try {
-    const response = await fetch("/api/action-problems");
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to load active problems.");
-    }
-    renderActionsDashboard(payload.summary || {}, payload.calendar || [], payload.items || []);
-  } catch (error) {
-    actionsOverview.innerHTML = `
-      <article class="summary-overview-card actions">
-        <p class="card-label">Actions</p>
-        <h3>Unavailable</h3>
-        <p>${escapeHtml(error.message)}</p>
-      </article>
-    `;
-    actionsCalendar.innerHTML = `<article class="action-calendar-item">${escapeHtml(error.message)}</article>`;
-    actionsList.innerHTML = `<article class="action-list-card">${escapeHtml(error.message)}</article>`;
-  } finally {
-    setAnalysisStatus(["actions"], false);
-  }
-}
-
-async function loadPipelineOverview() {
-  setAnalysisStatus(["review"], true, "Loading pipeline");
-  pipelineOverview.innerHTML = "";
-  pipelineStages.innerHTML = `<article class="pipeline-stage-card">Loading stage counts...</article>`;
-  pipelineActivity.innerHTML = `<article class="action-list-card">Loading recent movement...</article>`;
-  try {
-    const response = await fetch("/api/pipeline-overview");
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to load pipeline overview.");
-    }
-    renderPipelineOverview(payload.summary || {}, payload.stages || [], payload.recent_activity || []);
-  } catch (error) {
-    pipelineOverview.innerHTML = `
-      <article class="summary-overview-card problem">
-        <p class="card-label">Pipeline</p>
-        <h3>Unavailable</h3>
-        <p>${escapeHtml(error.message)}</p>
-      </article>
-    `;
-    pipelineStages.innerHTML = `<article class="pipeline-stage-card">${escapeHtml(error.message)}</article>`;
-    pipelineActivity.innerHTML = `<article class="action-list-card">${escapeHtml(error.message)}</article>`;
-  } finally {
-    setAnalysisStatus(["review"], false);
-  }
-}
-
-function renderPipelineOverview(summary, stages, activity) {
-  pipelineOverview.innerHTML = `
-    <article class="summary-overview-card problem">
-      <p class="card-label">Framed Problems</p>
-      <h3>Total Structured</h3>
-      <strong>${Number(summary.framed_total || 0)}</strong>
-      <p>The total number of problems that have been fully framed in Strenaysis.</p>
-    </article>
-    <article class="summary-overview-card actions">
-      <p class="card-label">Activated</p>
-      <h3>Moved Into Actions</h3>
-      <strong>${Number(summary.activated_total || 0)}</strong>
-      <p>${Number(summary.conversion_rate || 0)}% of framed problems have been activated into work.</p>
-    </article>
-    <article class="summary-overview-card readiness">
-      <p class="card-label">Still Framed Only</p>
-      <h3>Not Yet Activated</h3>
-      <strong>${Number(summary.framed_only || 0)}</strong>
-      <p>These problems are saved in the library but have not been turned into action.</p>
-    </article>
-    <article class="summary-overview-card actions">
-      <p class="card-label">Current Progress</p>
-      <h3>In Progress / Resolved</h3>
-      <strong>${Number(summary.in_progress || 0)} / ${Number(summary.resolved || 0)}</strong>
-      <p>${Number(summary.active_total || 0)} active problems total, with ${Number(summary.not_started || 0)} not started and ${Number(summary.blocked || 0)} blocked.</p>
-    </article>
-  `;
-
-  if (!stages.length) {
-    pipelineStages.innerHTML = `<article class="pipeline-stage-card">No lifecycle stages available yet.</article>`;
-  } else {
-    pipelineStages.innerHTML = "";
-    stages.forEach((stage) => {
-      const card = document.createElement("article");
-      card.className = `pipeline-stage-card pipeline-stage-${escapeHtml(String(stage.tone || "framed"))}`;
-      card.innerHTML = `
-        <span class="card-label">${escapeHtml(stage.label || "Stage")}</span>
-        <strong>${Number(stage.count || 0)}</strong>
-      `;
-      pipelineStages.appendChild(card);
-    });
-  }
-
-  if (!activity.length) {
-    pipelineActivity.innerHTML = `<article class="action-list-card">No movement recorded yet.</article>`;
-    return;
-  }
-  pipelineActivity.innerHTML = "";
-  activity.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "action-list-card";
-    card.innerHTML = `
-      <div class="action-list-header">
-        <div>
-          <h4>${escapeHtml(item.problem_name || "Untitled problem")}</h4>
-          <p>${escapeHtml(item.owner || "No owner listed")}</p>
-        </div>
-        <span class="status-chip">${escapeHtml(item.stage || "Framed")}</span>
-      </div>
-      <div class="action-list-footer">
-        <span>${escapeHtml(`Date: ${item.date ? formatSavedDate(item.date) : "Not available"}`)}</span>
-      </div>
-    `;
-    pipelineActivity.appendChild(card);
-  });
-}
-
-function renderActionsDashboard(summary, calendar, items) {
-  actionsOverview.innerHTML = `
-    <article class="summary-overview-card actions">
-      <p class="card-label">In Progress</p>
-      <h3>Problems In Progress</h3>
-      <strong>${Number(summary.in_progress || 0)}</strong>
-      <p>Problems currently being worked through in the action workspace.</p>
-    </article>
-    <article class="summary-overview-card readiness">
-      <p class="card-label">Resolved</p>
-      <h3>Resolved Problems</h3>
-      <strong>${Number(summary.resolved || 0)}</strong>
-      <p>Problems already closed out and moved beyond active management.</p>
-    </article>
-    <article class="summary-overview-card problem">
-      <p class="card-label">Open</p>
-      <h3>Open Problems</h3>
-      <strong>${Number(summary.open || 0)}</strong>
-      <p>The current number of open or in-progress problems underway.</p>
-    </article>
-    <article class="summary-overview-card actions">
-      <p class="card-label">Calendar</p>
-      <h3>Due This Week</h3>
-      <strong>${Number(summary.due_this_week || 0)}</strong>
-      <p>${Number(summary.high_priority || 0)} high-priority problems currently being tracked.</p>
-    </article>
-  `;
-
-  if (!calendar.length) {
-    actionsCalendar.innerHTML = `<article class="action-calendar-item">No upcoming dates in the current action workspace.</article>`;
-  } else {
-    actionsCalendar.innerHTML = "";
-    calendar.forEach((item) => {
-      const element = document.createElement("article");
-      element.className = "action-calendar-item";
-      element.innerHTML = `
-        <div>
-          <strong>${escapeHtml(item.problem_name || "Untitled problem")}</strong>
-          <p>${escapeHtml(item.status || "Open")}</p>
-        </div>
-        <span class="status-chip">${escapeHtml(formatSavedDate(item.due_date))}</span>
-      `;
-      actionsCalendar.appendChild(element);
-    });
-  }
-
-  const activeItems = items.filter((item) => String(item.status || "").toLowerCase() !== "resolved");
-  if (!activeItems.length) {
-    actionsList.innerHTML = `<article class="action-list-card">No open problems yet. Seed examples or future action conversions will appear here.</article>`;
-    return;
-  }
-
-  actionsList.innerHTML = "";
-  activeItems.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "action-list-card";
-    card.innerHTML = `
-      <div class="action-list-header">
-        <div>
-          <h4>${escapeHtml(item.problem_name || "Untitled problem")}</h4>
-          <p>${escapeHtml(item.summary || "No summary added yet.")}</p>
-        </div>
-        <span class="status-chip ${priorityClassName(item.priority)}">${escapeHtml(item.priority || "Medium")}</span>
-      </div>
-      <div class="action-list-meta">
-        <span class="profile-history-metric">${escapeHtml(item.status || "Open")}</span>
-        <span class="profile-history-metric">${escapeHtml(item.workstream || "General")}</span>
-        <span class="profile-history-metric">${escapeHtml(`Owner: ${item.owner || "Unassigned"}`)}</span>
-        <span class="profile-history-metric">${escapeHtml(`Approver: ${item.approver || "Not set"}`)}</span>
-      </div>
-      <div class="action-list-footer">
-        <span>${escapeHtml(`Due: ${item.due_date ? formatSavedDate(item.due_date) : "Not set"}`)}</span>
-        <span>${escapeHtml(`Updated: ${item.updated_at ? formatSavedDate(item.updated_at) : "Not available"}`)}</span>
-      </div>
-    `;
-    actionsList.appendChild(card);
-  });
-}
-
-function renderProfileHistory(items) {
-  if (!items.length) {
-    profileHistoryList.innerHTML = `
-      <article class="profile-history-card">
-        <div class="profile-history-meta">
-          No saved problem structures yet. Save one from the strategy brief and it will appear here.
-        </div>
-      </article>
-    `;
-    return;
-  }
-
-  profileHistoryList.innerHTML = "";
-  items.forEach((item) => {
-    const card = document.createElement("article");
-    card.className = "profile-history-card";
-    card.innerHTML = `
-      <div class="profile-history-header">
-        <div>
-          <h4>${escapeHtml(item.problem_name || item.problem || "Untitled problem framing")}</h4>
-          <div class="profile-history-meta">
-            <div>${escapeHtml(formatSavedDate(item.saved_at))}</div>
-            <div>${escapeHtml(item.problem_type || "Not set")}</div>
-          </div>
-        </div>
-        <span class="status-chip ${priorityClassName(item.priority)}">${escapeHtml(item.priority || "Medium")}</span>
-      </div>
-      <div class="profile-history-metrics">
-        <span class="profile-history-metric">${escapeHtml(`${item.node_count || 0} nodes`)}</span>
-        <span class="profile-history-metric">${escapeHtml(`${item.ready_count || 0} ready`)}</span>
-        <span class="profile-history-metric">${escapeHtml(`${item.action_count || 0} actions`)}</span>
-      </div>
-      <button class="ghost-button profile-view-button" type="button">View Structure</button>
-    `;
-    card.querySelector(".profile-view-button")?.addEventListener("click", () => openProfileItem(item.filename));
-    profileHistoryList.appendChild(card);
-  });
-}
-
-async function openProfileItem(filename) {
-  try {
-    const response = await fetch(`/api/problem-framings/${encodeURIComponent(filename)}`);
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to open this saved framing.");
-    }
-    profileItemModalTitle.textContent = payload.problem_name || payload.problem || "Saved Problem Framing";
-    profileItemModalBody.innerHTML = `
-      <section class="summary-modal-section">
-        <h4>Saved Metadata</h4>
-        <p>${escapeHtml(`Saved on: ${formatSavedDate(payload.saved_at)}`)}</p>
-        <p>${escapeHtml(`Priority: ${payload.priority || "Medium"}`)}</p>
-        <p>${escapeHtml(`Problem type: ${payload.problem_type || "Not set"}`)}</p>
-      </section>
-      <section class="summary-modal-section">
-        <h4>Problem Detail</h4>
-        <p>${escapeHtml(payload.problem_name || "No custom problem name saved.")}</p>
-        <p>${escapeHtml(payload.problem || "No problem captured.")}</p>
-        <p>${escapeHtml(payload.problem_details || "No detailed bucket added.")}</p>
-      </section>
-      <section class="summary-modal-section">
-        <h4>Assessment</h4>
-        <p>${escapeHtml(payload.assessment_title || "No assessment saved.")}</p>
-        <p>${escapeHtml(payload.assessment_recap || "No recap saved.")}</p>
-      </section>
-      <section class="summary-modal-section">
-        <h4>Structure Summary</h4>
-        <p>${escapeHtml(`${payload.node_count || 0} nodes | ${payload.ready_count || 0} ready | ${payload.action_count || 0} actions`)}</p>
-      </section>
-    `;
-    profileItemModal.hidden = false;
-    document.body.style.overflow = "hidden";
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
-async function exportWorkflow(format, button, idleText) {
-  const payload = buildExportPayload(format);
-  button.disabled = true;
-  button.textContent = format === "docx" ? "Preparing Word..." : "Preparing PowerPoint...";
-  try {
-    const response = await fetch("/api/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      let message = "Unable to export this workflow.";
-      try {
-        const data = await response.json();
-        message = data.error || message;
-      } catch {
-        // ignore
-      }
-      throw new Error(message);
-    }
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = format === "docx" ? "strenaysis-workflow.docx" : "strenaysis-workflow.pptx";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    window.alert(error.message);
-  } finally {
-    button.disabled = false;
-    button.textContent = idleText;
-  }
-}
-
-function buildExportPayload(format) {
-  return {
-    format,
-    problem: state.problem,
-    problem_details: state.problemDetails,
-    problem_type: state.problemType,
-    assessment_title: state.assessmentTitle,
-    assessment_recap: state.assessmentRecap,
-    nodes: state.roadmap.map((node) => ({
-      title: node.title,
-      why: node.why,
-      breakdown: node.breakdown,
-      suggested_context: node.suggested_context,
-      build: state.nodeBuilds[node.id] || {},
-    })),
-  };
-}
-
-function showPanel(name) {
-  const previousPanel = state.activeProblemPanel;
-  Object.entries(panels).forEach(([key, panel]) => {
-    panel.classList.toggle("active", key === name);
-  });
-  if (!isSecondaryPanel(name)) {
-    state.activeProblemPanel = name;
-  }
-  if (workspaceShell) {
-    workspaceShell.dataset.activeProblemPanel = state.activeProblemPanel;
-  }
-  if (appShell) {
-    appShell.dataset.activeProblemPanel = state.activeProblemPanel;
-  }
-  const activeNav = isSecondaryPanel(name) ? name : "problems";
-  sidebarNavItems.forEach((item) => {
-    item.classList.toggle("is-active", item.dataset.nav === activeNav);
-  });
-  problemSubsteps.forEach((item) => {
-    item.classList.toggle("is-active", item.dataset.problemStep === state.activeProblemPanel);
-  });
-  if (step1SidebarIntroButton) {
-    step1SidebarIntroButton.classList.toggle("is-active", state.activeProblemPanel === "intro");
-  }
-  if (step1SidebarNewProblemButton) {
-    step1SidebarNewProblemButton.classList.toggle("is-active", state.activeProblemPanel === "problem");
-  }
-  if (name === "problem") {
-    loadStepOneRecentProblems();
-  }
-  requestAnimationFrame(() => {
-    if (previousPanel !== state.activeProblemPanel || isSecondaryPanel(name)) {
-      scrollWorkspaceToTop();
-    }
-    autoResizeAll();
-    updateAssessmentFields();
-    updateStepOneComposerState();
-  });
-}
-
-function isSecondaryPanel(name) {
-  return ["profile", "actions", "review"].includes(name);
-}
-
-function scrollWorkspaceToTop() {
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    if (workspaceShell) {
-      workspaceShell.scrollTop = 0;
-    }
-  });
-}
-
-async function generateRoadmap(problem, options) {
-  state.problem = problem;
-  state.problemDetails = options.problemDetails || "";
-  setAnalysisStatus(options.statusKeys || [], true, options.statusText || "Analyzing");
-  if (options.button) {
-    options.button.disabled = true;
-    options.button.textContent = options.loadingText;
-  }
-  if (options.button !== updateRoadbuildButton) {
-    updateRoadbuildButton.disabled = true;
-  }
-
-  try {
+  /* ============ Step 2 — roadmap ============ */
+  async function callRoadmap(forcedType) {
     const response = await fetch("/api/roadmap", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        problem,
+        problem: state.problem,
         problem_details: state.problemDetails,
-        problem_type: options.problemType || "",
+        problem_type: forcedType || "",
       }),
     });
     const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || "Unable to generate roadmap.");
-    }
-
-    state.roadmap = normalizeRoadmap(payload.roadmap);
-    state.sequenceEditMode = false;
-    state.dragNodeId = null;
-    state.activeNodeId = null;
-      state.problemTypeKey = String(payload.problem_type || options.problemType || "").trim();
-      state.appliedProblemTypeKey = state.problemTypeKey;
-      state.inferredProblemTypeKey = String(payload.inferred_problem_type || "").trim();
-      state.problemType = normalizeProblemType(payload.problem_type);
-      state.assessmentTitle = String(payload.assessment_title || "").trim();
-      state.assessmentRecap = String(payload.assessment_recap || "").trim();
-      if (assessmentType) {
-        assessmentType.value = state.problemTypeKey || state.inferredProblemTypeKey || "predictive_modeling";
-      }
-      if (options.resetNotes) {
-        state.nodeBuilds = {};
-      }
-    state.nextNodeId = state.roadmap.length + 1;
-    problemInput.value = problem;
-    if (problemDetailsInput) {
-      problemDetailsInput.value = state.problemDetails;
-    }
-    roadmapProblemInput.value = problem;
-    roadmapProblemDetailsInput.value = state.problemDetails;
-    updateAssessmentFields();
-    updateProblemDetailsPreviews();
-    updateStepOneComposerState();
-    resetNewNodeDraft();
-    renderRoadmapEditor();
-    roadmapSource.textContent =
-      payload.source === "openai" ? "OpenAI generated" : "Template generated";
-    if (options.showRoadmap) {
-      showPanel("roadmap");
-    } else {
-      autoResizeAll();
-    }
-  } catch (error) {
-    window.alert(error.message);
-  } finally {
-    setAnalysisStatus(options.statusKeys || [], false);
-    if (options.button) {
-      options.button.disabled = false;
-      options.button.textContent = options.idleText;
-    }
-    if (options.button !== updateRoadbuildButton) {
-      updateRoadbuildButton.disabled = false;
-    }
+    if (!response.ok) throw new Error(payload.error || "Unable to generate roadmap.");
+    return payload;
   }
-}
 
-function setAnalysisStatus(keys, active, text = "") {
-  (keys || []).forEach((key) => {
-    const element = analysisStatusMap[key];
-    if (!element) {
+  function ingestRoadmapResponse(payload) {
+    state.problem = payload.problem || state.problem;
+    state.problemDetails = payload.problem_details || state.problemDetails;
+    state.problemType = String(payload.problem_type || "").trim();
+    state.inferredProblemType = String(payload.inferred_problem_type || "").trim();
+    state.assessmentTitle = String(payload.assessment_title || "").trim();
+    state.assessmentRecap = String(payload.assessment_recap || "").trim();
+
+    const seen = new Set();
+    state.nodes = (payload.roadmap || []).map((raw, i) => {
+      const baseId = "n_" + (i + 1) + "_" + (slugify(raw.title) || "node");
+      let id = baseId, n = 1;
+      while (seen.has(id)) { n++; id = baseId + "_" + n; }
+      seen.add(id);
+      return {
+        id,
+        title: String(raw.title || ("Node " + (i + 1))).trim(),
+        description: (raw.why || raw.suggested_context || "").trim(),
+        breakdown: String(raw.breakdown || "").trim(),
+        isCustom: false,
+      };
+    });
+    state.nextCustomIdx = state.nodes.length + 1;
+  }
+
+  function renderRoadmapTitle() {
+    const total = state.nodes.length;
+    const word = NUMBER_WORDS[total] || String(total);
+    roadmapTitle.textContent = total ? word + " nodes. Work them in any order." : "No nodes generated.";
+  }
+
+  function renderRoadmap() {
+    renderRoadmapTitle();
+    roadmapQuestion.value = state.problem;
+    const typeLabel = formatProblemType(state.problemType || state.inferredProblemType);
+    roadmapTypeChip.innerHTML = '<span class="dot"></span> ' + escapeHtml(typeLabel);
+    assessmentWhy.textContent = state.assessmentRecap || "Assessment unavailable. Backend did not provide a recap.";
+
+    problemTypes.querySelectorAll('input[name="ptype"]').forEach((r) => {
+      r.checked = r.value === state.problemType;
+    });
+    problemTypes.querySelectorAll(".recommended-slot").forEach((slot) => {
+      slot.innerHTML = slot.dataset.type === state.inferredProblemType
+        ? '<span class="recommended">Recommended</span>' : "";
+    });
+    updatePathBtn.style.display = "none";
+
+    renderNodeList();
+    updateSettledCount();
+  }
+
+  function renderNodeList() {
+    if (!state.nodes.length) {
+      nodeListEl.innerHTML =
+        '<div style="padding: var(--s-5) var(--s-5); color: var(--muted); font-size: var(--text-sm);">No nodes yet. Submit a question on Step 1 to generate a roadmap.</div>';
       return;
     }
-    const textElement = element.querySelector(".analysis-status-text");
-    if (active) {
-      if (textElement && text) {
-        textElement.textContent = text;
-      }
-      element.hidden = false;
+    nodeListEl.innerHTML = state.nodes.map((node, i) => {
+      const st = nodeStatus(node.id);
+      const stCls = st === "settled" ? "settled" : st === "in-progress" ? "in-progress" : "";
+      const stHtml = st === "settled"
+        ? '<span class="chip ok"><span class="dot"></span> Settled</span>'
+        : st === "in-progress"
+          ? renderInProgressChip(node.id)
+          : "Not started";
+      const action = st === "settled" ? "Review →" : st === "in-progress" ? "Continue →" : "Start →";
+      const descSafe = escapeHtml(node.description || "");
+      return (
+        '<a class="node-row ' + stCls + '" href="#" data-node-id="' +
+        escapeHtml(node.id) + '" draggable="true">' +
+        '<div class="nr-grip" data-grip="1"><span></span><span></span><span></span></div>' +
+        '<span class="nr-num">' + pad2(i + 1) + "</span>" +
+        '<div class="nr-body">' +
+          '<div class="nr-title">' + escapeHtml(node.title) + "</div>" +
+          (descSafe ? '<div class="nr-desc">' + descSafe + "</div>" : "") +
+        "</div>" +
+        '<span class="nr-status">' + stHtml + "</span>" +
+        '<span class="nr-action">' + action + "</span>" +
+        "</a>"
+      );
+    }).join("");
+
+    nodeListEl.querySelectorAll(".node-row").forEach((row) => {
+      row.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (state.justDragged) { state.justDragged = false; return; }
+        openNodeInBuildup(row.dataset.nodeId);
+      });
+    });
+  }
+
+  function renderInProgressChip(nodeId) {
+    const build = state.nodeBuilds[nodeId];
+    if (!build || !build.questions) return '<span class="chip warn"><span class="dot"></span> In progress</span>';
+    const total = build.questions.length;
+    const answered = build.questions.filter((q) => q.answer && q.answer.trim()).length;
+    return '<span class="chip warn"><span class="dot"></span> ' + answered + " of " + total + "</span>";
+  }
+
+  function updateSettledCount() {
+    const total = state.nodes.length;
+    const settled = state.nodes.filter((n) => nodeStatus(n.id) === "settled").length;
+    settledCountEl.textContent = settled + " of " + total + " settled";
+  }
+
+  /* ============ Step 2 — problem-type radios ============ */
+  function onProblemTypeChange() {
+    const selected = (problemTypes.querySelector('input[name="ptype"]:checked') || {}).value;
+    if (!selected) { updatePathBtn.style.display = "none"; return; }
+    if (selected !== state.problemType) {
+      updatePathBtn.style.display = "";
+      assessmentWhy.innerHTML =
+        "You selected <strong>" + escapeHtml(formatProblemType(selected)) + "</strong>. " +
+        "Updating will regenerate the node list for this problem type.";
     } else {
-      element.hidden = true;
+      updatePathBtn.style.display = "none";
+      assessmentWhy.textContent = state.assessmentRecap || "Assessment unavailable.";
     }
-  });
-}
+  }
 
-function closeProfileItemModal() {
-  profileItemModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function openSaveProblemModal() {
-  saveProblemNameInput.value = "";
-  saveProblemDateInput.value = new Date().toISOString().slice(0, 10);
-  saveProblemPriorityInput.value = "Medium";
-  saveProblemModal.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeSaveProblemModal() {
-  saveProblemModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function showAppToast(message, eyebrow = "Saved locally") {
-  if (!appToast || !appToastMessage || !appToastEyebrow) {
-    return;
-  }
-  if (appToastTimer) {
-    window.clearTimeout(appToastTimer);
-  }
-  appToastEyebrow.textContent = eyebrow;
-  appToastMessage.textContent = message;
-  appToast.hidden = false;
-  appToastTimer = window.setTimeout(() => {
-    hideAppToast();
-  }, 3200);
-}
-
-function hideAppToast() {
-  if (!appToast) {
-    return;
-  }
-  if (appToastTimer) {
-    window.clearTimeout(appToastTimer);
-    appToastTimer = null;
-  }
-  appToast.hidden = true;
-}
-
-function priorityClassName(priority) {
-  const value = String(priority || "").toLowerCase();
-  if (value === "high") {
-    return "priority-chip-high";
-  }
-  if (value === "low") {
-    return "priority-chip-low";
-  }
-  return "priority-chip-medium";
-}
-
-function formatSavedDate(value) {
-  if (!value) {
-    return "Saved date not available";
-  }
-  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value;
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString();
-}
-
-function summarizeProblemTitle(problemName, problemText, fallback = "Untitled problem framing") {
-  const explicit = String(problemName || "").trim();
-  if (explicit && explicit.length <= 42) {
-    return explicit;
-  }
-  const raw = String(explicit || problemText || "").replace(/\s+/g, " ").trim();
-  if (!raw) {
-    return fallback;
-  }
-  const candidate =
-    raw
-      .split(/[?.:;\n]/)
-      .map((part) => part.trim())
-      .find((part) => part.split(/\s+/).length >= 3) || raw;
-  const words = candidate.split(/\s+/).filter(Boolean);
-  const compact = words.slice(0, 6).join(" ");
-  return compact.length < candidate.length ? `${compact}…` : compact;
-}
-
-function resumeDraftWorkspace() {
-  const resumePanel =
-    state.activeProblemPanel && state.activeProblemPanel !== "problem"
-      ? state.activeProblemPanel
-      : (state.roadmap.length ? "roadmap" : "problem");
-  showPanel(resumePanel);
-  if (resumePanel === "details") {
-    loadDetailStep();
-    return;
-  }
-  if (resumePanel === "problem") {
-    if (problemInput) {
-      problemInput.value = state.problem || problemInput.value || "";
-      problemInput.focus();
+  async function triggerUpdatePath() {
+    const selected = (problemTypes.querySelector('input[name="ptype"]:checked') || {}).value;
+    if (!selected || selected === state.problemType) return;
+    updatePathBtn.disabled = true; updatePathBtn.textContent = "Updating…";
+    nodeListEl.style.opacity = "0.4"; nodeListEl.style.transition = "opacity 200ms ease";
+    try {
+      const payload = await callRoadmap(selected);
+      ingestRoadmapResponse(payload);
+      state.nodeBuilds = {}; // type changed → invalidate per-node state
+      renderRoadmap();
+    } catch (err) {
+      alert("Could not update analysis path: " + err.message);
+    } finally {
+      updatePathBtn.disabled = false; updatePathBtn.textContent = "Update analysis path";
+      nodeListEl.style.opacity = "";
     }
-    if (problemDetailsInput) {
-      problemDetailsInput.value = state.problemDetails || problemDetailsInput.value || "";
-    }
-    updateProblemDetailsPreviews();
-    updateStepOneComposerState();
   }
-}
 
-function escapeHtml(text) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
+  /* ============ Step 2 — drag-and-drop ============ */
+  function wireDragAndDrop() {
+    nodeListEl.addEventListener("mousedown", (e) => {
+      state.isDragFromGrip = !!e.target.closest(".nr-grip");
+    });
+    nodeListEl.addEventListener("dragstart", (e) => {
+      const row = e.target.closest(".node-row");
+      if (!row) return;
+      if (!state.isDragFromGrip) { e.preventDefault(); return; }
+      state.draggingNodeId = row.dataset.nodeId;
+      row.classList.add("dragging");
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", row.dataset.nodeId);
+      } catch (_) {}
+      state.justDragged = true;
+    });
+    nodeListEl.addEventListener("dragend", (e) => {
+      const row = e.target.closest(".node-row");
+      if (row) row.classList.remove("dragging");
+      nodeListEl.querySelectorAll(".drag-over, .drag-over-below").forEach((el) =>
+        el.classList.remove("drag-over", "drag-over-below"));
+      state.draggingNodeId = null; state.isDragFromGrip = false;
+    });
+    nodeListEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const row = e.target.closest(".node-row");
+      if (!row || row.dataset.nodeId === state.draggingNodeId) return;
+      nodeListEl.querySelectorAll(".drag-over, .drag-over-below").forEach((el) =>
+        el.classList.remove("drag-over", "drag-over-below"));
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      row.classList.add(e.clientY < midY ? "drag-over" : "drag-over-below");
+    });
+    nodeListEl.addEventListener("dragleave", (e) => {
+      const row = e.target.closest(".node-row");
+      if (row) row.classList.remove("drag-over", "drag-over-below");
+    });
+    nodeListEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const row = e.target.closest(".node-row");
+      if (!row || !state.draggingNodeId || row.dataset.nodeId === state.draggingNodeId) return;
+      const fromIdx = state.nodes.findIndex((n) => n.id === state.draggingNodeId);
+      if (fromIdx < 0) return;
+      const rect = row.getBoundingClientRect();
+      const midY = rect.top + rect.height / 2;
+      const insertBefore = e.clientY < midY;
+      const [moved] = state.nodes.splice(fromIdx, 1);
+      let insertIdx = state.nodes.findIndex((n) => n.id === row.dataset.nodeId);
+      if (!insertBefore) insertIdx += 1;
+      state.nodes.splice(insertIdx, 0, moved);
+      renderNodeList(); updateSettledCount();
+    });
+  }
 
-function normalizeRoadmap(rawRoadmap) {
-  return (rawRoadmap || [])
-    .map((item) => {
-      if (typeof item === "string") {
-        const title = item.trim();
-        return {
-          id: makeNodeId(),
-          title,
-          why: `Explains why ${title.toLowerCase()} matters in the workflow.`,
-          breakdown: `Outlines what ${title.toLowerCase()} should cover so the roadmap is understandable at a glance.`,
-          suggested_context: `What extra context should be added to sharpen ${title.toLowerCase()}?`,
-        };
-      }
-      if (item && typeof item === "object") {
-        const title =
-          typeof item.title === "string"
-            ? item.title.trim()
-            : typeof item.name === "string"
-              ? item.name.trim()
-              : "";
-        const why =
-          typeof item.why === "string"
-            ? item.why.trim()
-            : typeof item.description === "string"
-              ? item.description.trim()
-              : "";
-        const breakdown =
-          typeof item.breakdown === "string"
-            ? item.breakdown.trim()
-            : typeof item.summary === "string"
-              ? item.summary.trim()
-              : title
-                ? `Outlines what ${title.toLowerCase()} should cover so the roadmap is understandable at a glance.`
-                : "";
-        return {
-          id: makeNodeId(),
-          title,
-          why,
-          breakdown,
-          suggested_context:
-            typeof item.suggested_context === "string"
-              ? item.suggested_context.trim()
-              : typeof item.context_prompt === "string"
-                ? item.context_prompt.trim()
-                : title
-                  ? `What extra context should be added to sharpen ${title.toLowerCase()}?`
-                  : "",
-        };
-      }
-      return {
-        id: makeNodeId(),
-        title: "",
-        why: "",
-        breakdown: "",
-        suggested_context: "",
+  /* ============ Step 2 — add custom node ============ */
+  function checkNodeForm() {
+    saveNodeBtn.disabled = newNodeName.value.trim().length < 2;
+  }
+  function openAddNodeForm() {
+    addNodeTrigger.style.display = "none";
+    addNodeForm.classList.add("open"); newNodeName.focus();
+  }
+  function closeAddNodeForm() {
+    addNodeForm.classList.remove("open");
+    addNodeTrigger.style.display = "";
+    newNodeName.value = ""; newNodeDesc.value = "";
+    saveNodeBtn.disabled = true;
+  }
+  function saveCustomNode() {
+    if (saveNodeBtn.disabled) return;
+    const name = newNodeName.value.trim();
+    const desc = newNodeDesc.value.trim() || "Custom node added by the user.";
+    const idx = state.nextCustomIdx++;
+    state.nodes.push({
+      id: "custom_" + idx + "_" + (slugify(name) || "node"),
+      title: name, description: desc, breakdown: "",
+      isCustom: true,
+    });
+    closeAddNodeForm();
+    renderNodeList(); renderRoadmapTitle(); updateSettledCount();
+    setTimeout(() => {
+      const last = nodeListEl.querySelector(".node-row:last-child");
+      if (last) last.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }
+
+  /* ============ Step 3 — build cache + fetch ============ */
+  function ensureBuildSlot(nodeId) {
+    if (!state.nodeBuilds[nodeId]) {
+      state.nodeBuilds[nodeId] = {
+        loading: false,
+        loaded: false,
+        error: null,
+        brief: { summary: "", thinking: [] },
+        questions: [],
+        actions: [],
+        nextActionIdx: 0,
       };
-    })
-    .filter((item) => item.title && item.why && item.breakdown && item.suggested_context);
-}
-
-function normalizeProblemType(value) {
-  const labels = {
-    descriptive_analysis: "Descriptive Analysis",
-    predictive_modeling: "Predictive Modeling",
-    experiment_causal_question: "Experiment / Causal Question",
-    operational_optimization: "Operational Optimization",
-  };
-  if (labels[value]) {
-    return labels[value];
-  }
-  return String(value || "")
-    .replaceAll("_", " ")
-    .replaceAll("/", " / ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function updateAssessmentFields() {
-  assessmentType.value = state.problemTypeKey || state.inferredProblemTypeKey || "predictive_modeling";
-  const assessmentState = getAssessmentConfidenceState();
-  const selected = String(assessmentType.value || "").trim();
-  const applied = String(state.appliedProblemTypeKey || state.problemTypeKey || "").trim();
-  const inferred = String(state.inferredProblemTypeKey || "").trim();
-  const hasRecommended = Boolean(inferred);
-  const hasOverride = Boolean(applied && selected && selected !== applied);
-  assessmentType.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
-  assessmentTitle.classList.remove("assessment-match", "assessment-caution", "assessment-mismatch");
-  assessmentType.classList.add(`assessment-${assessmentState}`);
-  assessmentChoiceButtons.forEach((button) => {
-    const value = button.dataset.problemTypeOption || "";
-    const isSelected = value === assessmentType.value;
-    const isRecommended = value === (state.inferredProblemTypeKey || "");
-    const badge = button.querySelector(".assessment-choice-badge");
-    button.classList.toggle("is-selected", isSelected);
-    button.classList.toggle("is-recommended", isRecommended);
-    button.setAttribute("aria-pressed", String(isSelected));
-    if (badge) {
-      badge.hidden = !isRecommended;
     }
-  });
-  if (updateRoadbuildButton) {
-    updateRoadbuildButton.hidden = !hasOverride;
-  }
-  if (assessmentRecommendationNote) {
-    if (!hasRecommended && !applied) {
-      assessmentRecommendationNote.hidden = true;
-      assessmentRecommendationNote.textContent = "";
-    } else if (hasOverride) {
-      assessmentRecommendationNote.hidden = false;
-      assessmentRecommendationNote.className = "assessment-recommendation-note is-override";
-      assessmentRecommendationNote.textContent =
-        `Current analysis path: ${normalizeProblemType(applied)}. Updating will regenerate the node list for ${normalizeProblemType(selected)} while preserving the saved follow-up coverage where it still fits.`;
-    } else if (hasRecommended && applied && applied !== inferred) {
-      assessmentRecommendationNote.hidden = false;
-      assessmentRecommendationNote.className = "assessment-recommendation-note";
-      assessmentRecommendationNote.textContent =
-        `Current analysis path: ${normalizeProblemType(applied)}. The original system recommendation was ${normalizeProblemType(inferred)}.`;
-    } else {
-      assessmentRecommendationNote.hidden = false;
-      assessmentRecommendationNote.className = "assessment-recommendation-note";
-      assessmentRecommendationNote.textContent =
-        `Recommended framing: ${normalizeProblemType(inferred)}. Keep it if this still matches the real business question, or switch types to regenerate the roadmap around a different analytical path.`;
-    }
-  }
-  assessmentTitle.value = state.assessmentTitle || "No explanation yet.";
-  assessmentTitle.classList.add(`assessment-${assessmentState}`);
-  assessmentRecap.value = state.assessmentRecap || "No interview recap yet.";
-  if (assessmentRecapPopoverCopy) {
-    assessmentRecapPopoverCopy.textContent = assessmentRecap.value;
-  }
-  autoResize(assessmentTitle);
-  autoResize(assessmentRecap);
-}
-
-function getAssessmentConfidenceState() {
-  const selected = String(state.problemTypeKey || "").trim();
-  const applied = String(state.appliedProblemTypeKey || "").trim();
-  if (!selected || !applied || selected === applied) {
-    return "match";
+    return state.nodeBuilds[nodeId];
   }
 
-  const acceptableMatches = {
-    descriptive_analysis: ["predictive_modeling", "operational_optimization"],
-    predictive_modeling: ["descriptive_analysis", "experiment_causal_question", "operational_optimization"],
-    experiment_causal_question: ["predictive_modeling", "descriptive_analysis"],
-    operational_optimization: ["predictive_modeling", "descriptive_analysis"],
-  };
+  async function fetchNodeBuild(node) {
+    const slot = ensureBuildSlot(node.id);
+    if (slot.loaded || slot.loading) return slot;
+    slot.loading = true; slot.error = null;
+    renderBuildupBriefAndThread(); // show loading state
+    try {
+      const response = await fetch("/api/node-build", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problem: state.problem,
+          problem_details: state.problemDetails,
+          problem_type: state.problemType,
+          node_title: node.title,
+          node_why: node.description,
+          node_breakdown: node.breakdown || "",
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to load node detail.");
 
-  return acceptableMatches[applied]?.includes(selected) ? "caution" : "mismatch";
-}
+      const ws = Array.isArray(payload.workstreams) ? payload.workstreams : [];
+      const ec = Array.isArray(payload.extracted_context) ? payload.extracted_context : [];
+      const thinking = ws.length
+        ? ws.map((w) => ({
+            label: String(w.name || w.purpose || "").trim() || "Workstream",
+            text: String(w.purpose || w.completion_criteria || "").trim(),
+          }))
+        : ec.map((line, i) => ({ label: "Step " + (i + 1), text: String(line || "").trim() }));
 
-function updateAssessmentPrioritySummary() {
-  const totals = state.roadmap.reduce(
-    (accumulator, node) => {
-      const prompt = (node.suggested_context || "").trim();
-      if (!prompt) {
-        accumulator.medium += 1;
-      } else if (isNoAdditionalSuggestedItem(prompt)) {
-        accumulator.low += 1;
-      } else {
-        accumulator.high += 1;
+      const oq = Array.isArray(payload.open_questions) ? payload.open_questions : [];
+      slot.questions = oq.map((text, i) => ({
+        id: "q_" + node.id + "_" + (i + 1),
+        text: String(text || "").trim(),
+      }));
+
+      const items = Array.isArray(payload.execution_items) ? payload.execution_items : [];
+      slot.nextActionIdx = items.length;
+      slot.actions = items.map((item, i) => ({
+        id: "a_" + node.id + "_" + (i + 1),
+        title: String(item.action || "").trim() || ("Action " + (i + 1)),
+        detail: String(item.action || "").trim(),
+        owner: String(item.owner || "").trim(),
+        collaborator: String(item.collaborator || "").trim(),
+        source: String(item.source || "").trim(),
+        artifact: String(item.artifact || "").trim(),
+        approval: APPROVAL_OPTIONS.includes(String(item.approval || "").trim())
+          ? String(item.approval).trim()
+          : APPROVAL_OPTIONS[0],
+        blockers: String(item.blockers || "").trim(),
+        fromQ: null, // backend doesn't tag execution_items to questions
+      }));
+
+      slot.brief = {
+        summary: String(payload.execution_summary || payload.key_question || "").trim(),
+        thinking,
+      };
+      slot.loaded = true;
+    } catch (err) {
+      slot.error = err.message || "Unable to load node detail.";
+    } finally {
+      slot.loading = false;
+      if (state.activeNodeId === node.id) {
+        renderBuildupShell();
+        renderBuildupBriefAndThread();
+        renderActions();
+        renderProgressStrip();
       }
-      return accumulator;
-    },
-    { high: 0, medium: 0, low: 0 },
-  );
+    }
+    return slot;
+  }
 
-  if (assessmentHighPriority) {
-    assessmentHighPriority.textContent = String(totals.high);
+  /* ============ Step 3 — open a node ============ */
+  function openNodeInBuildup(nodeId) {
+    const node = state.nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    state.activeNodeId = nodeId;
+    state.editingQid = null;
+    showView("buildup");
+    renderBuildupShell();
+    ensureBuildSlot(nodeId);
+    fetchNodeBuild(node); // async; will trigger re-render when done
+    renderBuildupBriefAndThread();
+    renderActions();
+    renderProgressStrip();
   }
-  if (assessmentMediumPriority) {
-    assessmentMediumPriority.textContent = String(totals.medium);
-  }
-  if (assessmentLowPriority) {
-    assessmentLowPriority.textContent = String(totals.low);
-  }
-}
 
-function openNodeModal(nodeId) {
-  const node = state.roadmap.find((item) => item.id === nodeId);
-  if (!node) {
-    return;
-  }
-  state.activeNodeId = nodeId;
-  nodeModalName.value = node.title;
-  nodeModalWhy.value = node.why;
-  nodeModalBreakdown.value = node.breakdown;
-  nodeModalContext.value = node.suggested_context;
-  renderNodeModalFollowUpResponses(node.follow_up_threads || []);
-  nodeModalFollowUpInput.value = "";
-  nodeModalFollowUpType.value = "Confirmed fact";
-  nodeModal.hidden = false;
-  document.body.style.overflow = "hidden";
-  autoResize(nodeModalWhy);
-  autoResize(nodeModalBreakdown);
-  autoResize(nodeModalContext);
-  autoResize(nodeModalFollowUpInput);
-}
+  /* ============ Step 3 — render ============ */
+  function renderBuildupShell() {
+    /* Tabs */
+    nodeTabsEl.innerHTML = state.nodes.map((node) => {
+      const st = nodeStatus(node.id);
+      const onCls = node.id === state.activeNodeId ? " on" : "";
+      const doneCls = st === "settled" ? " done" : "";
+      const idx = state.nodes.indexOf(node) + 1;
+      const tnum = st === "settled" ? "✓" : pad2(idx);
+      return (
+        '<button type="button" class="node-tab' + onCls + doneCls + '" data-node-id="' +
+        escapeHtml(node.id) + '">' +
+        '<span class="tnum">' + tnum + "</span> " +
+        escapeHtml(node.title) +
+        "</button>"
+      );
+    }).join("");
+    nodeTabsEl.querySelectorAll(".node-tab").forEach((tab) => {
+      tab.addEventListener("click", () => openNodeInBuildup(tab.dataset.nodeId));
+    });
 
-function closeNodeModal() {
-  nodeModal.hidden = true;
-  state.activeNodeId = null;
-  document.body.style.overflow = "";
-}
+    const node = state.nodes.find((n) => n.id === state.activeNodeId);
+    if (node) {
+      buildupTitle.textContent = node.title;
+      crumbNode.textContent = node.title;
+      document.title = "Strenaysis — Workspace · " + node.title;
+    }
+  }
 
-async function saveNodeModal() {
-  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
-  if (!node) {
-    return;
-  }
-  const nodeIndex = state.roadmap.findIndex((item) => item.id === node.id);
-  node.title = nodeModalName.value.trim();
-  node.why = nodeModalWhy.value.trim();
-  node.breakdown = nodeModalBreakdown.value.trim();
-  node.suggested_context = nodeModalContext.value.trim();
-  persistPendingNodeModalResponse(node);
-  try {
-    await refreshRoadmapFollowUps(0);
-  } catch (error) {
-    window.alert(error.message);
-  }
-  renderRoadmapEditor();
-  closeNodeModal();
-}
+  function renderBuildupBriefAndThread() {
+    const node = state.nodes.find((n) => n.id === state.activeNodeId);
+    const slot = state.nodeBuilds[state.activeNodeId];
+    if (!node || !slot) return;
 
-function renderNodeModalFollowUpResponses(items) {
-  if (!nodeModalFollowUpResponses) {
-    return;
+    /* Brief */
+    nbDesc.textContent = node.description || "—";
+    if (slot.loading) {
+      nbGuidance.textContent = "Loading guidance…";
+    } else if (slot.error) {
+      nbGuidance.textContent = "Could not load: " + slot.error;
+    } else {
+      nbGuidance.textContent = slot.brief.summary || "Guidance unavailable.";
+    }
+    if (slot.brief.thinking && slot.brief.thinking.length) {
+      nbThinking.style.display = "";
+      nbThinking.removeAttribute("open");
+      nbThinkingBody.innerHTML =
+        "<ol>" +
+        slot.brief.thinking.map((t) =>
+          "<li><strong>" + escapeHtml(t.label) + "</strong> — " + escapeHtml(t.text) + "</li>"
+        ).join("") +
+        "</ol>";
+    } else {
+      nbThinking.style.display = "none";
+    }
+
+    /* Thread */
+    if (slot.loading) {
+      threadEl.innerHTML = '<div class="thread-loading">Loading guided questions…</div>';
+      return;
+    }
+    if (slot.error) {
+      threadEl.innerHTML = '<div class="thread-empty">' + escapeHtml(slot.error) + "</div>";
+      return;
+    }
+    if (!slot.questions.length) {
+      threadEl.innerHTML =
+        '<div class="thread-empty">No coaching questions were generated for this node. Move on or revisit later.</div>';
+      return;
+    }
+
+    /* Find first unanswered */
+    let firstUnansweredIdx = slot.questions.findIndex((q) => !q.answer || !q.answer.trim());
+    threadEl.innerHTML = slot.questions.map((q, i) => {
+      const total = slot.questions.length;
+      const isAnswered = q.answer && q.answer.trim();
+      const isEditing = state.editingQid === q.id;
+      const isCurrent = !isAnswered && i === firstUnansweredIdx;
+
+      let body = '<div class="ai-msg">' +
+        '<div class="ai-avatar">S</div>' +
+        '<div class="ai-body">' +
+          '<div class="ai-label"><span class="q-num">Q' + (i + 1) + " of " + total + "</span></div>" +
+          '<div class="ai-text">' + escapeHtml(q.text) + "</div>" +
+        "</div></div>";
+
+      if (isAnswered && !isEditing) {
+        const t = q.responseType || "assumption";
+        body += '<div class="user-resp">' +
+          '<div class="ur-head">' +
+            '<span class="ur-type ' + t + '">' + escapeHtml(t.charAt(0).toUpperCase() + t.slice(1)) + "</span>" +
+          "</div>" +
+          '<div class="ur-text">' + escapeHtml(q.answer) + "</div>" +
+          '<button type="button" class="ur-edit" data-qid="' + escapeHtml(q.id) + '">Edit response</button>' +
+        "</div>";
+        if (q.followup) {
+          body += '<div class="ai-followup">' + escapeHtml(q.followup) + "</div>";
+        }
+      } else if (isCurrent || isEditing) {
+        const prefill = isEditing ? (q.answer || "") : "";
+        const prefillType = isEditing ? (q.responseType || "assumption") : "assumption";
+        body += renderComposerHtml(q.id, prefill, prefillType, isEditing);
+      }
+      /* Future unanswered → just the question, no composer */
+
+      return '<div class="exchange">' + body + "</div>";
+    }).join("");
+
+    wireThreadHandlers();
   }
-  const values = normalizeNodeFollowUpThreads({ follow_up_threads: items });
-  if (!values.length) {
-    nodeModalFollowUpResponses.innerHTML = `
-      <article class="followup-response-empty node-followup-empty">
-        Saved responses will appear here as you add them. Keep only the key follow-up context that has already been covered.
-      </article>
-    `;
-    return;
+
+  function renderComposerHtml(qid, prefill, type, isEditing) {
+    const types = ["confirmed", "assumption", "hypothesis"];
+    return '<div class="composer" data-qid="' + escapeHtml(qid) + '">' +
+      '<textarea class="answer-input" placeholder="Type your answer…">' +
+        escapeHtml(prefill) +
+      "</textarea>" +
+      '<div class="composer-bar">' +
+        '<select class="resp-type">' +
+          types.map((t) =>
+            '<option value="' + t + '"' + (t === type ? " selected" : "") + ">" +
+            (t.charAt(0).toUpperCase() + t.slice(1)) + "</option>"
+          ).join("") +
+        "</select>" +
+        '<span class="spacer"></span>' +
+        '<span class="composer-charcount">' + (prefill.length || 0) + ' chars</span>' +
+        (isEditing
+          ? '<button type="button" class="btn btn-ghost cancel-edit-btn">Cancel</button>'
+          : "") +
+        '<button type="button" class="btn btn-primary submit-answer-btn"' +
+          (prefill.trim().length >= MIN_ANSWER_CHARS ? "" : " disabled") + ">" +
+          (isEditing ? "Save changes" : "Submit answer") +
+        "</button>" +
+      "</div>" +
+    "</div>";
   }
-  nodeModalFollowUpResponses.innerHTML = "";
-  values.forEach((item, index) => {
-    const card = document.createElement("article");
-    card.className = "followup-response-card node-followup-card";
-    card.innerHTML = `
-      <button class="followup-response-summary" type="button">
-        <div class="followup-response-summary-copy">
-          <span class="followup-response-summary-type">${escapeHtml(compactFollowUpText(String(item.prompt || "Follow-Up Prompt"), 52))}</span>
-          <span class="followup-response-summary-text">${escapeHtml(`${item.responses.length} response${item.responses.length === 1 ? "" : "s"}`)}</span>
-        </div>
-        <span class="followup-response-summary-toggle">Expand</span>
-      </button>
-      <div class="followup-response-body" hidden>
-        <div class="followup-thread-question">${escapeHtml(String(item.prompt || "No prompt recorded."))}</div>
-        <div class="followup-thread-answer-list"></div>
-        <div class="followup-response-actions">
-          <button class="ghost-button followup-response-remove" type="button">Remove</button>
-        </div>
-      </div>
-    `;
-    const summaryButton = card.querySelector(".followup-response-summary");
-    const summaryToggle = card.querySelector(".followup-response-summary-toggle");
-    const body = card.querySelector(".followup-response-body");
-    const answerList = card.querySelector(".followup-thread-answer-list");
-    const removeButton = card.querySelector(".followup-response-remove");
-    answerList.innerHTML = (item.responses || []).map((response, responseIndex) => `
-      <article class="followup-thread-answer">
-        <div class="followup-thread-answer-top">
-          <select class="followup-response-type assessment-type-select" data-response-index="${responseIndex}">
-            ${buildFollowUpTypeOptions(String(response.type || "Confirmed fact"))}
-          </select>
-        </div>
-        <textarea class="followup-response-text" data-response-index="${responseIndex}" rows="3" placeholder="Add the response you want to keep tied to this node."></textarea>
-      </article>
-    `).join("");
-    answerList.querySelectorAll(".followup-response-type").forEach((typeInput) => {
-      const responseIndex = Number(typeInput.dataset.responseIndex || "0");
-      const textInput = answerList.querySelector(`.followup-response-text[data-response-index="${responseIndex}"]`);
-      if (textInput) {
-        textInput.value = String(item.responses?.[responseIndex]?.text || "");
-        autoResize(textInput);
-        typeInput.addEventListener("change", () => updateNodeModalFollowUpResponse(index, responseIndex, { type: typeInput.value, text: textInput.value.trim() }));
-        textInput.addEventListener("input", () => {
-          autoResize(textInput);
-          updateNodeModalFollowUpResponse(index, responseIndex, { type: typeInput.value, text: textInput.value.trim() });
+
+  function wireThreadHandlers() {
+    threadEl.querySelectorAll(".composer").forEach((box) => {
+      const ta = box.querySelector(".answer-input");
+      const cc = box.querySelector(".composer-charcount");
+      const submitBtn = box.querySelector(".submit-answer-btn");
+      const select = box.querySelector(".resp-type");
+      const cancelBtn = box.querySelector(".cancel-edit-btn");
+
+      ta.addEventListener("input", () => {
+        const len = ta.value.trim().length;
+        cc.textContent = ta.value.length + " chars";
+        submitBtn.disabled = len < MIN_ANSWER_CHARS;
+      });
+
+      submitBtn.addEventListener("click", () => {
+        const qid = box.dataset.qid;
+        const text = ta.value.trim();
+        const type = select.value;
+        if (text.length < MIN_ANSWER_CHARS) return;
+        submitAnswer(qid, text, type);
+      });
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => {
+          state.editingQid = null;
+          renderBuildupBriefAndThread();
         });
       }
-    });
-    summaryButton.addEventListener("click", () => {
-      const willOpen = body.hasAttribute("hidden");
-      nodeModalFollowUpResponses.querySelectorAll(".followup-response-body").forEach((element) => element.setAttribute("hidden", ""));
-      nodeModalFollowUpResponses.querySelectorAll(".followup-response-summary-toggle").forEach((element) => {
-        element.textContent = "Expand";
+
+      /* Cmd/Ctrl+Enter in this textarea */
+      ta.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          e.preventDefault();
+          if (!submitBtn.disabled) submitBtn.click();
+        }
       });
-      if (willOpen) {
-        body.removeAttribute("hidden");
-        summaryToggle.textContent = "Collapse";
+    });
+
+    threadEl.querySelectorAll(".ur-edit").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.editingQid = btn.dataset.qid;
+        renderBuildupBriefAndThread();
+        setTimeout(() => {
+          const ta = threadEl.querySelector('.composer[data-qid="' + btn.dataset.qid + '"] .answer-input');
+          if (ta) ta.focus();
+        }, 0);
+      });
+    });
+  }
+
+  /* ============ Step 3 — answer submit ============ */
+  function submitAnswer(qid, text, type) {
+    const slot = state.nodeBuilds[state.activeNodeId];
+    if (!slot) return;
+    const q = slot.questions.find((x) => x.id === qid);
+    if (!q) return;
+
+    const wasEdit = !!q.answer;
+    q.answer = text;
+    q.responseType = type;
+    if (!wasEdit) {
+      q.followup = "Noted. The next question builds on this position, so keep it in mind as you continue.";
+      /* Auto-suggest an action item tied to this question */
+      const qIdx = slot.questions.indexOf(q);
+      slot.nextActionIdx = (slot.nextActionIdx || slot.actions.length) + 1;
+      slot.actions.push({
+        id: "a_" + state.activeNodeId + "_auto_" + slot.nextActionIdx,
+        title: "Review and validate: " + truncate(text, 70),
+        detail: "This was tagged as " + type + ". Confirm with the data or a subject-matter expert before building on it.",
+        owner: "", collaborator: "", source: "", artifact: "",
+        approval: APPROVAL_OPTIONS[0],
+        blockers: "",
+        fromQ: qIdx + 1,
+      });
+    }
+    state.editingQid = null;
+    pulseSave();
+    /* Re-render in dependency order: node status may have changed → tabs + Step 2 list */
+    renderBuildupShell();
+    renderBuildupBriefAndThread();
+    renderActions();
+    renderProgressStrip();
+
+    setTimeout(() => {
+      const nextComposer = threadEl.querySelector(".composer");
+      const target = nextComposer || threadEl.querySelector(".exchange:last-child");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 60);
+  }
+
+  /* ============ Step 3 — action items ============ */
+  function renderActions() {
+    const slot = state.nodeBuilds[state.activeNodeId];
+    if (!slot) return;
+    const acts = slot.actions || [];
+    if (!acts.length) {
+      actionListEl.innerHTML =
+        '<div class="actions-empty">No action items yet. Answer follow-up questions to generate suggested items for your workplan.</div>';
+      actionsCountEl.textContent = "no items yet";
+      return;
+    }
+    actionsCountEl.textContent = acts.length + " item" + (acts.length !== 1 ? "s" : "");
+    actionListEl.innerHTML = acts.map((a, i) => {
+      const letter = ALPHABET[i] || String(i + 1);
+      const fromHtml = a.fromQ ? "From Q" + a.fromQ : "Suggested";
+      return (
+        '<details class="action-item" data-action-id="' + escapeHtml(a.id) + '">' +
+        '<summary>' +
+          '<span class="ai-num">' + letter + "</span>" +
+          '<span class="ai-title">' + escapeHtml(a.title) + "</span>" +
+          '<span class="ai-meta">' + escapeHtml(fromHtml) + "</span>" +
+          '<span class="chev">›</span>' +
+        "</summary>" +
+        '<div class="action-body">' +
+          renderActionField("wide", "Action", "textarea", "detail", a.detail) +
+          renderActionField("", "Owner", "input", "owner", a.owner, "Who owns this?") +
+          renderActionField("", "Collaborator", "input", "collaborator", a.collaborator, "Optional") +
+          renderActionField("", "Source / system", "input", "source", a.source, "Table or system") +
+          renderActionApprovalSelect(a.approval) +
+          renderActionField("wide", "Artifact to create", "input", "artifact", a.artifact, "What deliverable comes out of this?") +
+          renderActionField("wide", "Blockers", "input", "blockers", a.blockers, "Anything blocking this work?") +
+        "</div>" +
+        '<div class="action-footer">' +
+          '<span class="count">Auto-saved (locally)</span>' +
+          '<button type="button" class="btn btn-ghost btn-danger remove-action-btn">Remove item</button>' +
+        "</div>" +
+        "</details>"
+      );
+    }).join("");
+
+    /* Accordion: one open at a time */
+    actionListEl.querySelectorAll(".action-item").forEach((item) => {
+      item.addEventListener("toggle", () => {
+        if (item.open) {
+          actionListEl.querySelectorAll(".action-item[open]").forEach((other) => {
+            if (other !== item) other.removeAttribute("open");
+          });
+        }
+      });
+    });
+
+    /* Field changes */
+    actionListEl.querySelectorAll("[data-field]").forEach((el) => {
+      el.addEventListener("input", onActionFieldChange);
+      el.addEventListener("change", onActionFieldChange);
+    });
+
+    /* Remove buttons */
+    actionListEl.querySelectorAll(".remove-action-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const item = btn.closest(".action-item");
+        const id = item.dataset.actionId;
+        slot.actions = slot.actions.filter((a) => a.id !== id);
+        pulseSave();
+        renderActions();
+      });
+    });
+  }
+
+  function renderActionField(cls, label, kind, field, value, placeholder) {
+    const safePh = placeholder ? ' placeholder="' + escapeHtml(placeholder) + '"' : "";
+    const safeVal = escapeHtml(value || "");
+    if (kind === "textarea") {
+      return '<div class="' + cls + '">' +
+        '<label class="field-label">' + escapeHtml(label) + "</label>" +
+        '<textarea rows="2" data-field="' + field + '"' + safePh + ">" + safeVal + "</textarea>" +
+        "</div>";
+    }
+    return '<div class="' + cls + '">' +
+      '<label class="field-label">' + escapeHtml(label) + "</label>" +
+      '<input type="text" data-field="' + field + '" value="' + safeVal + '"' + safePh + " />" +
+      "</div>";
+  }
+
+  function renderActionApprovalSelect(current) {
+    return '<div>' +
+      '<label class="field-label">Needs approval</label>' +
+      '<select data-field="approval">' +
+        APPROVAL_OPTIONS.map((opt) =>
+          '<option' + (opt === current ? " selected" : "") + ">" + escapeHtml(opt) + "</option>"
+        ).join("") +
+      "</select>" +
+    "</div>";
+  }
+
+  function onActionFieldChange(e) {
+    const item = e.target.closest(".action-item");
+    if (!item) return;
+    const slot = state.nodeBuilds[state.activeNodeId];
+    if (!slot) return;
+    const a = slot.actions.find((x) => x.id === item.dataset.actionId);
+    if (!a) return;
+    const field = e.target.dataset.field;
+    a[field] = e.target.value;
+    if (field === "detail") a.title = truncate(e.target.value || "Untitled action", 80);
+    pulseSave();
+    /* Don't fully re-render — keep focus + accordion state */
+  }
+
+  function addAction() {
+    const slot = state.nodeBuilds[state.activeNodeId];
+    if (!slot) return;
+    slot.nextActionIdx = (slot.nextActionIdx || slot.actions.length) + 1;
+    const newAct = {
+      id: "a_" + state.activeNodeId + "_manual_" + slot.nextActionIdx,
+      title: "New action item",
+      detail: "", owner: "", collaborator: "", source: "", artifact: "",
+      approval: APPROVAL_OPTIONS[0], blockers: "", fromQ: null,
+    };
+    slot.actions.push(newAct);
+    pulseSave();
+    renderActions();
+    /* Open the new one */
+    setTimeout(() => {
+      const item = actionListEl.querySelector('.action-item[data-action-id="' + newAct.id + '"]');
+      if (item) {
+        item.open = true;
+        const ta = item.querySelector('[data-field="detail"]');
+        if (ta) ta.focus();
+        item.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+    }, 0);
+  }
+
+  /* ============ Step 3 — sticky bar ============ */
+  function renderProgressStrip() {
+    const total = state.nodes.length;
+    const settled = state.nodes.filter((n) => nodeStatus(n.id) === "settled").length;
+    const activeIdx = state.nodes.findIndex((n) => n.id === state.activeNodeId);
+    let html = "";
+    for (let i = 0; i < total; i++) {
+      const st = nodeStatus(state.nodes[i].id);
+      const cls = st === "settled" ? "bar on" : i === activeIdx ? "bar now" : "bar";
+      html += '<span class="' + cls + '"></span>';
+    }
+    html += '<span class="progress-counter" id="progress-counter" style="margin-left:8px;">' +
+      settled + " of " + total + " settled</span>";
+    progressStripEl.innerHTML = html;
+  }
+
+  function pulseSave() {
+    saveIndicator.innerHTML =
+      '<span class="saved-dot" style="background:var(--accent)"></span> Saving…';
+    clearTimeout(state._saveTimeout);
+    state._saveTimeout = setTimeout(() => {
+      saveIndicator.innerHTML = '<span class="saved-dot"></span> Saved just now';
+    }, 500);
+  }
+
+  /* ============ Step 4 — render ============ */
+  function renderSummary() {
+    /* Title — the THESIS question itself, not the AI's classification commentary.
+       (assessment_title is meta-reasoning about the template choice; it belongs
+       in the callout below, not as the page headline.) */
+    /* Split the thesis at the first sentence boundary: h1 gets the headline
+       statement, the lede gets the supporting context. If the remainder is
+       trivially short (or absent), hide the lede so the page breathes. */
+    const { lead, trail } = splitThesis(state.problem);
+    summaryTitle.textContent = lead ? truncate(lead, 280) : "Problem review";
+    const ledeEl = document.getElementById("summary-lede");
+    if (trail) {
+      ledeEl.textContent = trail;
+      ledeEl.hidden = false;
+    } else {
+      ledeEl.textContent = "";
+      ledeEl.hidden = true;
+    }
+    document.title = "Strenaysis — Review";
+
+    /* "Why this template" callout — show only when the backend provided either
+       assessment_title or assessment_recap. */
+    const calloutEl = document.getElementById("summary-assessment-callout");
+    const calloutTitle = document.getElementById("summary-assessment-title");
+    const calloutBody = document.getElementById("summary-assessment-recap");
+    const hasTitle = !!state.assessmentTitle;
+    const hasRecap = !!state.assessmentRecap;
+    calloutEl.hidden = !(hasTitle || hasRecap);
+    calloutTitle.textContent = state.assessmentTitle || "";
+    calloutTitle.hidden = !hasTitle;
+    calloutBody.textContent = state.assessmentRecap || "";
+    calloutBody.hidden = !hasRecap;
+
+    /* Status chip */
+    const totalNodes = state.nodes.length;
+    const settledNodes = state.nodes.filter((n) => nodeStatus(n.id) === "settled").length;
+    const isComplete = totalNodes > 0 && settledNodes === totalNodes;
+    summaryStatusChip.className = "chip " + (isComplete ? "ok" : "active");
+    summaryStatusChip.innerHTML = '<span class="dot"></span> ' +
+      (isComplete ? "Complete" : "In progress");
+
+    /* Meta strip */
+    metaType.textContent = formatProblemType(state.problemType || state.inferredProblemType);
+    metaNodes.textContent = totalNodes
+      ? settledNodes + " of " + totalNodes + " settled"
+      : "—";
+    const totalActions = state.nodes.reduce((acc, n) => {
+      const slot = state.nodeBuilds[n.id];
+      return acc + (slot && slot.actions ? slot.actions.length : 0);
+    }, 0);
+    metaActions.textContent = totalActions ? String(totalActions) : "—";
+    metaDate.textContent = new Date().toLocaleDateString(undefined, {
+      year: "numeric", month: "short", day: "numeric",
     });
-    removeButton.addEventListener("click", () => removeNodeModalFollowUpResponse(index));
-    nodeModalFollowUpResponses.appendChild(card);
-  });
-}
 
-function compactFollowUpText(text) {
-  const normalized = String(text || "").replace(/\s+/g, " ").trim();
-  if (!normalized) {
-    return "No response text added yet.";
-  }
-  return normalized.length > 96 ? `${normalized.slice(0, 93)}...` : normalized;
-}
+    /* Executive summary */
+    execSummaryText.textContent = composeExecutiveSummary(settledNodes, totalNodes, totalActions);
 
-function normalizeNodeFollowUpThreads(node) {
-  const raw = Array.isArray(node?.follow_up_threads) ? node.follow_up_threads : [];
-  return raw
-    .map((thread) => ({
-      prompt: String(thread?.prompt || "").trim(),
-      responses: Array.isArray(thread?.responses)
-        ? thread.responses
-            .map((response) => ({
-              type: String(response?.type || "Confirmed fact").trim() || "Confirmed fact",
-              text: String(response?.text || "").trim(),
-            }))
-            .filter((response) => response.text)
-        : [],
-    }))
-    .filter((thread) => thread.prompt || thread.responses.length);
-}
+    /* Per-node reports */
+    renderNodeReports();
 
-function getNextNodeFollowUpPrompt(node, threads) {
-  const normalizedThreads = normalizeNodeFollowUpThreads({ follow_up_threads: threads });
-  const currentPrompt = String(node?.suggested_context || "").trim();
-  if (isNoAdditionalSuggestedItem(currentPrompt)) {
-    return NO_ADDITIONAL_SUGGESTED_ITEM;
+    /* Consolidated workplan */
+    renderWorkplan();
   }
-  if (!normalizedThreads.length) {
-    return currentPrompt || NO_ADDITIONAL_SUGGESTED_ITEM;
-  }
-  if (normalizedThreads.length === 1) {
-    return "What supporting evidence, owner, or constraint should be attached to that answer so this node can move forward cleanly?";
-  }
-  return NO_ADDITIONAL_SUGGESTED_ITEM;
-}
 
-function persistPendingNodeModalResponse(node) {
-  if (!node) {
-    return;
-  }
-  const response = nodeModalFollowUpInput.value.trim();
-  const prompt = nodeModalContext.value.trim();
-  if (!response || !prompt || isNoAdditionalSuggestedItem(prompt)) {
-    return;
-  }
-  const threads = normalizeNodeFollowUpThreads(node);
-  const existingThread = threads.find((item) => item.prompt === prompt);
-  const nextResponse = {
-    type: nodeModalFollowUpType.value,
-    text: response,
-  };
-  if (existingThread) {
-    existingThread.responses.push(nextResponse);
-  } else {
-    threads.push({
-      prompt,
-      responses: [nextResponse],
+  function composeExecutiveSummary(settledNodes, totalNodes, totalActions) {
+    /* Note: we deliberately do NOT lead with state.assessmentRecap here —
+       it now lives in the "Why this template" callout above. The exec summary
+       should be about what the user did, not why the AI picked the template. */
+    const pieces = [];
+
+    /* Answer-type counts across all nodes */
+    let confirmed = 0, assumption = 0, hypothesis = 0, answered = 0, totalQ = 0;
+    Object.values(state.nodeBuilds).forEach((slot) => {
+      if (!slot || !slot.questions) return;
+      totalQ += slot.questions.length;
+      slot.questions.forEach((q) => {
+        if (!q.answer || !q.answer.trim()) return;
+        answered++;
+        const t = (q.responseType || "").toLowerCase();
+        if (t === "confirmed") confirmed++;
+        else if (t === "hypothesis") hypothesis++;
+        else assumption++;
+      });
     });
-  }
-  node.follow_up_threads = threads;
-  node.follow_up_responses = [];
-  nodeModalFollowUpInput.value = "";
-  nodeModalFollowUpType.value = "Confirmed fact";
-}
 
-async function refreshRoadmapFollowUps(startIndex = 0) {
-  if (!state.roadmap.length) {
-    return;
+    const statline = [
+      settledNodes + " of " + totalNodes + " nodes settled",
+      answered + " of " + totalQ + " coaching questions addressed",
+      totalActions + " action item" + (totalActions === 1 ? "" : "s") + " in the workplan",
+    ];
+    pieces.push(statline.join(" · ") + ".");
+
+    if (answered > 0) {
+      const tagPieces = [];
+      if (confirmed) tagPieces.push(confirmed + " confirmed");
+      if (assumption) tagPieces.push(assumption + " assumption" + (assumption === 1 ? "" : "s"));
+      if (hypothesis) tagPieces.push(hypothesis + " hypothes" + (hypothesis === 1 ? "is" : "es"));
+      pieces.push("Positions taken: " + tagPieces.join(", ") + ".");
+    } else {
+      pieces.push("No coaching answers have been recorded yet — every node is still open.");
+    }
+
+    return pieces.join(" ");
   }
-  const response = await fetch("/api/refresh-followups", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+
+  function composeNodeSummary(node) {
+    const slot = state.nodeBuilds[node.id];
+    if (!slot || !slot.loaded) {
+      return "Node detail has not been loaded yet. Open it in the workspace to generate the coaching breakdown.";
+    }
+    const total = slot.questions.length;
+    const answered = slot.questions.filter((q) => q.answer && q.answer.trim()).length;
+    const summary = slot.brief.summary || node.description || "";
+
+    if (total === 0) {
+      return summary || "This node was generated but had no coaching questions in the breakdown.";
+    }
+    if (answered === 0) {
+      return (summary ? summary + " " : "") +
+        "No coaching questions answered yet — " + total + " open below.";
+    }
+    let confirmed = 0, assumption = 0, hypothesis = 0;
+    slot.questions.forEach((q) => {
+      if (!q.answer || !q.answer.trim()) return;
+      const t = (q.responseType || "").toLowerCase();
+      if (t === "confirmed") confirmed++;
+      else if (t === "hypothesis") hypothesis++;
+      else assumption++;
+    });
+    const tagPieces = [];
+    if (confirmed) tagPieces.push(confirmed + " confirmed");
+    if (assumption) tagPieces.push(assumption + " assumption" + (assumption === 1 ? "" : "s"));
+    if (hypothesis) tagPieces.push(hypothesis + " hypothes" + (hypothesis === 1 ? "is" : "es"));
+    const tagLine = tagPieces.length ? " (" + tagPieces.join(", ") + ")" : "";
+    const intro = summary ? summary + " " : "";
+    if (answered === total) {
+      return intro + "All " + total + " coaching questions are addressed" + tagLine + ".";
+    }
+    return intro + answered + " of " + total + " coaching questions answered" + tagLine +
+      ". The remaining " + (total - answered) + " are still open.";
+  }
+
+  function renderNodeReports() {
+    if (!state.nodes.length) {
+      nodeReportsEl.innerHTML =
+        '<div class="recent-empty">No nodes in this roadmap yet.</div>';
+      return;
+    }
+    nodeReportsEl.innerHTML = state.nodes.map((node, idx) => {
+      const slot = state.nodeBuilds[node.id];
+      const st = nodeStatus(node.id);
+      const chipCls = st === "settled" ? "chip ok" : st === "in-progress" ? "chip warn" : "chip";
+      const chipLabel = st === "settled" ? "Settled" : st === "in-progress" ? "In progress" : "Open";
+      const narrative = composeNodeSummary(node);
+      return (
+        '<section class="node-report">' +
+          '<div class="nr-header">' +
+            '<span class="nr-num">' + pad2(idx + 1) + "</span>" +
+            "<h2>" + escapeHtml(node.title) + "</h2>" +
+            '<span class="spacer"></span>' +
+            '<span class="' + chipCls + '"><span class="dot"></span> ' + chipLabel + "</span>" +
+          "</div>" +
+          '<p class="nr-summary">' + escapeHtml(narrative) + "</p>" +
+          renderQaDisclosure(slot) +
+          renderNodeActionsTable(slot) +
+        "</section>"
+      );
+    }).join("");
+  }
+
+  function renderQaDisclosure(slot) {
+    if (!slot || !slot.loaded || !slot.questions.length) {
+      return '<p class="no-actions">No coaching questions recorded for this node.</p>';
+    }
+    const qs = slot.questions;
+    const answered = qs.filter((q) => q.answer && q.answer.trim()).length;
+    const summary = answered === qs.length
+      ? qs.length + " question" + (qs.length === 1 ? "" : "s") + " answered"
+      : answered + " answered, " + (qs.length - answered) + " remaining";
+    const rows = qs.map((q) => {
+      const isAnswered = q.answer && q.answer.trim();
+      let body = '<span class="qa-q-label">Q</span>' +
+        '<div class="qa-q-text">' + escapeHtml(q.text) + "</div>";
+      body += '<span class="qa-a-label">A</span>';
+      if (isAnswered) {
+        const t = (q.responseType || "assumption").toLowerCase();
+        body += "<div>" +
+          '<span class="qa-type ' + t + '">' + (t.charAt(0).toUpperCase() + t.slice(1)) + "</span>" +
+          '<div class="qa-a-text">' + escapeHtml(q.answer) + "</div>" +
+          "</div>";
+        if (q.followup) {
+          body += '<span></span>' +
+            '<div class="qa-followup">' + escapeHtml(q.followup) + "</div>";
+        }
+      } else {
+        body += '<div class="qa-unanswered">Not yet answered</div>';
+      }
+      return '<div class="qa-exchange">' + body + "</div>";
+    }).join("");
+    return '<details class="qa-disclosure">' +
+      '<summary><span class="chev">›</span> ' + summary + "</summary>" +
+      '<div class="qa-thread">' + rows + "</div>" +
+    "</details>";
+  }
+
+  function renderNodeActionsTable(slot) {
+    if (!slot || !slot.loaded || !slot.actions.length) {
+      return '<p class="no-actions">No action items for this node.</p>';
+    }
+    const rows = slot.actions.map((a, i) => {
+      const letter = ALPHABET[i] || String(i + 1);
+      const ownerHtml = a.owner
+        ? '<td class="at-owner">' + escapeHtml(a.owner) + "</td>"
+        : '<td class="at-owner unassigned">Unassigned</td>';
+      return "<tr>" +
+        '<td class="at-num">' + letter + "</td>" +
+        '<td class="at-action">' + escapeHtml(a.detail || a.title) + "</td>" +
+        ownerHtml +
+        '<td class="at-approval">' + escapeHtml(a.approval || "—") + "</td>" +
+      "</tr>";
+    }).join("");
+    return '<table class="actions-table">' +
+      "<thead><tr><th></th><th>Action item</th><th>Owner</th><th>Approval</th></tr></thead>" +
+      "<tbody>" + rows + "</tbody>" +
+    "</table>";
+  }
+
+  function renderWorkplan() {
+    const rows = [];
+    let num = 1;
+    state.nodes.forEach((node) => {
+      const slot = state.nodeBuilds[node.id];
+      if (!slot || !slot.actions) return;
+      slot.actions.forEach((a) => {
+        const ownerHtml = a.owner
+          ? '<td class="wp-owner">' + escapeHtml(a.owner) + "</td>"
+          : '<td class="wp-owner unassigned">Unassigned</td>';
+        rows.push("<tr>" +
+          '<td class="wp-num">' + num + "</td>" +
+          '<td class="wp-node">' + escapeHtml(truncate(node.title, 18)) + "</td>" +
+          "<td>" + escapeHtml(a.detail || a.title) + "</td>" +
+          ownerHtml +
+          '<td class="wp-approval">' + escapeHtml(a.approval || "—") + "</td>" +
+        "</tr>");
+        num++;
+      });
+    });
+    if (!rows.length) {
+      workplanTbody.innerHTML =
+        '<tr><td colspan="5" class="no-actions" style="padding: var(--s-4) 0;">' +
+        "No action items across nodes yet. Answer coaching questions in Step 3 to generate suggestions." +
+        "</td></tr>";
+    } else {
+      workplanTbody.innerHTML = rows.join("");
+    }
+  }
+
+  /* ============ Step 4 — serialize for backend ============ */
+  function serializeForBackend() {
+    const today = new Date();
+    const isoDate = today.getFullYear() + "-" +
+      pad2(today.getMonth() + 1) + "-" + pad2(today.getDate());
+
+    const nodes = state.nodes.map((node, i) => {
+      const slot = state.nodeBuilds[node.id] || {};
+      const st = nodeStatus(node.id);
+      const actions = (slot.actions || []).map((a) => ({
+        action: a.detail || a.title,
+        owner: a.owner || "",
+        collaborator: a.collaborator || "",
+        source: a.source || "",
+        artifact: a.artifact || "",
+        approval: a.approval || "",
+        blockers: a.blockers || "",
+      }));
+      const workstreams = (slot.brief && slot.brief.thinking || []).map((t) => ({
+        name: t.label || "",
+        purpose: t.text || "",
+      }));
+      return {
+        position: i + 1,
+        title: node.title,
+        why: node.description || "",
+        breakdown: node.breakdown || "",
+        is_custom: !!node.isCustom,
+        status: st,
+        questions: (slot.questions || []).map((q) => ({
+          text: q.text,
+          answer: q.answer || "",
+          response_type: q.responseType || "",
+          followup: q.followup || "",
+        })),
+        build: {
+          execution_summary: (slot.brief && slot.brief.summary) || "",
+          workstreams,
+          execution_items: actions,
+        },
+        /* Backend uses this magic-string match (see server.py:283) to count
+           ready_count in the recent list. */
+        suggested_context: st === "settled" ? "no additional suggested item" : "",
+      };
+    });
+
+    return {
       problem: state.problem,
       problem_details: state.problemDetails,
-      roadmap: serializeRoadmapForFollowUpRefresh(),
-    }),
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error || "Unable to refresh node follow-up prompts.");
+      problem_type: state.problemType,
+      assessment_title: state.assessmentTitle,
+      assessment_recap: state.assessmentRecap,
+      saved_date: isoDate,
+      priority: "Medium",
+      /* problem_name is a short label used in the file name + recent-list
+         display. Derive it from the THESIS (state.problem), not the AI's
+         classification commentary (state.assessmentTitle) — that's the same
+         mistake the Step 4 H1 made. */
+      problem_name: truncate(state.problem || "Problem", 60),
+      nodes,
+    };
   }
-  const prompts = Array.isArray(payload.suggested_contexts) ? payload.suggested_contexts : [];
-  prompts.forEach((prompt, index) => {
-    if (index < startIndex || !state.roadmap[index]) {
+
+  function showSaveToast(msg, isError) {
+    if (!saveToast) return;
+    saveToast.textContent = msg;
+    saveToast.classList.toggle("is-error", !!isError);
+    saveToast.classList.add("is-visible");
+    clearTimeout(state._saveToastTimer);
+    state._saveToastTimer = setTimeout(() => {
+      saveToast.classList.remove("is-visible");
+    }, 2500);
+  }
+
+  async function saveToHistory() {
+    if (!state.problem) {
+      showSaveToast("Nothing to save yet — no problem in state.", true);
       return;
     }
-    state.roadmap[index].suggested_context = String(prompt || "").trim() || NO_ADDITIONAL_SUGGESTED_ITEM;
-  });
-  renderRoadmapEditor();
-}
-
-function serializeRoadmapForFollowUpRefresh() {
-  return state.roadmap.map((node) => ({
-    title: String(node.title || "").trim(),
-    why: String(node.why || "").trim(),
-    breakdown: String(node.breakdown || "").trim(),
-    suggested_context: String(node.suggested_context || "").trim(),
-    follow_up_threads: normalizeNodeFollowUpThreads(node),
-    build_log: {
-      execution_summary: String(state.nodeBuilds[node.id]?.execution_summary || "").trim(),
-      key_question: String(state.nodeBuilds[node.id]?.key_question || "").trim(),
-      extracted_context: String(state.nodeBuilds[node.id]?.extracted_context || "").trim(),
-      open_questions: Array.isArray(state.nodeBuilds[node.id]?.open_questions)
-        ? state.nodeBuilds[node.id].open_questions
-        : [],
-      workstreams: Array.isArray(state.nodeBuilds[node.id]?.workstreams)
-        ? state.nodeBuilds[node.id].workstreams
-        : [],
-    },
-  }));
-}
-
-function updateNodeModalFollowUpResponse(index, responseIndex, nextValue) {
-  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
-  if (!node) {
-    return;
-  }
-  const items = normalizeNodeFollowUpThreads(node);
-  if (!items[index] || !items[index].responses?.[responseIndex]) {
-    return;
-  }
-  items[index].responses[responseIndex] = {
-    type: String(nextValue?.type || "Confirmed fact").trim(),
-    text: String(nextValue?.text || "").trim(),
-  };
-  node.follow_up_threads = items;
-}
-
-function removeNodeModalFollowUpResponse(index) {
-  const node = state.roadmap.find((item) => item.id === state.activeNodeId);
-  if (!node) {
-    return;
-  }
-  const items = normalizeNodeFollowUpThreads(node);
-  items.splice(index, 1);
-  node.follow_up_threads = items;
-  renderNodeModalFollowUpResponses(items);
-}
-
-function removeActiveNode() {
-  return;
-}
-
-function makeNodeId() {
-  const id = `node-${state.nextNodeId}`;
-  state.nextNodeId += 1;
-  return id;
-}
-
-  function resetNewNodeDraft() {
-    state.polishedDraft = null;
-  newNodeDraft.value = "";
-  newNodePreview.hidden = true;
-  newNodeAdvisory.hidden = true;
-  newNodeAdvisory.textContent = "";
-  newNodeAdvisory.classList.remove("is-caution");
-  newNodeTitleInput.value = "";
-  newNodeWhyInput.value = "";
-  newNodeBreakdownInput.value = "";
-  newNodeContextInput.value = "";
-    confirmAddNodeButton.disabled = true;
-      confirmAddNodeButton.textContent = "Confirm Add Node";
-    autoResizeAll();
+    const payload = serializeForBackend();
+    saveHistoryBtn.disabled = true;
+    const originalText = saveHistoryBtn.textContent;
+    saveHistoryBtn.textContent = "Saving…";
+    try {
+      const response = await fetch("/api/save-problem-framing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Save failed (" + response.status + ").");
+      showSaveToast("Saved to history.");
+      /* Refresh Step 1's recent list so it's fresh next visit */
+      loadRecent();
+    } catch (err) {
+      showSaveToast(err.message || "Save failed.", true);
+    } finally {
+      saveHistoryBtn.disabled = false;
+      saveHistoryBtn.textContent = originalText;
+    }
   }
 
-  function renderNewNodeAdvisory(draft) {
-  if (!newNodeAdvisory) {
-    return;
+  async function exportFile(format) {
+    if (!state.problem) {
+      showSaveToast("Nothing to export yet.", true);
+      return;
+    }
+    const btn = format === "docx" ? exportDocxBtn : exportPptxBtn;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Building…";
+    try {
+      const payload = Object.assign({ format }, serializeForBackend());
+      const response = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        let msg = "Export failed (" + response.status + ").";
+        try { const j = await response.json(); if (j.error) msg = j.error; } catch (_) {}
+        throw new Error(msg);
+      }
+      const blob = await response.blob();
+      const filename = "strenaysis-workflow." + format;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showSaveToast("Downloaded ." + format + ".");
+    } catch (err) {
+      showSaveToast(err.message || "Export failed.", true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
   }
-  const message = String(draft?.advisory || "").trim();
-  if (!message) {
-    newNodeAdvisory.hidden = true;
-    newNodeAdvisory.textContent = "";
-    newNodeAdvisory.classList.remove("is-caution");
-    return;
+
+  function startNewProblem() {
+    const hasWork = !!state.problem ||
+      !!Object.keys(state.nodeBuilds).length;
+    if (hasWork && !window.confirm("Start a new problem? Your current in-memory work will be cleared (saved framings are unaffected).")) {
+      return;
+    }
+    state.problem = "";
+    state.problemDetails = "";
+    state.problemType = "";
+    state.inferredProblemType = "";
+    state.assessmentTitle = "";
+    state.assessmentRecap = "";
+    state.nodes = [];
+    state.nodeBuilds = {};
+    state.activeNodeId = null;
+    state.editingQid = null;
+    if (problemInput) problemInput.value = "";
+    if (problemDetailsInput) problemDetailsInput.value = "";
+    if (contextDetails) contextDetails.open = false;
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    updateComposer();
+    showView("home");
   }
-  newNodeAdvisory.textContent = message;
-  newNodeAdvisory.hidden = false;
-  newNodeAdvisory.classList.toggle("is-caution", String(draft?.recommendation || "") === "caution");
-}
 
-function openDetailsModal(target) {
-  detailsModalTarget = target;
-  detailsModalInput.value =
-    target === "roadmap"
-      ? (roadmapProblemDetailsInput?.value || state.problemDetails || "")
-      : (problemDetailsInput?.value || state.problemDetails || "");
-  detailsModal.hidden = false;
-  document.body.style.overflow = "hidden";
-  detailsModalInput.scrollTop = 0;
-  detailsModalInput.focus();
-}
+  /* ============ Init ============ */
+  function resolveDOM() {
+    problemInput = document.getElementById("problem-input");
+    problemDetailsInput = document.getElementById("problem-details-input");
+    contextDetails = document.getElementById("context-details");
+    charCounter = document.getElementById("char-counter");
+    structureBtn = document.getElementById("structure-problem-btn");
+    saveDraftBtn = document.getElementById("save-draft-btn");
+    recentCount = document.getElementById("recent-count");
+    recentList = document.getElementById("recent-list");
+    sideRecentNav = document.getElementById("side-recent-nav");
+    sideHistoryCount = document.getElementById("side-history-count");
 
-function closeDetailsModal() {
-  detailsModal.hidden = true;
-  document.body.style.overflow = "";
-}
+    sideStep1 = document.getElementById("side-step1");
+    sideCurrentProblem = document.getElementById("side-current-problem");
+    cpSteps = Array.from(sideCurrentProblem.querySelectorAll(".side-step"));
 
-function openAddNodeModal() {
-  addNodeModal.hidden = false;
-  document.body.style.overflow = "hidden";
-  newNodeDraft.focus();
-}
+    homeView = document.getElementById("view-home");
+    roadmapView = document.getElementById("view-roadmap");
+    buildupView = document.getElementById("view-buildup");
+    summaryView = document.getElementById("view-summary");
 
-function closeAddNodeModal() {
-  addNodeModal.hidden = true;
-  document.body.style.overflow = "";
-}
+    roadmapTitle = document.getElementById("roadmap-title");
+    roadmapQuestion = document.getElementById("roadmap-question");
+    roadmapTypeChip = document.getElementById("roadmap-type-chip");
+    assessmentWhy = document.getElementById("assessment-why");
+    problemTypes = document.getElementById("problem-types");
+    updatePathBtn = document.getElementById("update-path-btn");
+    nodeListEl = document.getElementById("node-list");
+    addNodeTrigger = document.getElementById("add-node-trigger");
+    addNodeForm = document.getElementById("add-node-form");
+    newNodeName = document.getElementById("new-node-name");
+    newNodeDesc = document.getElementById("new-node-desc");
+    saveNodeBtn = document.getElementById("save-node-btn");
+    cancelNodeBtn = document.getElementById("cancel-node-btn");
+    settledCountEl = document.getElementById("settled-count");
+    backToHomeBtn = document.getElementById("back-to-home-btn");
+    toWorkspaceBtn = document.getElementById("to-workspace-btn");
 
-function setProblemDetails(value) {
-  state.problemDetails = value;
-  if (problemDetailsInput) {
-    problemDetailsInput.value = value;
+    crumbNode = document.getElementById("crumb-node");
+    buildupTitle = document.getElementById("buildup-title");
+    nodeTabsEl = document.getElementById("node-tabs");
+    nbDesc = document.getElementById("nb-desc");
+    nbGuidance = document.getElementById("nb-guidance");
+    nbThinking = document.getElementById("nb-thinking");
+    nbThinkingBody = document.getElementById("nb-thinking-body");
+    threadEl = document.getElementById("buildup-thread");
+    actionsCountEl = document.getElementById("actions-count");
+    actionListEl = document.getElementById("action-list");
+    addActionBtn = document.getElementById("add-action-btn");
+    saveIndicator = document.getElementById("save-indicator");
+    progressStripEl = document.getElementById("progress-strip");
+    progressCounter = document.getElementById("progress-counter");
+    backToRoadmapBtn = document.getElementById("back-to-roadmap-btn");
+    toSummaryBtn = document.getElementById("to-summary-btn");
+
+    summaryStatusChip = document.getElementById("summary-status-chip");
+    summaryTitle = document.getElementById("summary-title");
+    metaType = document.getElementById("meta-type");
+    metaNodes = document.getElementById("meta-nodes");
+    metaActions = document.getElementById("meta-actions");
+    metaDate = document.getElementById("meta-date");
+    execSummaryText = document.getElementById("exec-summary-text");
+    nodeReportsEl = document.getElementById("node-reports");
+    workplanSectionEl = document.getElementById("workplan-section");
+    workplanTbody = document.getElementById("workplan-tbody");
+    exportDocxBtn = document.getElementById("export-docx-btn");
+    exportPptxBtn = document.getElementById("export-pptx-btn");
+    backToBuildupBtn = document.getElementById("back-to-buildup-btn");
+    startNewBtn = document.getElementById("start-new-btn");
+    saveHistoryBtn = document.getElementById("save-history-btn");
+    saveToast = document.getElementById("save-toast");
   }
-  if (roadmapProblemDetailsInput) {
-    roadmapProblemDetailsInput.value = value;
-  }
-  updateProblemDetailsPreviews();
-}
 
-function updateProblemDetailsPreviews() {
-  const value =
-    state.problemDetails ||
-    problemDetailsInput?.value ||
-    roadmapProblemDetailsInput?.value ||
-    "";
-  [problemDetailsPreview, roadmapProblemDetailsPreview].filter(Boolean).forEach((preview) => {
-    preview.textContent = value
-      ? 'Details added. Click "Insert Details" to review or edit.'
-      : "No detailed bucket added yet.";
-    preview.classList.toggle("empty", !value);
-    preview.classList.toggle("has-content", Boolean(value));
-  });
-}
+  function wire() {
+    /* Step 1 */
+    problemInput.addEventListener("input", updateComposer);
+    structureBtn.addEventListener("click", submitProblem);
+    saveDraftBtn.addEventListener("click", saveDraft);
 
-function updateStepOneComposerState() {
-  if (!problemInput || !startRoadmapButton || !problemCharCounter) {
-    return;
-  }
-  const rawLength = problemInput.value.length;
-  const trimmedLength = problemInput.value.trim().length;
-  const isOverLimit = rawLength > STEP_ONE_MAX_CHARS;
-  if (!trimmedLength) {
-    problemCharCounter.textContent = "Type a question to continue";
-  } else if (isOverLimit) {
-    problemCharCounter.textContent = `${rawLength} / ${STEP_ONE_MAX_CHARS} - over the limit`;
-  } else {
-    problemCharCounter.textContent = `${rawLength} / ${STEP_ONE_MAX_CHARS}`;
-  }
-  problemCharCounter.classList.toggle("is-over-limit", isOverLimit);
-  startRoadmapButton.disabled = !trimmedLength || isOverLimit;
-}
-
-function collectWorkItems() {
-  return Array.from(detailWorkItems.querySelectorAll(".work-item-card"))
-    .map((card) => ({
-      action: card.querySelector(".work-item-action")?.value.trim() || "",
-      owner: card.querySelector(".work-item-owner")?.value.trim() || "",
-      collaborator: card.querySelector(".work-item-collaborator")?.value.trim() || "",
-      source: card.querySelector(".work-item-source")?.value.trim() || "",
-      artifact: card.querySelector(".work-item-artifact")?.value.trim() || "",
-      approval: card.querySelector(".work-item-approval")?.value.trim() || "",
-      blockers: card.querySelector(".work-item-blockers")?.value.trim() || "",
-    }))
-    .filter(
-      (item) =>
-        item.action ||
-        item.owner ||
-        item.collaborator ||
-        item.source ||
-        item.artifact ||
-        item.blockers ||
-        item.approval !== "No approval needed",
-    );
-}
-
-function formatList(items) {
-  return (items || []).join("\n");
-}
-
-function parseList(text) {
-  return String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-function formatWorkstreams(items) {
-  return (items || [])
-    .map((item) => `${item.name}: ${item.purpose} | Priority: ${item.priority} | Done when: ${item.completion_criteria}`)
-    .join("\n");
-}
-
-function syncBriefPreviews() {
-  if (detailNodeDescriptionPreview) {
-  detailNodeDescriptionPreview.textContent = detailNodeDescription.value.trim() || "No strategic tension added yet.";
-  }
-  if (detailNodeBreakdownPreview) {
-  detailNodeBreakdownPreview.textContent = detailNodeBreakdown.value.trim() || "No hypothesis tree added yet.";
-  }
-}
-
-function renderFollowUpPrompt() {
-  if (!detailFollowUpPrompt || !detailFollowUpSupport) {
-    return;
-  }
-  const currentNode = state.roadmap[state.currentIndex];
-  const prompt = String(currentNode?.suggested_context || "").trim() || "No additional suggested item.";
-  detailFollowUpPrompt.textContent = prompt;
-  const supportParts = [];
-  if (detailExecutionSummary.value.trim()) {
-    supportParts.push(`Agent frame: ${detailExecutionSummary.value.trim()}`);
-  }
-  const extracted = parseList(detailExtractedContext.value);
-  if (extracted.length) {
-    supportParts.push(`Already known: ${extracted.slice(0, 2).join(" | ")}`);
-  }
-  detailFollowUpSupport.textContent =
-    supportParts.join(" ") || "Keep the answers concise. Capture only the facts, evidence, assumptions, or exclusions needed to move this node forward.";
-  detailFollowUpSupport.classList.toggle("is-complete", isNoAdditionalSuggestedItem(prompt));
-}
-
-function renderFollowUpResponses(items) {
-  if (!detailFollowUpResponses) {
-    return;
-  }
-  const values = Array.isArray(items) ? items : [];
-  if (!values.length) {
-    detailFollowUpResponses.innerHTML = `
-      <article class="followup-response-empty">
-        No follow-up answers saved yet. Add only the key context needed for this node.
-      </article>
-    `;
-    return;
-  }
-  detailFollowUpResponses.innerHTML = "";
-  values.forEach((item, index) => {
-    const card = document.createElement("article");
-    card.className = "followup-response-card";
-    card.innerHTML = `
-      <div class="followup-response-top">
-        <select class="followup-response-type assessment-type-select">
-          ${buildFollowUpTypeOptions(String(item.type || "Confirmed fact"))}
-        </select>
-        <button class="ghost-button followup-response-remove" type="button">Remove</button>
-      </div>
-      <textarea class="followup-response-text" rows="3" placeholder="Add the response you want to keep tied to this node."></textarea>
-    `;
-    const typeInput = card.querySelector(".followup-response-type");
-    const textInput = card.querySelector(".followup-response-text");
-    const removeButton = card.querySelector(".followup-response-remove");
-    textInput.value = String(item.text || "");
-    typeInput.addEventListener("change", () => updateFollowUpResponse(index, { type: typeInput.value, text: textInput.value.trim() }));
-    textInput.addEventListener("input", () => {
-      autoResize(textInput);
-      updateFollowUpResponse(index, { type: typeInput.value, text: textInput.value.trim() });
+    /* Step 2 */
+    roadmapQuestion.addEventListener("input", () => { state.problem = roadmapQuestion.value; });
+    problemTypes.addEventListener("change", onProblemTypeChange);
+    updatePathBtn.addEventListener("click", triggerUpdatePath);
+    wireDragAndDrop();
+    addNodeTrigger.addEventListener("click", openAddNodeForm);
+    cancelNodeBtn.addEventListener("click", closeAddNodeForm);
+    newNodeName.addEventListener("input", checkNodeForm);
+    newNodeDesc.addEventListener("input", checkNodeForm);
+    saveNodeBtn.addEventListener("click", saveCustomNode);
+    backToHomeBtn.addEventListener("click", () => showView("home"));
+    toWorkspaceBtn.addEventListener("click", () => {
+      const first = state.nodes[0];
+      if (first) openNodeInBuildup(first.id);
     });
-    removeButton.addEventListener("click", () => removeFollowUpResponse(index));
-    detailFollowUpResponses.appendChild(card);
-    autoResize(textInput);
-  });
-}
 
-function renderDetailCoverageReview() {
-  if (!detailCoverageReview) {
-    return;
-  }
-  const currentNode = state.roadmap[state.currentIndex];
-  const threads = normalizeNodeFollowUpThreads(currentNode);
-  if (!threads.length) {
-    detailCoverageReview.innerHTML = `
-      <article class="detail-coverage-empty">
-        No diagnostic coverage has been saved for this lens yet. Any assumptions, evidence, or follow-up context captured during roadmap framing will appear here.
-      </article>
-    `;
-    return;
-  }
+    /* Step 3 */
+    backToRoadmapBtn.addEventListener("click", () => {
+      renderNodeList(); renderRoadmap();
+      showView("roadmap");
+    });
+    toSummaryBtn.addEventListener("click", () => {
+      renderSummary();
+      showView("summary");
+    });
+    addActionBtn.addEventListener("click", addAction);
 
-  detailCoverageReview.innerHTML = "";
-  threads.forEach((thread, index) => {
-    const card = document.createElement("article");
-    card.className = "detail-coverage-card";
-    const coverageType = deriveCoverageType(thread);
-    card.innerHTML = `
-      <button class="detail-coverage-summary" type="button" aria-expanded="false">
-        <span class="detail-coverage-type">${escapeHtml(coverageType)}</span>
-        <span class="detail-coverage-question">${escapeHtml(thread.prompt || "Untitled coverage item")}</span>
-        <span class="detail-coverage-toggle">Expand</span>
-      </button>
-      <div class="detail-coverage-body" hidden>
-        ${(thread.responses || []).length ? thread.responses.map((response) => `
-          <article class="detail-coverage-answer">
-            <span class="detail-coverage-answer-type">${escapeHtml(response.type || "Coverage")}</span>
-            <div class="detail-coverage-answer-text">${escapeHtml(response.text || "")}</div>
-          </article>
-        `).join("") : `
-          <article class="detail-coverage-answer">
-            <span class="detail-coverage-answer-type">${escapeHtml(coverageType)}</span>
-            <div class="detail-coverage-answer-text">${escapeHtml("No saved answer yet.")}</div>
-          </article>
-        `}
-      </div>
-    `;
-    const summaryButton = card.querySelector(".detail-coverage-summary");
-    const body = card.querySelector(".detail-coverage-body");
-    const toggle = card.querySelector(".detail-coverage-toggle");
-    summaryButton?.addEventListener("click", () => {
-      Array.from(detailCoverageReview.querySelectorAll(".detail-coverage-card")).forEach((otherCard, otherIndex) => {
-        const otherBody = otherCard.querySelector(".detail-coverage-body");
-        const otherButton = otherCard.querySelector(".detail-coverage-summary");
-        const otherToggle = otherCard.querySelector(".detail-coverage-toggle");
-        const isOpen = otherIndex === index ? otherBody?.hidden : false;
-        if (otherBody) {
-          otherBody.hidden = !isOpen;
-        }
-        otherButton?.setAttribute("aria-expanded", String(Boolean(isOpen)));
-        if (otherToggle) {
-          otherToggle.textContent = isOpen ? "Collapse" : "Expand";
+    /* Step 4 */
+    backToBuildupBtn.addEventListener("click", () => {
+      if (state.activeNodeId) openNodeInBuildup(state.activeNodeId);
+      else showView("roadmap");
+    });
+    startNewBtn.addEventListener("click", startNewProblem);
+    saveHistoryBtn.addEventListener("click", saveToHistory);
+    exportDocxBtn.addEventListener("click", () => exportFile("docx"));
+    exportPptxBtn.addEventListener("click", () => exportFile("pptx"));
+
+    /* Sidebar nav */
+    document.querySelectorAll('[data-nav="home"]').forEach((el) => {
+      el.addEventListener("click", (e) => { e.preventDefault(); showView("home"); });
+    });
+    cpSteps.forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (el.classList.contains("is-disabled")) { e.preventDefault(); return; }
+        e.preventDefault();
+        const step = Number(el.dataset.step);
+        if (step === 1) showView("home");
+        else if (step === 2) showView("roadmap");
+        else if (step === 3) {
+          if (state.activeNodeId) openNodeInBuildup(state.activeNodeId);
+          else if (state.nodes[0]) openNodeInBuildup(state.nodes[0].id);
+        } else if (step === 4) {
+          renderSummary(); showView("summary");
         }
       });
-      if (body && !body.hidden) {
-        body.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+
+    /* Global keyboard */
+    document.addEventListener("keydown", (e) => {
+      const cmd = e.metaKey || e.ctrlKey;
+      if (cmd && e.key === "Enter") {
+        if (state.view === "home") { e.preventDefault(); submitProblem(); }
+        else if (state.view === "roadmap" && addNodeForm.classList.contains("open") && !saveNodeBtn.disabled) {
+          e.preventDefault(); saveCustomNode();
+        } else if (state.view === "roadmap") {
+          e.preventDefault(); toWorkspaceBtn.click();
+        }
+        /* Cmd+Enter inside Step 3 textareas is handled per-composer */
+      }
+      if (e.key === "Escape" && addNodeForm.classList.contains("open")) {
+        closeAddNodeForm();
+      }
+      /* Cmd/Ctrl+S in summary view triggers Save to history */
+      if (cmd && (e.key === "s" || e.key === "S") && state.view === "summary") {
+        e.preventDefault();
+        saveToHistory();
       }
     });
-    detailCoverageReview.appendChild(card);
-  });
-}
-
-function deriveCoverageType(thread) {
-  const types = Array.isArray(thread?.responses)
-    ? thread.responses
-        .map((response) => String(response?.type || "").trim())
-        .filter(Boolean)
-    : [];
-  if (!types.length) {
-    return "Coverage";
   }
-  return types.length === 1 ? types[0] : `${types[0]} +${types.length - 1}`;
-}
 
-function buildFollowUpTypeOptions(selectedValue) {
-  return getFollowUpTypes()
-    .map((item) => `<option value="${escapeHtml(item)}"${item === selectedValue ? " selected" : ""}>${escapeHtml(item)}</option>`)
-    .join("");
-}
-
-function getFollowUpTypes() {
-  return [
-    "Confirmed fact",
-    "Gathered evidence",
-    "Hypothesis",
-    "Assumption to proceed",
-    "Please do not consider",
-  ];
-}
-
-function collectFollowUpResponses() {
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return [];
+  function init() {
+    resolveDOM();
+    wire();
+    restoreDraft();
+    updateComposer();
+    loadRecent();
+    showView("home");
   }
-  return Array.isArray(state.nodeBuilds[currentNode.id]?.follow_up_responses)
-    ? state.nodeBuilds[currentNode.id].follow_up_responses.filter((item) => String(item?.text || "").trim())
-    : [];
-}
 
-function updateFollowUpResponse(index, nextValue) {
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return;
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
   }
-  const build = state.nodeBuilds[currentNode.id] || {};
-  const items = Array.isArray(build.follow_up_responses) ? [...build.follow_up_responses] : [];
-  if (!items[index]) {
-    return;
-  }
-  items[index] = {
-    type: String(nextValue?.type || "Confirmed fact").trim(),
-    text: String(nextValue?.text || "").trim(),
-  };
-  build.follow_up_responses = items;
-  state.nodeBuilds[currentNode.id] = build;
-}
-
-function removeFollowUpResponse(index) {
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return;
-  }
-  const build = state.nodeBuilds[currentNode.id] || {};
-  const items = Array.isArray(build.follow_up_responses) ? [...build.follow_up_responses] : [];
-  items.splice(index, 1);
-  build.follow_up_responses = items;
-  state.nodeBuilds[currentNode.id] = build;
-  renderFollowUpResponses(items);
-}
-
-function refreshExecutionPreview() {
-  if (!executionItemsPreview) {
-    return;
-  }
-  const items = collectWorkItems();
-  if (!items.length) {
-    executionItemsPreview.innerHTML = `
-      <div class="execution-preview-copy">
-        No workstream items yet. Open the work plan to add tasks, owners, approvals, evidence sources, and blockers.
-      </div>
-    `;
-    return;
-  }
-  executionItemsPreview.innerHTML = items
-    .map(
-      (item, index) => `
-        <div class="execution-preview-item">
-          <div class="execution-preview-main">
-            <div class="execution-preview-title">${escapeHtml(item.action || `Workstream item ${index + 1}`)}</div>
-            <div class="execution-preview-meta">${escapeHtml(`${item.owner || "Owner not set"} | Evidence/source: ${item.source || "Not set"}`)}</div>
-          </div>
-        </div>
-      `,
-    )
-    .join("");
-}
-
-function normalizeOutputSections(sections) {
-  return {
-    focus: String(sections?.focus || "").trim(),
-    work_to_complete: String(sections?.work_to_complete || "").trim(),
-    owners_and_sources: String(sections?.owners_and_sources || "").trim(),
-    risks_and_handoff: String(sections?.risks_and_handoff || "").trim(),
-  };
-}
-
-function parseStructuredOutput(text) {
-  const sections = {
-    focus: "",
-    work_to_complete: "",
-    owners_and_sources: "",
-    risks_and_handoff: "",
-  };
-  String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .forEach((line) => {
-      if (line.startsWith("Strategic implication:") || line.startsWith("Focus:")) {
-        sections.focus = line.replace("Strategic implication:", "").replace("Focus:", "").trim();
-      } else if (line.startsWith("Recommended workstream:") || line.startsWith("What will be done:")) {
-        sections.work_to_complete = line.replace("Recommended workstream:", "").replace("What will be done:", "").trim();
-      } else if (line.startsWith("Evidence path:") || line.startsWith("Who and where:")) {
-        sections.owners_and_sources = line.replace("Evidence path:", "").replace("Who and where:", "").trim();
-      } else if (line.startsWith("Risks and counterarguments:") || line.startsWith("Deliverable and risk:")) {
-        sections.risks_and_handoff = line.replace("Risks and counterarguments:", "").replace("Deliverable and risk:", "").trim();
-      }
-    });
-  return sections;
-}
-
-function buildStructuredOutput() {
-  const sections = normalizeOutputSections({
-    focus: detailOutputFocus.value.trim(),
-    work_to_complete: detailOutputWork.value.trim(),
-    owners_and_sources: detailOutputOwners.value.trim(),
-    risks_and_handoff: detailOutputRisks.value.trim(),
-  });
-  if (!sections.focus && !sections.work_to_complete && !sections.owners_and_sources && !sections.risks_and_handoff) {
-    detailOutput.value = "";
-    return "";
-  }
-  detailOutput.value = [
-    `Strategic implication: ${sections.focus}`,
-    `Recommended workstream: ${sections.work_to_complete}`,
-    `Evidence path: ${sections.owners_and_sources}`,
-    `Risks and counterarguments: ${sections.risks_and_handoff}`,
-  ].join("\n");
-  return detailOutput.value;
-}
-
-function applyStructuredOutput(output, sections) {
-  const normalized = normalizeOutputSections(Object.values(sections || {}).some(Boolean) ? sections : parseStructuredOutput(output));
-  detailOutputFocus.value = normalized.focus;
-  detailOutputWork.value = normalized.work_to_complete;
-  detailOutputOwners.value = normalized.owners_and_sources;
-  detailOutputRisks.value = normalized.risks_and_handoff;
-  detailOutput.value = output || buildStructuredOutput();
-}
-
-function parseWorkstreams(text) {
-  return String(text || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => ({ name: line, purpose: "", priority: "", completion_criteria: "" }));
-}
-
-function openDetailBriefModal() {
-  const currentNode = state.roadmap[state.currentIndex];
-  if (!currentNode) {
-    return;
-  }
-  openNodeModal(currentNode.id);
-}
-
-function closeDetailBriefModal() {
-  detailBriefModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function openExecutionModal() {
-  executionModal.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeExecutionModal() {
-  executionModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function openAgentNoteModal(title, copy, items) {
-  agentNoteModalTitle.textContent = title;
-  agentNoteModalCopy.textContent = copy;
-  const values = (items || []).filter((item) => String(item || "").trim());
-  agentNoteModalContent.innerHTML = values.length
-    ? values.map((item) => `<div class="context-preview-item">${escapeHtml(String(item))}</div>`).join("")
-    : `<div class="context-preview-item">No agent note available yet.</div>`;
-  agentNoteModal.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeAgentNoteModal() {
-  agentNoteModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function openSummaryNodeModal(node, nodeBuild) {
-  const threads = normalizeNodeFollowUpThreads(node);
-  const actions = Array.isArray(nodeBuild.execution_items) ? nodeBuild.execution_items : [];
-  summaryNodeModalTitle.textContent = node.title;
-  summaryNodeModalCopy.textContent = "Review how this lens moved from diagnostic framing into evidence coverage and workstream planning.";
-  summaryNodeModalBody.className = "modal-body summary-modal-body";
-  summaryNodeModalBody.innerHTML = `
-    <section class="summary-modal-section">
-      <h4>Diagnostic Framing</h4>
-      <div class="summary-modal-list">
-        <div class="summary-modal-item">
-          <strong>Strategic Tension</strong>
-          <p>${escapeHtml(node.why || "No strategic tension added yet.")}</p>
-        </div>
-        <div class="summary-modal-item">
-          <strong>Hypothesis Tree</strong>
-          <p>${escapeHtml(node.breakdown || "No hypothesis tree added yet.")}</p>
-        </div>
-      </div>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Evidence and Assumption Coverage</h4>
-      <div class="summary-modal-list">
-        ${
-          threads.length
-            ? threads
-                .map(
-                  (thread) => `
-                    <div class="summary-modal-item">
-                      <p><strong>Question</strong></p>
-                      <p>${escapeHtml(thread.prompt || "No prompt recorded.")}</p>
-                      <p><strong>Answers</strong></p>
-                      ${
-                        (thread.responses || []).length
-                          ? thread.responses
-                              .map(
-                                (response) =>
-                                  `<p>${escapeHtml(`${response.type || "Coverage"}: ${response.text || ""}`)}</p>`,
-                              )
-                              .join("")
-                          : `<p>No answer saved yet.</p>`
-                      }
-                    </div>
-                  `,
-                )
-                .join("")
-            : `<div class="summary-modal-item">No evidence or assumption coverage was captured for this lens yet.</div>`
-        }
-      </div>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Workstream Planning</h4>
-      <div class="summary-modal-list">
-        <div class="summary-modal-item">
-          <strong>Analytical Lens</strong>
-          <p>${escapeHtml(nodeBuild.execution_summary || "No analytical lens summary added yet.")}</p>
-        </div>
-        <div class="summary-modal-item">
-          <strong>Known Signals and Evidence Required</strong>
-          <p>${escapeHtml(nodeBuild.extracted_context || "No evidence plan added yet.")}</p>
-        </div>
-      </div>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Workstream Items and Blockers</h4>
-      <div class="summary-modal-list">
-        ${
-          actions.length
-            ? actions
-                .map(
-                  (item) => `
-                    <div class="summary-modal-item">
-                      <p><strong>${escapeHtml(item.action || "No workstream item title")}</strong></p>
-                      <p>${escapeHtml(`Owner: ${item.owner || "Not set"} | Collaborator: ${item.collaborator || "Not set"}`)}</p>
-                      <p>${escapeHtml(`Source: ${item.source || "Not set"} | Artifact: ${item.artifact || "Not set"}`)}</p>
-                      <p>${escapeHtml(`Approval: ${item.approval || "Not set"} | Blocker: ${item.blockers || "Not set"}`)}</p>
-                    </div>
-                  `,
-                )
-                .join("")
-            : `<div class="summary-modal-item">No workstream items added yet.</div>`
-        }
-      </div>
-    </section>
-  `;
-  summaryNodeModal.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeSummaryNodeModal() {
-  summaryNodeModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function openSummaryProblemModal() {
-  summaryProblemModalBody.innerHTML = `
-    <section class="summary-modal-section">
-      <h4>Main Question</h4>
-      <p>${escapeHtml(state.problem || "No problem captured yet.")}</p>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Detailed Context</h4>
-      <p>${escapeHtml(state.problemDetails || "No detailed bucket added yet.")}</p>
-    </section>
-    <section class="summary-modal-section">
-      <h4>Assessment</h4>
-      <p>${escapeHtml(state.problemType || "Problem type not set yet.")}</p>
-      <p>${escapeHtml(state.assessmentTitle || "No assessment explanation yet.")}</p>
-      <p>${escapeHtml(state.assessmentRecap || "No recap added yet.")}</p>
-    </section>
-  `;
-  summaryProblemModal.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeSummaryProblemModal() {
-  summaryProblemModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function openRoadmapLogModal() {
-  roadmapLogModalBody.innerHTML = buildRoadmapLogMarkup();
-  roadmapLogModal.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-
-function closeRoadmapLogModal() {
-  roadmapLogModal.hidden = true;
-  document.body.style.overflow = "";
-}
-
-function buildRoadmapLogMarkup() {
-  const intro = `
-    <section class="summary-modal-section roadmap-log-section">
-      <h4>Main Question</h4>
-      <div class="summary-modal-item">${escapeHtml(state.problem || "No main question captured yet.")}</div>
-      <h4>Detailed Context</h4>
-      <div class="summary-modal-item">${escapeHtml(state.problemDetails || "No additional detailed context captured yet.")}</div>
-    </section>
-  `;
-  const nodeSections = state.roadmap.map((node, index) => {
-    const threads = normalizeNodeFollowUpThreads(node);
-    const threadsMarkup = threads.length
-      ? threads.map((thread) => `
-          <div class="roadmap-log-thread">
-            <div class="roadmap-log-block">
-              <span class="roadmap-log-block-label">Question</span>
-              <div class="roadmap-log-block-copy">${escapeHtml(thread.prompt || "No prompt recorded.")}</div>
-            </div>
-            <div class="roadmap-log-block">
-              <span class="roadmap-log-block-label">Answers</span>
-              <div class="roadmap-log-thread-list">
-                ${(thread.responses || []).map((response) => `
-                  <div class="roadmap-log-response"><strong>${escapeHtml(response.type || "Response")}:</strong> ${escapeHtml(response.text || "")}</div>
-                `).join("")}
-              </div>
-            </div>
-          </div>
-        `).join("")
-      : `<div class="summary-modal-item">No follow-up responses saved for this node yet.</div>`;
-    return `
-      <section class="summary-modal-section roadmap-log-section">
-        <div class="roadmap-log-node">
-          <div class="roadmap-log-node-top">
-            <h4>${escapeHtml(`${index + 1}. ${node.title || "Untitled Node"}`)}</h4>
-            <span class="status-chip">${escapeHtml(node.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM)}</span>
-          </div>
-          <div class="roadmap-log-block">
-            <span class="roadmap-log-block-label">Strategic Tension</span>
-            <div class="roadmap-log-block-copy">${escapeHtml(node.why || "No description yet.")}</div>
-          </div>
-          <div class="roadmap-log-block">
-            <span class="roadmap-log-block-label">Hypothesis Tree</span>
-            <div class="roadmap-log-block-copy">${escapeHtml(node.breakdown || "No breakdown yet.")}</div>
-          </div>
-          <div class="roadmap-log-block">
-            <span class="roadmap-log-block-label">Current Follow-Up Prompt</span>
-            <div class="roadmap-log-block-copy">${escapeHtml(node.suggested_context || NO_ADDITIONAL_SUGGESTED_ITEM)}</div>
-          </div>
-          <div class="roadmap-log-block">
-            <span class="roadmap-log-block-label">Saved Follow-Up Coverage</span>
-            ${threadsMarkup}
-          </div>
-        </div>
-      </section>
-    `;
-  }).join("");
-  return `${intro}${nodeSections || '<section class="summary-modal-section"><div class="summary-modal-item">No roadmap nodes yet.</div></section>'}`;
-}
-
-function saveDetailBriefModal() {
-  detailNodeName.textContent = detailBriefModalName.value.trim();
-  detailNodeDescription.value = detailBriefModalDescription.value.trim();
-  detailNodeBreakdown.value = detailBriefModalBreakdown.value.trim();
-  if (detailStepTitle) {
-    detailStepTitle.textContent = detailNodeName.textContent || "Detail Builder";
-  }
-  syncBriefPreviews();
-  autoResize(detailNodeDescription);
-  autoResize(detailNodeBreakdown);
-  closeDetailBriefModal();
-}
-
-function resetDetailSections() {
-  document.querySelectorAll(".collapsible-section").forEach((section) => {
-    section.classList.add("is-open");
-  });
-  sectionToggles.forEach((button) => {
-    button.textContent = "Collapse";
-  });
-}
-
-function isNoAdditionalSuggestedItem(value) {
-  return value.trim().toLowerCase() === NO_ADDITIONAL_SUGGESTED_ITEM.toLowerCase();
-}
-
-function applyFollowUpPromptStyle(element) {
-  if (!element) {
-    return;
-  }
-  const isComplete = isNoAdditionalSuggestedItem(element.value || "");
-  element.classList.toggle("is-complete", isComplete);
-  element.classList.toggle("needs-attention", !isComplete && element.value.trim().length > 0);
-}
-
-function refreshRoadmapCompletionState() {
-  const allComplete =
-    state.roadmap.length > 0 &&
-    state.roadmap.every((node) => isNoAdditionalSuggestedItem(node.suggested_context || ""));
-
-  [confirmRoadmapButton, confirmRoadmapBottomButton].forEach((button) => {
-    if (!button) {
-      return;
-    }
-    button.classList.toggle("ready", allComplete);
-    button.classList.toggle("needs-attention", !allComplete);
-  });
-}
-
-function buildPolishDraft() {
-  const draft = newNodeDraft.value.trim();
-  const existing = readCustomNodeDraft();
-  if (!existing) {
-    return draft;
-  }
-  return [
-    draft,
-    `Current title: ${existing.title}`,
-    `Current why: ${existing.why}`,
-    `Current breakdown:\n${existing.breakdown}`,
-    `Current suggested context: ${existing.suggested_context}`,
-  ].filter(Boolean).join("\n\n");
-}
-
-function readCustomNodeDraft() {
-  const title = newNodeTitleInput.value.trim();
-  const why = newNodeWhyInput.value.trim();
-  const breakdown = newNodeBreakdownInput.value.trim();
-  const suggested_context = newNodeContextInput.value.trim();
-  if (!title && !why && !breakdown && !suggested_context) {
-    return null;
-  }
-  return { title, why, breakdown, suggested_context };
-}
-
-function autoResize(element) {
-  if (!element || element.tagName !== "TEXTAREA") {
-    return;
-  }
-  if (["details-modal-input", "roadmap-problem-input", "assessment-title", "assessment-recap"].includes(element.id)) {
-    return;
-  }
-  element.style.height = "auto";
-  element.style.height = `${element.scrollHeight}px`;
-}
-
-function autoResizeAll() {
-  document.querySelectorAll("textarea").forEach((textarea) => autoResize(textarea));
-}
-
-document.addEventListener("input", (event) => {
-  autoResize(event.target);
-  if (event.target.classList?.contains("node-context-input")) {
-    applyFollowUpPromptStyle(event.target);
-    refreshRoadmapCompletionState();
-  }
-});
-
-autoResizeAll();
-updateAssessmentFields();
-updateProblemDetailsPreviews();
-refreshRoadmapCompletionState();
-updateAssessmentPrioritySummary();
-showPanel(state.activeProblemPanel || "problem");
+})();

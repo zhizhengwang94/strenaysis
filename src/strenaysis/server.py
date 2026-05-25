@@ -534,7 +534,13 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def end_headers(self) -> None:
-        if self.path in {"/", "/index.html", "/app.js", "/styles.css"}:
+        no_cache_paths = {
+            "/",
+            "/index.html",
+            "/styles.css",
+            "/app.js",
+        }
+        if self.path in no_cache_paths:
             self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")

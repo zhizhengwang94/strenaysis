@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "strenaysis",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "strenaysis"],
+      "port": 8765,
+      "env": {
+        "PYTHONPATH": "src",
+        "PORT": "8765"
+      }
+    }
+  ]
+}

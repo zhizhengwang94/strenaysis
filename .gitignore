@@ -2,3 +2,17 @@ __pycache__/
 *.py[cod]
 *.log
 .DS_Store
+
+# Transient app data — only `saved_problem_structures/` is meant to be tracked.
+problems/
+
+# Browser / editor scratch dirs
+.tmp-edge-codex/
+
+# External design references stay local
+external/
+
+# Claude Code per-user state. `launch.json` is the exception — it's useful
+# for the team — so it's kept tracked while everything else is ignored.
+.claude/*
+!.claude/launch.json
