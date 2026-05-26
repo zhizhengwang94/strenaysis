@@ -10,6 +10,12 @@
         "PYTHONPATH": "src",
         "PORT": "8765"
       }
+    },
+    {
+      "name": "prototype",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd docs/prototypes && python3 -m http.server 8770"],
+      "port": 8770
     }
   ]
 }
