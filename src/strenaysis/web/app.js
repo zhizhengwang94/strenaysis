@@ -21,7 +21,10 @@
 
   /* ============ Constants ============ */
   const MAX_QUESTION_CHARS = 600;
-  const MIN_ANSWER_CHARS = 10;
+  /* Step 3 answers only need to be non-empty. Some coaching questions have
+     legitimately short answers ("yes", "no", "TBD") — gating to 10 chars
+     forces the user to pad with fluff, which is bad coaching. */
+  const MIN_ANSWER_CHARS = 1;
   const DRAFT_KEY = "strenaysis.draft.v1"; // legacy: just the textarea contents
   const STATE_KEY = "strenaysis.state.v1"; // full in-progress framing snapshot
 
