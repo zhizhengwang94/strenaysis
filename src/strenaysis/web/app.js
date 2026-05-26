@@ -254,14 +254,49 @@
 
   function saveDraft() {
     try {
+      /* Always save the textarea snapshot. */
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         problem: problemInput.value,
         problemDetails: problemDetailsInput.value,
         saved_at: new Date().toISOString(),
       }));
-      saveDraftBtn.textContent = "Draft saved";
-      setTimeout(() => { saveDraftBtn.textContent = "Save as draft"; }, 1500);
-    } catch (e) { /* localStorage unavailable */ }
+      /* If the user has past-Step-1 work (roadmap + Step 3 answers),
+         flush the full state synchronously too — bypass the persistState
+         debounce so "Save as draft" is an immediate explicit save. */
+      if (hasMeaningfulState()) {
+        clearTimeout(state._persistTimer);
+        try {
+          localStorage.setItem(STATE_KEY, JSON.stringify({
+            v: 1,
+            view: state.view,
+            problem: state.problem,
+            problemDetails: state.problemDetails,
+            problemType: state.problemType,
+            inferredProblemType: state.inferredProblemType,
+            assessmentTitle: state.assessmentTitle,
+            assessmentRecap: state.assessmentRecap,
+            nodes: state.nodes,
+            nodeBuilds: state.nodeBuilds,
+            activeNodeId: state.activeNodeId,
+            nextCustomIdx: state.nextCustomIdx,
+            savedAt: new Date().toISOString(),
+          }));
+        } catch (_) {}
+      }
+      /* Clear visible feedback: button text + style flip for 2.5s. */
+      saveDraftBtn.textContent = "✓ Draft saved";
+      saveDraftBtn.classList.add("btn-primary");
+      saveDraftBtn.classList.remove("btn-ghost");
+      clearTimeout(state._draftFlashTimer);
+      state._draftFlashTimer = setTimeout(() => {
+        saveDraftBtn.textContent = "Save as draft";
+        saveDraftBtn.classList.remove("btn-primary");
+        saveDraftBtn.classList.add("btn-ghost");
+      }, 2500);
+    } catch (e) {
+      saveDraftBtn.textContent = "Could not save";
+      setTimeout(() => { saveDraftBtn.textContent = "Save as draft"; }, 2500);
+    }
   }
 
   function restoreDraft() {
