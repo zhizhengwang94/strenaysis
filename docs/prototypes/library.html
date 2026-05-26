@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strenaysis — Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* ————— Filter bar ————— */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin: 0 0 var(--s-6);
+    flex-wrap: wrap;
+  }
+
+  .search-with-hint {
+    position: relative;
+    flex: 0 1 360px;
+    min-width: 220px;
+  }
+  .search-with-hint input {
+    padding: 9px 60px 9px 14px;
+    font-size: var(--text-sm);
+    background: var(--surface);
+  }
+  .search-with-hint input:focus {
+    border-color: var(--ink-soft);
+  }
+  .search-with-hint .kbd-hint {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 1px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filter-chip-wrap { position: relative; }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+    white-space: nowrap;
+  }
+  .filter-chip:hover { border-color: var(--faint); }
+  .filter-chip.is-open { border-color: var(--ink-soft); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .filter-chip.is-active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-ink); }
+  .filter-chip .fc-label { color: var(--muted); font-size: var(--text-xs); }
+  .filter-chip .fc-value { font-weight: var(--w-medium); }
+  .filter-chip .fc-caret {
+    color: var(--faint);
+    font-size: 9px;
+    margin-left: 2px;
+  }
+
+  .filter-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 8px 24px oklch(20% 0.015 260 / 0.10);
+    padding: 4px;
+    z-index: 20;
+    display: none;
+  }
+  .filter-popover.is-open { display: block; }
+  .filter-popover-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--ink-soft);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .filter-popover-item:hover { background: var(--surface-2); color: var(--ink); }
+  .filter-popover-item.is-selected {
+    color: var(--accent-ink);
+    background: var(--accent-bg);
+  }
+  .filter-popover-item .fpi-check {
+    float: right;
+    color: var(--accent);
+    font-size: var(--text-xs);
+  }
+
+  .filter-spacer { flex: 1; }
+
+  /* Mobile collapse — below 700px, hide chips and show a single Filter button */
+  .filter-mobile-button {
+    display: none;
+    font-family: inherit;
+  }
+  @media (max-width: 700px) {
+    .filter-bar .filter-chip-wrap { display: none; }
+    .filter-bar .filter-mobile-button { display: inline-flex; }
+    .search-with-hint { flex: 1 1 100%; }
+  }
+
+  /* ————— List ————— */
+  .list-frame {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .list-row {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) 170px 130px 88px 96px 32px;
+    gap: var(--s-4);
+    align-items: center;
+    padding: 16px var(--s-5);
+    border-top: 1px solid var(--line-soft);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: background 120ms ease;
+    position: relative;
+  }
+  .list-row,
+  .list-row * {
+    text-decoration: none;
+  }
+  .list-row:first-child { border-top: none; }
+  .list-row:hover { background: var(--surface-2); }
+  .list-row.is-draft {
+    background: var(--accent-bg);
+  }
+  .list-row.is-draft:hover {
+    background: color-mix(in oklch, var(--accent-bg) 70%, var(--surface-2));
+  }
+
+  .ld-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .list-row.complete .ld-dot { background: var(--success); }
+  .list-row.in-progress .ld-dot { background: var(--accent); }
+  .list-row.is-draft .ld-dot { background: var(--accent); }
+
+  .ld-title { min-width: 0; }
+  .ld-title-main {
+    font-size: var(--text-sm);
+    font-weight: var(--w-medium);
+    color: var(--ink);
+    line-height: var(--leading-tight);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ld-title-sub {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    line-height: var(--leading-normal);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ld-type {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .ld-draft-kicker {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: var(--w-medium);
+    margin-right: 4px;
+  }
+
+  .ld-progress, .ld-actions, .ld-date {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ld-progress.is-complete { color: var(--success); }
+  .ld-progress.is-draft { color: var(--accent); }
+  .ld-actions { text-align: right; }
+
+  .ld-menu {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--faint);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+  }
+  .list-row:hover .ld-menu { color: var(--muted); }
+  .ld-menu:hover { background: var(--surface); color: var(--ink); }
+
+  /* Mobile collapse — cards instead of grid */
+  @media (max-width: 700px) {
+    .list-row {
+      grid-template-columns: 12px 1fr 28px;
+      grid-template-rows: auto auto;
+      row-gap: 8px;
+    }
+    .ld-title { grid-column: 2; grid-row: 1; }
+    .ld-menu { grid-column: 3; grid-row: 1; }
+    .ld-type, .ld-progress, .ld-actions, .ld-date {
+      grid-column: 2 / -1; grid-row: 2;
+      display: inline-block;
+      margin-right: var(--s-3);
+    }
+    .ld-actions { text-align: left; }
+    .ld-dot { grid-column: 1; grid-row: 1 / -1; align-self: start; margin-top: 4px; }
+  }
+
+  /* Eyebrow tweak: tighten the count badge inside the eyebrow */
+  .eyebrow .count {
+    color: var(--muted);
+    font-weight: var(--w-normal);
+    margin-left: 4px;
+  }
+
+  /* Pull main content area a touch wider since we have a busy filter bar */
+  .main {
+    max-width: 1120px;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <aside class="side" aria-label="Primary">
+    <div class="brand">
+      <div class="brand-glyph">S</div>
+      <div>
+        <div class="brand-name">Strenaysis</div>
+        <div class="brand-sub">Decision workspace</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">Workspace</div>
+      <nav class="side-nav">
+        <a href="step-1-home.html"><span class="side-ico">&#9998;</span> New problem <span class="badge">N</span></a>
+        <a href="library.html" class="on"><span class="side-ico">&#9649;</span> Library <span class="badge">12</span></a>
+        <a href="actions.html"><span class="side-ico">&#9673;</span> Actions <span class="badge">23</span></a>
+        <a href="#"><span class="side-ico">&#9651;</span> Portfolio</a>
+      </nav>
+    </div>
+
+    <div class="side-foot">
+      <button>Settings</button>
+      <button>Feedback</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <span class="crumb">Workspace</span>
+      <span class="sep">/</span>
+      <span class="crumb active">Library</span>
+      <span class="spacer"></span>
+    </div>
+
+    <p class="eyebrow"><span class="dot"></span> Library <span class="count">· 12 saved</span></p>
+    <h1 class="title">Library</h1>
+    <p class="lede">Every problem you've structured. Resume one, or search across your archive.</p>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" role="toolbar" aria-label="Filter library">
+      <div class="search-with-hint">
+        <input type="text" placeholder="Search problems…" aria-label="Search problems" />
+        <span class="kbd-hint">&#8984;K</span>
+      </div>
+
+      <div class="filter-chip-wrap">
+        <button class="filter-chip" data-filter="status" aria-haspopup="true" aria-expanded="false">
+          <span class="fc-label">Status</span>
+          <span class="fc-value">All</span>
+          <span class="fc-caret">&#9662;</span>
+        </button>
+        <div class="filter-popover" role="menu" aria-label="Filter by status">
+          <button class="filter-popover-item is-selected" data-value="all">All <span class="fpi-check">&#10003;</span></button>
+          <button class="filter-popover-item" data-value="in_progress">In progress</button>
+          <button class="filter-popover-item" data-value="complete">Complete</button>
+          <button class="filter-popover-item" data-value="drafts">Drafts only</button>
+        </div>
+      </div>
+
+      <div class="filter-chip-wrap">
+        <button class="filter-chip" data-filter="sort" aria-haspopup="true" aria-expanded="false">
+          <span class="fc-label">Sort</span>
+          <span class="fc-value">Last touched &darr;</span>
+          <span class="fc-caret">&#9662;</span>
+        </button>
+        <div class="filter-popover" role="menu" aria-label="Sort">
+          <button class="filter-popover-item is-selected" data-value="touched">Last touched &darr; <span class="fpi-check">&#10003;</span></button>
+          <button class="filter-popover-item" data-value="created">Created &darr;</button>
+          <button class="filter-popover-item" data-value="title">Title A–Z</button>
+          <button class="filter-popover-item" data-value="actions">Most actions</button>
+        </div>
+      </div>
+
+      <span class="filter-spacer"></span>
+      <button class="btn btn-ghost filter-mobile-button">Filter</button>
+    </div>
+
+    <!-- List -->
+    <div class="list-frame">
+
+      <a class="list-row is-draft draft" href="step-3-buildup.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main"><span class="ld-draft-kicker">DRAFT ·</span> Predict 90-day retention from the first 14 days of trial.</div>
+          <div class="ld-title-sub">In-memory · 14-day prediction window · CS targets the at-risk segment before they churn</div>
+        </div>
+        <span class="ld-type">Predictive modeling</span>
+        <span class="ld-progress is-draft">1 of 8 settled</span>
+        <span class="ld-actions">5 actions</span>
+        <span class="ld-date">Unsaved</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row in-progress" href="step-3-buildup.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">Our DTC subscription business has seen a 12% drop in 30-day retention since the new pricing tiers launched in March.</div>
+          <div class="ld-title-sub">CFO wants causal attribution · 3 weeks before Q3 planning · pricing team drafting follow-up A/B</div>
+        </div>
+        <span class="ld-type">Descriptive</span>
+        <span class="ld-progress">5 of 8 settled</span>
+        <span class="ld-actions">12 actions</span>
+        <span class="ld-date">Today</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row complete" href="step-4-summary.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">How should we evaluate whether launching a premium recommendation feature will move subscription revenue?</div>
+          <div class="ld-title-sub">A/B at account level · 3% MDE on net-new MRR · pre-registered decision rule</div>
+        </div>
+        <span class="ld-type">Experiment / causal</span>
+        <span class="ld-progress is-complete">Complete</span>
+        <span class="ld-actions">6 actions</span>
+        <span class="ld-date">Yesterday</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row in-progress" href="step-3-buildup.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">Why did EMEA B2B trial-to-paid conversion drop to 14% in Q1 while SMB stayed flat?</div>
+          <div class="ld-title-sub">Segment-level diagnosis · prior baseline ~21% · sales reorg confounds attribution</div>
+        </div>
+        <span class="ld-type">Descriptive</span>
+        <span class="ld-progress">2 of 7 settled</span>
+        <span class="ld-actions">6 actions</span>
+        <span class="ld-date">2 days ago</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row complete" href="step-4-summary.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">We have 12 customer success reps and 4,000 accounts split across enterprise / mid-market / SMB. How should we re-allocate them?</div>
+          <div class="ld-title-sub">Tier reshuffle in Q3 · regret-minimizing allocation · constraint: no hires</div>
+        </div>
+        <span class="ld-type">Operational optimization</span>
+        <span class="ld-progress is-complete">Complete</span>
+        <span class="ld-actions">4 actions</span>
+        <span class="ld-date">May 18</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row complete" href="step-4-summary.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">Did the Q1 entry-tier price increase cause the churn bump, or was it the renewal-cohort timing?</div>
+          <div class="ld-title-sub">DID design vs synthetic control · 4 cohorts compared · final report shipped to finance</div>
+        </div>
+        <span class="ld-type">Experiment / causal</span>
+        <span class="ld-progress is-complete">Complete</span>
+        <span class="ld-actions">8 actions</span>
+        <span class="ld-date">May 14</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row in-progress" href="step-3-buildup.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">Which onboarding signals best predict whether a self-serve account is still active at day 90?</div>
+          <div class="ld-title-sub">Feature engineering on first-14-day events · prior model AUC 0.71 · 50k labeled accounts</div>
+        </div>
+        <span class="ld-type">Predictive modeling</span>
+        <span class="ld-progress">3 of 8 settled</span>
+        <span class="ld-actions">9 actions</span>
+        <span class="ld-date">May 12</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row in-progress" href="step-3-buildup.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">How should we measure customer health to predict expansion likelihood, not just churn?</div>
+          <div class="ld-title-sub">Expansion vs churn are different signals · CS wants leading indicators for QBR prep</div>
+        </div>
+        <span class="ld-type">Predictive modeling</span>
+        <span class="ld-progress">4 of 7 settled</span>
+        <span class="ld-actions">5 actions</span>
+        <span class="ld-date">Apr 22</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row complete" href="step-4-summary.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">What's the right discount structure to win back churned customers in the SMB tier without cannibalizing renewals?</div>
+          <div class="ld-title-sub">Win-back economics · counterfactual against organic returners · price elasticity unknown</div>
+        </div>
+        <span class="ld-type">Operational optimization</span>
+        <span class="ld-progress is-complete">Complete</span>
+        <span class="ld-actions">7 actions</span>
+        <span class="ld-date">Apr 20</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row complete" href="step-4-summary.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">Can we identify the 3 cohorts most likely to upgrade to the enterprise tier in the next two quarters?</div>
+          <div class="ld-title-sub">Propensity model + segmentation overlay · output is a target list for sales · model card included</div>
+        </div>
+        <span class="ld-type">Predictive modeling</span>
+        <span class="ld-progress is-complete">Complete</span>
+        <span class="ld-actions">5 actions</span>
+        <span class="ld-date">Apr 14</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+      <a class="list-row complete" href="step-4-summary.html">
+        <span class="ld-dot" aria-hidden="true"></span>
+        <div class="ld-title">
+          <div class="ld-title-main">Telecom churn framing: mid-tenure subscribers are leaving 2–3% faster than last year. Where do we focus?</div>
+          <div class="ld-title-sub">8M subscribers · mobile + broadband · CAC rising · competitor bundling aggressive</div>
+        </div>
+        <span class="ld-type">Experiment / causal</span>
+        <span class="ld-progress is-complete">Complete</span>
+        <span class="ld-actions">11 actions</span>
+        <span class="ld-date">Apr 09</span>
+        <button class="ld-menu" aria-label="Row menu" type="button">&#8943;</button>
+      </a>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  // ————— Filter chip popover toggle —————
+  var allChips = document.querySelectorAll('.filter-chip');
+  var allPopovers = document.querySelectorAll('.filter-popover');
+
+  function closeAll() {
+    allChips.forEach(function (chip) {
+      chip.classList.remove('is-open');
+      chip.setAttribute('aria-expanded', 'false');
+    });
+    allPopovers.forEach(function (p) { p.classList.remove('is-open'); });
+  }
+
+  allChips.forEach(function (chip) {
+    chip.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var pop = chip.parentElement.querySelector('.filter-popover');
+      var wasOpen = pop.classList.contains('is-open');
+      closeAll();
+      if (!wasOpen) {
+        chip.classList.add('is-open');
+        chip.setAttribute('aria-expanded', 'true');
+        pop.classList.add('is-open');
+      }
+    });
+  });
+
+  // Popover item select: update chip label, mark selected, close
+  document.querySelectorAll('.filter-popover').forEach(function (pop) {
+    pop.addEventListener('click', function (e) {
+      var item = e.target.closest('.filter-popover-item');
+      if (!item) return;
+      // Update visuals
+      pop.querySelectorAll('.filter-popover-item').forEach(function (i) {
+        i.classList.remove('is-selected');
+        var check = i.querySelector('.fpi-check');
+        if (check) check.remove();
+      });
+      item.classList.add('is-selected');
+      var checkEl = document.createElement('span');
+      checkEl.className = 'fpi-check';
+      checkEl.innerHTML = '&#10003;';
+      item.appendChild(checkEl);
+      // Update parent chip label
+      var chip = pop.parentElement.querySelector('.filter-chip');
+      var valueEl = chip.querySelector('.fc-value');
+      // Take the text minus the checkmark suffix
+      var label = item.textContent.replace('✓', '').trim();
+      valueEl.textContent = label;
+      // Visual cue: chip is "active" when it's not the default first option
+      if (item.parentElement.firstElementChild === item) {
+        chip.classList.remove('is-active');
+      } else {
+        chip.classList.add('is-active');
+      }
+      closeAll();
+    });
+  });
+
+  // Close popovers on outside click + Escape
+  document.addEventListener('click', closeAll);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
+  });
+
+  // ⌘K to focus search
+  var searchInput = document.querySelector('.search-with-hint input');
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (searchInput) searchInput.focus();
+    }
+  });
+
+  // Row menu click — stop propagation so it doesn't open the framing
+  document.querySelectorAll('.ld-menu').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      // No-op for the mockup — real impl would open a row menu popover
+    });
+  });
+})();
+</script>
+</body>
+</html>

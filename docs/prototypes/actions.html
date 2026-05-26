@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strenaysis — Actions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_shared.css" />
+<style>
+  /* ————— Filter bar (shared visual language with Library) ————— */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin: 0 0 var(--s-6);
+    flex-wrap: wrap;
+  }
+
+  .search-with-hint {
+    position: relative;
+    flex: 0 1 360px;
+    min-width: 220px;
+  }
+  .search-with-hint input {
+    padding: 9px 60px 9px 14px;
+    font-size: var(--text-sm);
+    background: var(--surface);
+  }
+  .search-with-hint input:focus { border-color: var(--ink-soft); }
+  .search-with-hint .kbd-hint {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 1px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filter-chip-wrap { position: relative; }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--ink);
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+    white-space: nowrap;
+  }
+  .filter-chip:hover { border-color: var(--faint); }
+  .filter-chip.is-open { border-color: var(--ink-soft); box-shadow: 0 0 0 3px var(--accent-bg); }
+  .filter-chip.is-active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent-ink); }
+  .filter-chip .fc-label { color: var(--muted); font-size: var(--text-xs); }
+  .filter-chip .fc-value { font-weight: var(--w-medium); }
+  .filter-chip .fc-caret { color: var(--faint); font-size: 9px; margin-left: 2px; }
+
+  .filter-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 8px 24px oklch(20% 0.015 260 / 0.10);
+    padding: 4px;
+    z-index: 20;
+    display: none;
+  }
+  .filter-popover.is-open { display: block; }
+  .filter-popover-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--ink-soft);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .filter-popover-item:hover { background: var(--surface-2); color: var(--ink); }
+  .filter-popover-item.is-selected {
+    color: var(--accent-ink);
+    background: var(--accent-bg);
+  }
+  .filter-popover-item .fpi-check {
+    float: right;
+    color: var(--accent);
+    font-size: var(--text-xs);
+  }
+
+  .filter-spacer { flex: 1; }
+  .filter-mobile-button { display: none; }
+  @media (max-width: 700px) {
+    .filter-bar .filter-chip-wrap { display: none; }
+    .filter-bar .filter-mobile-button { display: inline-flex; }
+    .search-with-hint { flex: 1 1 100%; }
+  }
+
+  /* ————— Eyebrow count ————— */
+  .eyebrow .count {
+    color: var(--muted);
+    font-weight: var(--w-normal);
+    margin-left: 4px;
+  }
+
+  /* ————— Grouped action list ————— */
+  .group-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-5);
+  }
+
+  .list-group {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .list-group-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+    padding: var(--s-4) var(--s-5);
+    background: var(--surface);
+    border-bottom: 1px solid var(--line-soft);
+    cursor: pointer;
+    user-select: none;
+  }
+  .list-group.is-collapsed .list-group-header { border-bottom-color: transparent; }
+  .list-group-header .lgh-chevron {
+    color: var(--faint);
+    font-size: var(--text-xs);
+    width: 10px;
+    flex-shrink: 0;
+    transition: transform 120ms ease;
+    display: inline-block;
+    margin-right: 2px;
+  }
+  .list-group.is-collapsed .list-group-header .lgh-chevron {
+    transform: rotate(-90deg);
+  }
+  .lgh-name {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ink);
+    font-weight: var(--w-medium);
+  }
+  .lgh-name:hover { text-decoration: underline; cursor: pointer; }
+  .lgh-stats {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .lgh-spacer { flex: 1; }
+  .lgh-link-hint {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .list-group-header:hover .lgh-link-hint { opacity: 1; }
+
+  .list-group.is-collapsed .action-row { display: none; }
+
+  /* Action row */
+  .action-row {
+    display: grid;
+    grid-template-columns: 24px 24px minmax(0, 1fr) 120px 150px 32px;
+    gap: var(--s-3);
+    align-items: center;
+    padding: 13px var(--s-5);
+    border-top: 1px solid var(--line-soft);
+    cursor: pointer;
+    transition: background 120ms ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .action-row,
+  .action-row * {
+    text-decoration: none;
+  }
+  .list-group-header + .action-row { border-top: none; }
+  .action-row:hover { background: var(--surface-2); }
+  .action-row.is-done { opacity: 0.55; }
+  .action-row.is-done .ar-text { text-decoration: line-through; color: var(--muted); }
+
+  .ar-icon-button {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: var(--muted);
+    border-radius: 4px;
+  }
+  .ar-icon-button:hover { background: var(--surface); color: var(--ink-soft); }
+  .ar-icon-button svg { width: 14px; height: 14px; display: block; }
+
+  .action-row.is-open .ar-icon-button { color: var(--muted); }
+  .action-row.is-done .ar-icon-button { color: var(--success); }
+  .action-row.is-blocked .ar-icon-button { color: var(--warning); }
+  .action-row.is-in-progress .ar-icon-button { color: var(--accent); }
+
+  .ar-letter {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-weight: var(--w-medium);
+    letter-spacing: 0.04em;
+  }
+
+  .ar-text {
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--ink);
+    min-width: 0;
+  }
+  .ar-text-tag {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--warning);
+    background: var(--warning-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+
+  .ar-owner, .ar-approval {
+    font-family: var(--mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ar-owner.unassigned { font-style: italic; color: var(--faint); }
+
+  .ar-menu {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--faint);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+  }
+  .action-row:hover .ar-menu { color: var(--muted); }
+  .ar-menu:hover { background: var(--surface); color: var(--ink); }
+
+  /* Mobile: card layout for action rows */
+  @media (max-width: 700px) {
+    .action-row {
+      grid-template-columns: 24px 1fr 28px;
+      grid-template-rows: auto auto;
+      row-gap: 6px;
+    }
+    .ar-icon-button { grid-column: 1; grid-row: 1 / -1; align-self: start; margin-top: 2px; }
+    .ar-letter { display: none; }
+    .ar-text { grid-column: 2; grid-row: 1; }
+    .ar-menu { grid-column: 3; grid-row: 1; }
+    .ar-owner, .ar-approval {
+      grid-column: 2 / -1; grid-row: 2;
+      display: inline-block;
+      margin-right: var(--s-3);
+    }
+  }
+
+  /* Pull main content area a touch wider */
+  .main { max-width: 1120px; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <aside class="side" aria-label="Primary">
+    <div class="brand">
+      <div class="brand-glyph">S</div>
+      <div>
+        <div class="brand-name">Strenaysis</div>
+        <div class="brand-sub">Decision workspace</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">Workspace</div>
+      <nav class="side-nav">
+        <a href="step-1-home.html"><span class="side-ico">&#9998;</span> New problem <span class="badge">N</span></a>
+        <a href="library.html"><span class="side-ico">&#9649;</span> Library <span class="badge">12</span></a>
+        <a href="actions.html" class="on"><span class="side-ico">&#9673;</span> Actions <span class="badge">23</span></a>
+        <a href="#"><span class="side-ico">&#9651;</span> Portfolio</a>
+      </nav>
+    </div>
+
+    <div class="side-foot">
+      <button>Settings</button>
+      <button>Feedback</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="topbar">
+      <span class="crumb">Workspace</span>
+      <span class="sep">/</span>
+      <span class="crumb active">Actions</span>
+      <span class="spacer"></span>
+    </div>
+
+    <p class="eyebrow"><span class="dot"></span> Actions <span class="count">· 23 open</span></p>
+    <h1 class="title">Workplan</h1>
+    <p class="lede">Every action item you've written, across every problem. Triage, edit, or jump back to source.</p>
+
+    <!-- Filter bar -->
+    <div class="filter-bar" role="toolbar" aria-label="Filter actions">
+      <div class="search-with-hint">
+        <input type="text" placeholder="Search actions…" aria-label="Search actions" />
+        <span class="kbd-hint">&#8984;K</span>
+      </div>
+
+      <div class="filter-chip-wrap">
+        <button class="filter-chip" data-filter="status" aria-haspopup="true" aria-expanded="false">
+          <span class="fc-label">Status</span>
+          <span class="fc-value">All open</span>
+          <span class="fc-caret">&#9662;</span>
+        </button>
+        <div class="filter-popover" role="menu" aria-label="Filter by status">
+          <button class="filter-popover-item is-selected" data-value="all_open">All open <span class="fpi-check">&#10003;</span></button>
+          <button class="filter-popover-item" data-value="mine">Mine</button>
+          <button class="filter-popover-item" data-value="awaiting">Awaiting approval</button>
+          <button class="filter-popover-item" data-value="blocked">Blocked</button>
+          <button class="filter-popover-item" data-value="done">Done</button>
+          <button class="filter-popover-item" data-value="everything">Everything</button>
+        </div>
+      </div>
+
+      <div class="filter-chip-wrap">
+        <button class="filter-chip" data-filter="group" aria-haspopup="true" aria-expanded="false">
+          <span class="fc-label">Group</span>
+          <span class="fc-value">Project</span>
+          <span class="fc-caret">&#9662;</span>
+        </button>
+        <div class="filter-popover" role="menu" aria-label="Group by">
+          <button class="filter-popover-item is-selected" data-value="project">Project <span class="fpi-check">&#10003;</span></button>
+          <button class="filter-popover-item" data-value="owner">Owner</button>
+          <button class="filter-popover-item" data-value="approval">Approval</button>
+          <button class="filter-popover-item" data-value="none">None (flat list)</button>
+        </div>
+      </div>
+
+      <div class="filter-chip-wrap">
+        <button class="filter-chip" data-filter="sort" aria-haspopup="true" aria-expanded="false">
+          <span class="fc-label">Sort</span>
+          <span class="fc-value">Last edited &darr;</span>
+          <span class="fc-caret">&#9662;</span>
+        </button>
+        <div class="filter-popover" role="menu" aria-label="Sort">
+          <button class="filter-popover-item is-selected" data-value="edited">Last edited &darr; <span class="fpi-check">&#10003;</span></button>
+          <button class="filter-popover-item" data-value="created">Created &darr;</button>
+          <button class="filter-popover-item" data-value="owner">Owner A–Z</button>
+          <button class="filter-popover-item" data-value="project">Project A–Z</button>
+        </div>
+      </div>
+
+      <span class="filter-spacer"></span>
+      <button class="btn btn-ghost filter-mobile-button">Filter</button>
+    </div>
+
+    <!-- Action groups -->
+    <div class="group-list">
+
+      <!-- Group 1 -->
+      <section class="list-group" data-group="premium-reco">
+        <header class="list-group-header" role="button" tabindex="0">
+          <span class="lgh-chevron" aria-hidden="true">&#9662;</span>
+          <span class="lgh-name">Premium reco lift</span>
+          <span class="lgh-stats">· 6 actions · 1 done</span>
+          <span class="lgh-spacer"></span>
+          <span class="lgh-link-hint">Open in review &rarr;</span>
+        </header>
+
+        <a class="action-row is-open" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="open">
+            <!-- open: empty square -->
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>
+          </button>
+          <span class="ar-letter">A</span>
+          <span class="ar-text">Document the metric spec and circulate to product + finance before launch.</span>
+          <span class="ar-owner">Euphie</span>
+          <span class="ar-approval">No approval needed</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-open" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="open">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>
+          </button>
+          <span class="ar-letter">B</span>
+          <span class="ar-text">Verify exposure event timestamps reflect trigger time, not ETL batch time.</span>
+          <span class="ar-owner">Euphie</span>
+          <span class="ar-approval">No approval needed</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-done" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="done">
+            <!-- done: square with check -->
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.12"/><path d="M5 8.5l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="ar-letter">C</span>
+          <span class="ar-text">Add plan-upgrade tracking alongside net-new MRR.</span>
+          <span class="ar-owner">Eng lead</span>
+          <span class="ar-approval">Data access approval</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-blocked" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="blocked">
+            <!-- blocked: warning triangle -->
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5 L14 13 L2 13 Z" stroke-linejoin="round"/><path d="M8 6.5 v3.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <span class="ar-letter">D</span>
+          <span class="ar-text">
+            Profile the 6% unmatched users to determine if missingness is random or patterned.<span class="ar-text-tag">Blocked</span>
+          </span>
+          <span class="ar-owner unassigned">Unassigned</span>
+          <span class="ar-approval">Data access approval</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-open" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="open">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>
+          </button>
+          <span class="ar-letter">E</span>
+          <span class="ar-text">Run novelty-decay analysis split by week to surface honeymoon effects.</span>
+          <span class="ar-owner">Euphie</span>
+          <span class="ar-approval">No approval needed</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-in-progress" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="in_progress">
+            <!-- in_progress: square with a small filled inner segment -->
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M2.5 8 H 8 V 13.5 H 4.5 a 2 2 0 0 1 -2 -2 Z" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <span class="ar-letter">F</span>
+          <span class="ar-text">Design the holdout group for the causal arm — confirm sample-size math with Priya.</span>
+          <span class="ar-owner">Priya</span>
+          <span class="ar-approval">Leadership review</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+      </section>
+
+      <!-- Group 2 -->
+      <section class="list-group" data-group="emea-trial">
+        <header class="list-group-header" role="button" tabindex="0">
+          <span class="lgh-chevron" aria-hidden="true">&#9662;</span>
+          <span class="lgh-name">EMEA trial-to-paid drop</span>
+          <span class="lgh-stats">· 4 actions · 0 done</span>
+          <span class="lgh-spacer"></span>
+          <span class="lgh-link-hint">Open in review &rarr;</span>
+        </header>
+
+        <a class="action-row is-open" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="open">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>
+          </button>
+          <span class="ar-letter">A</span>
+          <span class="ar-text">Segment the 14% conversion-rate cohort by signup source and product tier.</span>
+          <span class="ar-owner">Euphie</span>
+          <span class="ar-approval">No approval needed</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-open" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="open">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>
+          </button>
+          <span class="ar-letter">B</span>
+          <span class="ar-text">Pull the equivalent SMB segment as a control comparison and document the join logic.</span>
+          <span class="ar-owner">Euphie</span>
+          <span class="ar-approval">No approval needed</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-blocked" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="blocked">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5 L14 13 L2 13 Z" stroke-linejoin="round"/><path d="M8 6.5 v3.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <span class="ar-letter">C</span>
+          <span class="ar-text">
+            Confirm whether the Q1 sales reorg affected attribution for EMEA accounts.<span class="ar-text-tag">Blocked</span>
+          </span>
+          <span class="ar-owner unassigned">Unassigned</span>
+          <span class="ar-approval">Business owner sign-off</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+
+        <a class="action-row is-open" href="step-3-buildup.html">
+          <button class="ar-icon-button" type="button" aria-label="Toggle status" data-status="open">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>
+          </button>
+          <span class="ar-letter">D</span>
+          <span class="ar-text">Identify the 3 most likely silent failure modes (instrumentation, deduplication, attribution).</span>
+          <span class="ar-owner">Priya</span>
+          <span class="ar-approval">No approval needed</span>
+          <button class="ar-menu" aria-label="Row menu" type="button">&#8943;</button>
+        </a>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  // ————— Filter chip popovers (same pattern as Library) —————
+  var allChips = document.querySelectorAll('.filter-chip');
+  var allPopovers = document.querySelectorAll('.filter-popover');
+
+  function closeAll() {
+    allChips.forEach(function (chip) {
+      chip.classList.remove('is-open');
+      chip.setAttribute('aria-expanded', 'false');
+    });
+    allPopovers.forEach(function (p) { p.classList.remove('is-open'); });
+  }
+
+  allChips.forEach(function (chip) {
+    chip.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var pop = chip.parentElement.querySelector('.filter-popover');
+      var wasOpen = pop.classList.contains('is-open');
+      closeAll();
+      if (!wasOpen) {
+        chip.classList.add('is-open');
+        chip.setAttribute('aria-expanded', 'true');
+        pop.classList.add('is-open');
+      }
+    });
+  });
+
+  document.querySelectorAll('.filter-popover').forEach(function (pop) {
+    pop.addEventListener('click', function (e) {
+      var item = e.target.closest('.filter-popover-item');
+      if (!item) return;
+      pop.querySelectorAll('.filter-popover-item').forEach(function (i) {
+        i.classList.remove('is-selected');
+        var check = i.querySelector('.fpi-check');
+        if (check) check.remove();
+      });
+      item.classList.add('is-selected');
+      var checkEl = document.createElement('span');
+      checkEl.className = 'fpi-check';
+      checkEl.innerHTML = '&#10003;';
+      item.appendChild(checkEl);
+      var chip = pop.parentElement.querySelector('.filter-chip');
+      chip.querySelector('.fc-value').textContent = item.textContent.replace('✓', '').trim();
+      if (item.parentElement.firstElementChild === item) {
+        chip.classList.remove('is-active');
+      } else {
+        chip.classList.add('is-active');
+      }
+      closeAll();
+    });
+  });
+
+  document.addEventListener('click', closeAll);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
+  });
+
+  // ⌘K to focus search
+  var searchInput = document.querySelector('.search-with-hint input');
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (searchInput) searchInput.focus();
+    }
+  });
+
+  // ————— Group header collapse —————
+  document.querySelectorAll('.list-group-header').forEach(function (header) {
+    header.addEventListener('click', function (e) {
+      // Only collapse if the click wasn't on the project name (which would imply "open framing")
+      if (e.target.classList.contains('lgh-name')) {
+        // Project-name click: in the real app, navigate to step-4-summary.html for that framing.
+        // For the mockup, no-op or follow the link — keep it inert.
+        e.stopPropagation();
+        return;
+      }
+      var group = header.parentElement;
+      group.classList.toggle('is-collapsed');
+    });
+    header.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        var group = header.parentElement;
+        group.classList.toggle('is-collapsed');
+      }
+    });
+  });
+
+  // ————— Status icon toggle on row —————
+  // Cycle: open → done. (blocked + in_progress are set elsewhere; the icon click is a single-tap "mark done" shortcut.)
+  // SVG definitions for the two states the toggle moves between
+  var ICONS = {
+    open: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/></svg>',
+    done: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="currentColor" fill-opacity="0.12"/><path d="M5 8.5l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    in_progress: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M2.5 8 H 8 V 13.5 H 4.5 a 2 2 0 0 1 -2 -2 Z" fill="currentColor" stroke="none"/></svg>',
+    blocked: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5 L14 13 L2 13 Z" stroke-linejoin="round"/><path d="M8 6.5 v3.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r="0.6" fill="currentColor" stroke="none"/></svg>'
+  };
+
+  document.querySelectorAll('.ar-icon-button').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var row = btn.closest('.action-row');
+      var current = btn.dataset.status;
+      var next;
+      // Simple toggle: open → done, done → open. Blocked/in_progress are inert single-clicks
+      // (they'd need a status dropdown to change — out of scope for the mockup).
+      if (current === 'open') {
+        next = 'done';
+      } else if (current === 'done') {
+        next = 'open';
+      } else {
+        return; // blocked, in_progress — no-op via single click
+      }
+      btn.dataset.status = next;
+      btn.innerHTML = ICONS[next];
+      row.classList.remove('is-open', 'is-done', 'is-blocked', 'is-in-progress');
+      row.classList.add('is-' + next.replace('_', '-'));
+      // Update the group header's "X done" stat
+      updateGroupStats(row.closest('.list-group'));
+    });
+  });
+
+  function updateGroupStats(group) {
+    if (!group) return;
+    var rows = group.querySelectorAll('.action-row');
+    var total = rows.length;
+    var done = group.querySelectorAll('.action-row.is-done').length;
+    var stats = group.querySelector('.lgh-stats');
+    if (stats) {
+      stats.textContent = '· ' + total + ' actions · ' + done + ' done';
+    }
+  }
+
+  // Row menu — stop propagation so it doesn't open the framing
+  document.querySelectorAll('.ar-menu').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+})();
+</script>
+</body>
+</html>
