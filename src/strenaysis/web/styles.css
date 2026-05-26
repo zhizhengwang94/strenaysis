@@ -698,6 +698,34 @@ details.context textarea {
 /* Workspace tightens main width vs. Step 1/2 */
 #view-buildup .main-inner { /* hook in case we need it later */ }
 
+/* Persistent thesis-question reminder shown above the node tabs in Step 3.
+   Anchors the user to the original problem while they work in a specific node. */
+.thesis-context {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-6);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--ink-soft);
+}
+.thesis-context-label {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.thesis-context-text {
+  font-weight: var(--w-medium);
+  color: var(--ink);
+}
+
 /* Node tabs */
 .node-tabs {
   display: flex; align-items: center; gap: 2px;

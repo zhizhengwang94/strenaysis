@@ -12,7 +12,9 @@
      execution_items[]  → action items accordion
      execution_summary  → Guidance line
      workstreams[]      → "How I'm breaking this down" labeled list
-   Answers, response-type tags, and followups are local-only — no persistence yet. */
+   Answers, response-type tags, and followups are persisted to localStorage
+   (debounced) so the in-progress framing survives page reloads / accidental
+   navigation. Use Save to history in Step 4 to persist to the backend. */
 
 (function () {
   "use strict";
@@ -20,7 +22,8 @@
   /* ============ Constants ============ */
   const MAX_QUESTION_CHARS = 600;
   const MIN_ANSWER_CHARS = 10;
-  const DRAFT_KEY = "strenaysis.draft.v1";
+  const DRAFT_KEY = "strenaysis.draft.v1"; // legacy: just the textarea contents
+  const STATE_KEY = "strenaysis.state.v1"; // full in-progress framing snapshot
 
   const TYPE_LABELS = {
     descriptive_analysis: "Descriptive",
@@ -189,6 +192,7 @@
     }
 
     window.scrollTo({ top: 0, behavior: "instant" });
+    persistState();
   }
 
   /* ============ Step 1 — composer ============ */
@@ -236,6 +240,7 @@
       state.nodeBuilds = {}; // fresh problem → fresh per-node state
       renderRoadmap();
       showView("roadmap");
+      persistState();
     } catch (err) {
       alert("Could not generate roadmap: " + err.message);
     } finally {
@@ -271,6 +276,69 @@
     } catch (e) { /* ignore corrupt draft */ }
   }
 
+  /* ============ Full-state persistence (across reload / navigation) ============ */
+
+  function persistState() {
+    /* Debounced: collapse rapid mutations (drag-drop, field-typing) into one write. */
+    clearTimeout(state._persistTimer);
+    state._persistTimer = setTimeout(() => {
+      if (!hasMeaningfulState()) {
+        try { localStorage.removeItem(STATE_KEY); } catch (e) {}
+        return;
+      }
+      try {
+        localStorage.setItem(STATE_KEY, JSON.stringify({
+          v: 1,
+          view: state.view,
+          problem: state.problem,
+          problemDetails: state.problemDetails,
+          problemType: state.problemType,
+          inferredProblemType: state.inferredProblemType,
+          assessmentTitle: state.assessmentTitle,
+          assessmentRecap: state.assessmentRecap,
+          nodes: state.nodes,
+          nodeBuilds: state.nodeBuilds,
+          activeNodeId: state.activeNodeId,
+          nextCustomIdx: state.nextCustomIdx,
+          savedAt: new Date().toISOString(),
+        }));
+      } catch (e) { /* localStorage full or unavailable — fail silently */ }
+    }, 250);
+  }
+
+  function hasMeaningfulState() {
+    /* "Meaningful" = past the home view (user has submitted a problem). */
+    return !!state.problem && state.nodes.length > 0;
+  }
+
+  function restoreState() {
+    try {
+      const raw = localStorage.getItem(STATE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      if (!saved || saved.v !== 1 || !saved.problem || !Array.isArray(saved.nodes)) return null;
+      state.problem = String(saved.problem || "");
+      state.problemDetails = String(saved.problemDetails || "");
+      state.problemType = String(saved.problemType || "");
+      state.inferredProblemType = String(saved.inferredProblemType || "");
+      state.assessmentTitle = String(saved.assessmentTitle || "");
+      state.assessmentRecap = String(saved.assessmentRecap || "");
+      state.nodes = saved.nodes;
+      state.nodeBuilds = (saved.nodeBuilds && typeof saved.nodeBuilds === "object") ? saved.nodeBuilds : {};
+      state.activeNodeId = saved.activeNodeId || null;
+      state.nextCustomIdx = Number(saved.nextCustomIdx) || (state.nodes.length + 1);
+      const v = saved.view;
+      if (v === "roadmap" || v === "buildup" || v === "summary") return v;
+      return "roadmap"; // sensible fallback
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearPersistedState() {
+    try { localStorage.removeItem(STATE_KEY); } catch (e) {}
+  }
+
   /* ============ Step 1 — recent list ============ */
   async function loadRecent() {
     try {
@@ -284,6 +352,55 @@
       sideRecentNav.innerHTML =
         '<div class="recent-empty" style="padding: 6px var(--s-3); text-align: left;">Unavailable</div>';
     }
+  }
+
+  /* Pseudo-row shown at the top of the recent list when there's in-progress
+     in-memory state. Clicking it jumps back to wherever the user was. */
+  function renderDraftResumeRow() {
+    if (!hasMeaningfulState()) return "";
+    const title = (state.problem || "").trim() || "Untitled draft";
+    const type = formatProblemType(state.problemType || state.inferredProblemType);
+    const total = state.nodes.length;
+    const settled = state.nodes.filter((n) => nodeStatus(n.id) === "settled").length;
+    const where = state.view === "buildup"
+      ? "in workspace"
+      : state.view === "summary" ? "reviewing"
+      : "on analysis path";
+    const progress = total > 0
+      ? where + " · " + settled + " of " + total + " settled"
+      : where;
+    return (
+      '<a class="recent-row in-progress" href="#" data-is-draft="1" tabindex="0" style="background: var(--accent-bg);">' +
+      '<span class="status" aria-label="in progress"></span>' +
+      '<span class="rtitle">' + escapeHtml(truncate(title, 100)) + "</span>" +
+      '<span class="rtype">' + escapeHtml(type) + " · DRAFT</span>" +
+      '<span class="rdate">Unsaved · ' + escapeHtml(progress) + "</span>" +
+      "</a>"
+    );
+  }
+
+  function resumeInMemoryDraft() {
+    /* Heuristic: state.view is set to "home" the moment the user navigates
+       there, which masks where they were *in their flow*. Use activeNodeId
+       as the real anchor — if they were working on a node, they want to
+       resume there, not on Step 2. */
+    if (state.activeNodeId && state.nodes.length) {
+      const node = state.nodes.find((n) => n.id === state.activeNodeId);
+      if (node) {
+        renderBuildupShell();
+        renderBuildupBriefAndThread();
+        renderActions();
+        renderProgressStrip();
+        showView("buildup");
+        return;
+      }
+    }
+    if (state.nodes.length) {
+      renderRoadmap();
+      showView("roadmap");
+      return;
+    }
+    showView("home");
   }
 
   function renderRecent(items) {
@@ -305,7 +422,7 @@
       : total + " complete";
 
     const top = items.slice(0, 5);
-    recentList.innerHTML = top.map((item) => {
+    const savedRowsHtml = top.map((item) => {
       const status = deriveSavedStatus(item);
       /* Prefer the full thesis (item.problem) for display; problem_name is a
          truncated label that, in older saves, was sourced from the AI's
@@ -328,6 +445,11 @@
       );
     }).join("");
 
+    /* Resume-draft pseudo-row: shown at the top when there's in-memory
+       in-progress work that hasn't been saved to history yet. */
+    const draftRowHtml = renderDraftResumeRow();
+    recentList.innerHTML = draftRowHtml + savedRowsHtml;
+
     const sidebarItems = items.slice(0, 4);
     sideRecentNav.innerHTML = sidebarItems.map((item) => {
       const title = (item.problem || item.problem_name || "").trim() || "Untitled";
@@ -345,7 +467,11 @@
     recentList.querySelectorAll(".recent-row").forEach((row) => {
       row.addEventListener("click", (e) => {
         e.preventDefault();
-        loadSavedFraming(row.dataset.filename);
+        if (row.dataset.isDraft === "1") {
+          resumeInMemoryDraft();
+        } else {
+          loadSavedFraming(row.dataset.filename);
+        }
       });
     });
     sideRecentNav.querySelectorAll("a[data-filename]").forEach((row) => {
@@ -606,6 +732,7 @@
       ingestRoadmapResponse(payload);
       state.nodeBuilds = {}; // type changed → invalidate per-node state
       renderRoadmap();
+      persistState();
     } catch (err) {
       alert("Could not update analysis path: " + err.message);
     } finally {
@@ -667,6 +794,7 @@
       if (!insertBefore) insertIdx += 1;
       state.nodes.splice(insertIdx, 0, moved);
       renderNodeList(); updateSettledCount();
+      persistState();
     });
   }
 
@@ -696,6 +824,7 @@
     });
     closeAddNodeForm();
     renderNodeList(); renderRoadmapTitle(); updateSettledCount();
+    persistState();
     setTimeout(() => {
       const last = nodeListEl.querySelector(".node-row:last-child");
       if (last) last.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -831,6 +960,19 @@
       buildupTitle.textContent = node.title;
       crumbNode.textContent = node.title;
       document.title = "Strenaysis — Workspace · " + node.title;
+    }
+
+    /* Persistent "Answering: <thesis>" reminder. Anchors the user to the
+       original problem while they work in a specific node. */
+    const thesisEl = document.getElementById("buildup-thesis-context");
+    const thesisText = document.getElementById("buildup-thesis-text");
+    const thesis = (state.problem || "").trim();
+    if (thesis) {
+      thesisText.textContent = truncate(thesis, 220);
+      thesisText.title = thesis; // full text on hover
+      thesisEl.hidden = false;
+    } else {
+      thesisEl.hidden = true;
     }
   }
 
@@ -1024,6 +1166,7 @@
     renderBuildupBriefAndThread();
     renderActions();
     renderProgressStrip();
+    persistState();
 
     setTimeout(() => {
       const nextComposer = threadEl.querySelector(".composer");
@@ -1097,6 +1240,7 @@
         slot.actions = slot.actions.filter((a) => a.id !== id);
         pulseSave();
         renderActions();
+        persistState();
       });
     });
   }
@@ -1138,6 +1282,7 @@
     a[field] = e.target.value;
     if (field === "detail") a.title = truncate(e.target.value || "Untitled action", 80);
     pulseSave();
+    persistState(); // debounced — handles rapid typing
     /* Don't fully re-render — keep focus + accordion state */
   }
 
@@ -1154,6 +1299,7 @@
     slot.actions.push(newAct);
     pulseSave();
     renderActions();
+    persistState();
     /* Open the new one */
     setTimeout(() => {
       const item = actionListEl.querySelector('.action-item[data-action-id="' + newAct.id + '"]');
@@ -1611,6 +1757,7 @@
     if (problemDetailsInput) problemDetailsInput.value = "";
     if (contextDetails) contextDetails.open = false;
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    clearPersistedState();
     updateComposer();
     showView("home");
   }
@@ -1781,7 +1928,32 @@
     restoreDraft();
     updateComposer();
     loadRecent();
-    showView("home");
+
+    /* Try to restore a full in-progress state. If nothing was saved (or it's
+       corrupt / first visit), fall back to the home view. */
+    const restoredView = restoreState();
+    if (restoredView === "roadmap") {
+      renderRoadmap();
+      showView("roadmap");
+    } else if (restoredView === "buildup") {
+      const node = state.nodes.find((n) => n.id === state.activeNodeId)
+        || state.nodes[0];
+      if (node) {
+        state.activeNodeId = node.id;
+        renderBuildupShell();
+        renderBuildupBriefAndThread();
+        renderActions();
+        renderProgressStrip();
+        showView("buildup");
+      } else {
+        showView("home");
+      }
+    } else if (restoredView === "summary") {
+      renderSummary();
+      showView("summary");
+    } else {
+      showView("home");
+    }
   }
 
   if (document.readyState === "loading") {
