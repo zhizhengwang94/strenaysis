@@ -25,18 +25,6 @@
       </div>
     </div>
 
-    <section class="workspace-card" aria-label="Local project folder">
-      <div class="workspace-card-head">
-        <span>Local project</span>
-        <span id="workspace-mode">Default</span>
-      </div>
-      <div class="workspace-path" id="workspace-path">Repository folder</div>
-      <div class="workspace-actions">
-        <button type="button" id="choose-workspace-btn">Choose folder</button>
-        <button type="button" id="clear-workspace-btn" hidden>Use repo</button>
-      </div>
-    </section>
-
     <!-- Sidebar variant: Step 1 (Workspace + Recent) -->
     <div id="side-step1">
       <div style="margin-bottom: var(--s-6);">
@@ -45,6 +33,18 @@
           <a href="#" data-nav="intro"><span class="side-ico">i</span> Mission &amp; vision <span class="badge">I</span></a>
         </nav>
       </div>
+
+      <section class="workspace-card" aria-label="Local project folder">
+        <div class="workspace-card-head">
+          <span>Local project</span>
+          <span id="workspace-mode">Default</span>
+        </div>
+        <div class="workspace-path" id="workspace-path">Repository folder</div>
+        <div class="workspace-actions">
+          <button type="button" id="choose-workspace-btn">Choose folder</button>
+          <button type="button" id="clear-workspace-btn" hidden>Use repo</button>
+        </div>
+      </section>
 
       <div style="margin-bottom: var(--s-6);">
         <div class="side-label">Workspace</div>

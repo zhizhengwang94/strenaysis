@@ -2054,34 +2054,14 @@
     llmModeToggle.checked = state.useLlm !== false;
     updateComposer();
     loadWorkspace();
-    loadRecent();
 
-    /* Try to restore a full in-progress state. If nothing was saved (or it's
-       corrupt / first visit), fall back to the home view. */
-    const restoredView = restoreState();
+    /* Restore in-progress work into memory, but always land on New problem.
+       The restored work remains available through "Pick up where you left off"
+       instead of hijacking the default home page on reload. */
+    restoreState();
     llmModeToggle.checked = state.useLlm !== false;
-    if (restoredView === "roadmap") {
-      renderRoadmap();
-      showView("roadmap");
-    } else if (restoredView === "buildup") {
-      const node = state.nodes.find((n) => n.id === state.activeNodeId)
-        || state.nodes[0];
-      if (node) {
-        state.activeNodeId = node.id;
-        renderBuildupShell();
-        renderBuildupBriefAndThread();
-        renderActions();
-        renderProgressStrip();
-        showView("buildup");
-      } else {
-        showView("home");
-      }
-    } else if (restoredView === "summary") {
-      renderSummary();
-      showView("summary");
-    } else {
-      showView("home");
-    }
+    loadRecent();
+    showView("home");
   }
 
   if (document.readyState === "loading") {
