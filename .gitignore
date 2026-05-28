@@ -5,6 +5,7 @@ __pycache__/
 
 # Transient app data — only `saved_problem_structures/` is meant to be tracked.
 problems/
+.strenaysis_workspace.json
 
 # Browser / editor scratch dirs
 .tmp-edge-codex/

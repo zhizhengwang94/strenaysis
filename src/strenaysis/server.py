@@ -27,6 +27,14 @@ ACCESS_COOKIE = "strenaysis_access"
 ACCESS_CODE = "2825628257282931"
 SAVE_DIRECTORY = "saved_problem_structures"
 ACTION_DIRECTORY = "active_problem_structures"
+WORKSPACE_CONFIG_FILE = ".strenaysis_workspace.json"
+
+
+def _wants_llm(body: dict) -> bool:
+    value = body.get("use_llm", True)
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off"}
+    return value is not False
 
 
 class AppHandler(SimpleHTTPRequestHandler):
@@ -48,6 +56,9 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
         if path == "/api/pipeline-overview" or path.endswith("/api/pipeline-overview"):
             self._handle_pipeline_overview()
+            return
+        if path == "/api/workspace" or path.endswith("/api/workspace"):
+            self._handle_get_workspace()
             return
         if "/api/problem-framings/" in path:
             self._handle_get_problem_framing()
@@ -82,6 +93,12 @@ class AppHandler(SimpleHTTPRequestHandler):
         if path == "/api/export" or path.endswith("/api/export"):
             self._handle_export()
             return
+        if path == "/api/workspace/choose" or path.endswith("/api/workspace/choose"):
+            self._handle_choose_workspace()
+            return
+        if path == "/api/workspace" or path.endswith("/api/workspace"):
+            self._handle_set_workspace()
+            return
         if "save-problem-framing" in path:
             self._handle_save_problem_framing()
             return
@@ -99,11 +116,12 @@ class AppHandler(SimpleHTTPRequestHandler):
         problem = str(body.get("problem", "")).strip()
         problem_details = str(body.get("problem_details", "")).strip()
         problem_type = str(body.get("problem_type", "")).strip() or None
+        use_llm = _wants_llm(body)
         if not problem:
             self._send_json({"error": "Problem to Solve is required."}, status=HTTPStatus.BAD_REQUEST)
             return
 
-        result = generate_roadmap(problem, problem_details, problem_type)
+        result = generate_roadmap(problem, problem_details, problem_type, use_llm=use_llm)
         self._send_json({
             "problem": problem,
             "problem_details": problem_details,
@@ -151,6 +169,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         node_title = str(body.get("node_title", "")).strip()
         node_why = str(body.get("node_why", "")).strip()
         node_breakdown = str(body.get("node_breakdown", "")).strip()
+        use_llm = _wants_llm(body)
         if not problem or not node_title:
             self._send_json({"error": "Problem and node title are required."}, status=HTTPStatus.BAD_REQUEST)
             return
@@ -162,6 +181,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             node_title=node_title,
             node_why=node_why,
             node_breakdown=node_breakdown,
+            use_llm=use_llm,
         )
         self._send_json(scaffold)
 
@@ -524,6 +544,68 @@ class AppHandler(SimpleHTTPRequestHandler):
             "recent_activity": recent_activity[:10],
         })
 
+    def _handle_get_workspace(self) -> None:
+        self._send_json(self._workspace_payload())
+
+    def _handle_set_workspace(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        raw_body = self.rfile.read(content_length)
+        try:
+            body = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        if body.get("clear") is True:
+            self._clear_workspace_dir()
+            self._send_json(self._workspace_payload())
+            return
+
+        folder = str(body.get("path", "")).strip()
+        if not folder:
+            self._send_json({"error": "Workspace path is required."}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        try:
+            workspace = self._set_workspace_dir(folder)
+        except ValueError as exc:
+            self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
+        except OSError as exc:
+            self._send_json({"error": f"Unable to use workspace folder: {exc}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+        self._send_json(self._workspace_payload(workspace))
+
+    def _handle_choose_workspace(self) -> None:
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            selected = filedialog.askdirectory(
+                title="Choose Strenaysis working folder",
+                mustexist=True,
+            )
+            root.destroy()
+        except Exception as exc:
+            self._send_json({"error": f"Unable to open folder picker: {exc}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
+
+        if not selected:
+            payload = self._workspace_payload()
+            payload["cancelled"] = True
+            self._send_json(payload)
+            return
+
+        try:
+            workspace = self._set_workspace_dir(selected)
+        except (ValueError, OSError) as exc:
+            self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
+        self._send_json(self._workspace_payload(workspace))
+
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         encoded = json.dumps(payload).encode("utf-8")
         self.send_response(status)
@@ -738,11 +820,67 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     @staticmethod
     def _storage_dir() -> Path:
-        return Path.cwd() / SAVE_DIRECTORY
+        return AppHandler._workspace_dir() / SAVE_DIRECTORY
 
     @staticmethod
     def _action_storage_dir() -> Path:
-        return Path.cwd() / ACTION_DIRECTORY
+        return AppHandler._workspace_dir() / ACTION_DIRECTORY
+
+    @staticmethod
+    def _workspace_config_path() -> Path:
+        return Path.cwd() / WORKSPACE_CONFIG_FILE
+
+    @staticmethod
+    def _configured_workspace_dir() -> Path | None:
+        env_path = os.getenv("STRENAYSIS_WORKSPACE_DIR", "").strip()
+        if env_path:
+            return Path(env_path).expanduser().resolve()
+
+        config_path = AppHandler._workspace_config_path()
+        if not config_path.exists():
+            return None
+        try:
+            payload = json.loads(config_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        folder = str(payload.get("path", "")).strip()
+        return Path(folder).expanduser().resolve() if folder else None
+
+    @staticmethod
+    def _workspace_dir() -> Path:
+        configured = AppHandler._configured_workspace_dir()
+        if configured and configured.is_dir():
+            return configured
+        return Path.cwd()
+
+    @staticmethod
+    def _workspace_payload(workspace: Path | None = None) -> dict:
+        configured = AppHandler._configured_workspace_dir()
+        active = workspace or AppHandler._workspace_dir()
+        is_selected = configured is not None and configured.is_dir() and active == configured
+        return {
+            "path": str(active),
+            "mode": "selected" if is_selected else "default",
+            "storage_dir": str(active / SAVE_DIRECTORY),
+            "action_dir": str(active / ACTION_DIRECTORY),
+        }
+
+    @staticmethod
+    def _set_workspace_dir(folder: str) -> Path:
+        workspace = Path(folder).expanduser().resolve()
+        if not workspace.exists() or not workspace.is_dir():
+            raise ValueError("Choose an existing folder for this Strenaysis workspace.")
+        config_path = AppHandler._workspace_config_path()
+        config_path.write_text(json.dumps({"path": str(workspace)}, indent=2), encoding="utf-8")
+        return workspace
+
+    @staticmethod
+    def _clear_workspace_dir() -> None:
+        config_path = AppHandler._workspace_config_path()
+        try:
+            config_path.unlink()
+        except FileNotFoundError:
+            return
 
     def log_message(self, format: str, *args) -> None:  # noqa: A003
         return

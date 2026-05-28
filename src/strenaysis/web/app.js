@@ -54,9 +54,10 @@
 
   /* ============ State ============ */
   const state = {
-    view: "home", // "home" | "roadmap" | "buildup" | "summary"
+    view: "home", // "intro" | "home" | "roadmap" | "buildup" | "summary"
     problem: "",
     problemDetails: "",
+    useLlm: true,
     problemType: "",
     inferredProblemType: "",
     assessmentTitle: "",
@@ -78,9 +79,10 @@
 
   /* ============ DOM refs ============ */
   let problemInput, problemDetailsInput, contextDetails, charCounter,
-    structureBtn, saveDraftBtn, recentCount, recentList, sideRecentNav,
-    sideHistoryCount, sideStep1, sideCurrentProblem, cpSteps,
-    homeView, roadmapView, buildupView, summaryStubView,
+    structureBtn, saveDraftBtn, llmModeToggle, recentCount, recentList, sideRecentNav,
+    sideHistoryCount, workspaceMode, workspacePath, chooseWorkspaceBtn, clearWorkspaceBtn,
+    sideStep1, sideCurrentProblem, cpSteps,
+    introView, homeView, roadmapView, buildupView, summaryStubView,
     roadmapTitle, roadmapQuestion, roadmapTypeChip, assessmentWhy,
     problemTypes, updatePathBtn, nodeListEl,
     addNodeTrigger, addNodeForm, newNodeName, newNodeDesc, saveNodeBtn,
@@ -175,16 +177,21 @@
   /* ============ View / sidebar routing ============ */
   function showView(name) {
     state.view = name;
+    introView.hidden = name !== "intro";
     homeView.hidden = name !== "home";
     roadmapView.hidden = name !== "roadmap";
     buildupView.hidden = name !== "buildup";
     summaryView.hidden = name !== "summary";
 
-    const isStep1 = name === "home";
-    sideStep1.hidden = !isStep1;
-    sideCurrentProblem.hidden = isStep1;
+    const isEntryView = name === "intro" || name === "home";
+    sideStep1.hidden = !isEntryView;
+    sideCurrentProblem.hidden = isEntryView;
 
-    if (!isStep1) {
+    document.querySelectorAll("[data-nav]").forEach((el) => {
+      el.classList.toggle("on", el.dataset.nav === name);
+    });
+
+    if (!isEntryView) {
       const activeStep = name === "roadmap" ? 2 : name === "buildup" ? 3 : 4;
       cpSteps.forEach((el) => {
         const step = Number(el.dataset.step);
@@ -271,6 +278,7 @@
             view: state.view,
             problem: state.problem,
             problemDetails: state.problemDetails,
+            useLlm: state.useLlm,
             problemType: state.problemType,
             inferredProblemType: state.inferredProblemType,
             assessmentTitle: state.assessmentTitle,
@@ -330,6 +338,7 @@
           view: state.view,
           problem: state.problem,
           problemDetails: state.problemDetails,
+          useLlm: state.useLlm,
           problemType: state.problemType,
           inferredProblemType: state.inferredProblemType,
           assessmentTitle: state.assessmentTitle,
@@ -357,6 +366,7 @@
       if (!saved || saved.v !== 1 || !saved.problem || !Array.isArray(saved.nodes)) return null;
       state.problem = String(saved.problem || "");
       state.problemDetails = String(saved.problemDetails || "");
+      state.useLlm = saved.useLlm !== false;
       state.problemType = String(saved.problemType || "");
       state.inferredProblemType = String(saved.inferredProblemType || "");
       state.assessmentTitle = String(saved.assessmentTitle || "");
@@ -375,6 +385,66 @@
 
   function clearPersistedState() {
     try { localStorage.removeItem(STATE_KEY); } catch (e) {}
+  }
+
+  /* ============ Local project folder ============ */
+  function renderWorkspace(payload) {
+    if (!payload || !workspacePath || !workspaceMode) return;
+    const path = String(payload.path || "").trim();
+    const mode = payload.mode === "selected" ? "Selected" : "Default";
+    const name = path.split(/[\\/]+/).filter(Boolean).pop() || path || "Repository folder";
+    workspaceMode.textContent = mode;
+    workspacePath.textContent = mode === "Selected" ? name : "Repository folder";
+    workspacePath.title = path;
+    if (clearWorkspaceBtn) clearWorkspaceBtn.hidden = mode !== "Selected";
+  }
+
+  async function loadWorkspace() {
+    try {
+      const response = await fetch("/api/workspace");
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to load workspace.");
+      renderWorkspace(payload);
+    } catch (err) {
+      if (workspaceMode) workspaceMode.textContent = "Offline";
+      if (workspacePath) workspacePath.textContent = "Folder unavailable";
+    }
+  }
+
+  async function chooseWorkspace() {
+    if (!chooseWorkspaceBtn) return;
+    const original = chooseWorkspaceBtn.textContent;
+    chooseWorkspaceBtn.disabled = true;
+    chooseWorkspaceBtn.textContent = "Choosing...";
+    try {
+      const response = await fetch("/api/workspace/choose", { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to choose folder.");
+      renderWorkspace(payload);
+      if (!payload.cancelled) loadRecent();
+    } catch (err) {
+      alert("Could not choose workspace folder: " + (err.message || "unknown error"));
+    } finally {
+      chooseWorkspaceBtn.disabled = false;
+      chooseWorkspaceBtn.textContent = original;
+    }
+  }
+
+  async function clearWorkspace() {
+    if (!clearWorkspaceBtn) return;
+    try {
+      const response = await fetch("/api/workspace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clear: true }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to reset workspace.");
+      renderWorkspace(payload);
+      loadRecent();
+    } catch (err) {
+      alert("Could not reset workspace folder: " + (err.message || "unknown error"));
+    }
   }
 
   /* ============ Step 1 — recent list ============ */
@@ -629,6 +699,7 @@
       body: JSON.stringify({
         problem: state.problem,
         problem_details: state.problemDetails,
+        use_llm: state.useLlm !== false,
         problem_type: forcedType || "",
       }),
     });
@@ -897,6 +968,7 @@
         body: JSON.stringify({
           problem: state.problem,
           problem_details: state.problemDetails,
+          use_llm: state.useLlm !== false,
           problem_type: state.problemType,
           node_title: node.title,
           node_why: node.description,
@@ -1808,15 +1880,21 @@
     charCounter = document.getElementById("char-counter");
     structureBtn = document.getElementById("structure-problem-btn");
     saveDraftBtn = document.getElementById("save-draft-btn");
+    llmModeToggle = document.getElementById("llm-mode-toggle");
     recentCount = document.getElementById("recent-count");
     recentList = document.getElementById("recent-list");
     sideRecentNav = document.getElementById("side-recent-nav");
     sideHistoryCount = document.getElementById("side-history-count");
+    workspaceMode = document.getElementById("workspace-mode");
+    workspacePath = document.getElementById("workspace-path");
+    chooseWorkspaceBtn = document.getElementById("choose-workspace-btn");
+    clearWorkspaceBtn = document.getElementById("clear-workspace-btn");
 
     sideStep1 = document.getElementById("side-step1");
     sideCurrentProblem = document.getElementById("side-current-problem");
     cpSteps = Array.from(sideCurrentProblem.querySelectorAll(".side-step"));
 
+    introView = document.getElementById("view-intro");
     homeView = document.getElementById("view-home");
     roadmapView = document.getElementById("view-roadmap");
     buildupView = document.getElementById("view-buildup");
@@ -1879,6 +1957,12 @@
     problemInput.addEventListener("input", updateComposer);
     structureBtn.addEventListener("click", submitProblem);
     saveDraftBtn.addEventListener("click", saveDraft);
+    llmModeToggle.addEventListener("change", () => {
+      state.useLlm = llmModeToggle.checked;
+      persistState();
+    });
+    chooseWorkspaceBtn.addEventListener("click", chooseWorkspace);
+    clearWorkspaceBtn.addEventListener("click", clearWorkspace);
 
     /* Step 2 */
     roadmapQuestion.addEventListener("input", () => { state.problem = roadmapQuestion.value; });
@@ -1918,6 +2002,9 @@
     exportPptxBtn.addEventListener("click", () => exportFile("pptx"));
 
     /* Sidebar nav */
+    document.querySelectorAll('[data-nav="intro"]').forEach((el) => {
+      el.addEventListener("click", (e) => { e.preventDefault(); showView("intro"); });
+    });
     document.querySelectorAll('[data-nav="home"]').forEach((el) => {
       el.addEventListener("click", (e) => { e.preventDefault(); showView("home"); });
     });
@@ -1964,12 +2051,15 @@
     resolveDOM();
     wire();
     restoreDraft();
+    llmModeToggle.checked = state.useLlm !== false;
     updateComposer();
+    loadWorkspace();
     loadRecent();
 
     /* Try to restore a full in-progress state. If nothing was saved (or it's
        corrupt / first visit), fall back to the home view. */
     const restoredView = restoreState();
+    llmModeToggle.checked = state.useLlm !== false;
     if (restoredView === "roadmap") {
       renderRoadmap();
       showView("roadmap");

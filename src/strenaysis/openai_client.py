@@ -54,11 +54,19 @@ class OpenAIResult:
 DEFAULT_ROADMAP = [{"title": t, "why": NODE_WHY[t], "breakdown": "", "suggested_context": ""} for t in ROADMAP_TEMPLATES[DEFAULT_PROBLEM_TYPE]]
 
 
-def generate_roadmap(problem: str, problem_details: str = "", forced_problem_type: str | None = None) -> OpenAIResult:
+def generate_roadmap(
+    problem: str,
+    problem_details: str = "",
+    forced_problem_type: str | None = None,
+    use_llm: bool = True,
+) -> OpenAIResult:
     inferred_type = _classify_problem_type(problem, problem_details)
     fallback_type = forced_problem_type or inferred_type
     fallback_roadmap = _build_fallback_roadmap(problem, problem_details, fallback_type)
     fallback_title, fallback_recap = _build_problem_assessment(problem, problem_details, fallback_type, inferred_type)
+
+    if not use_llm:
+        return OpenAIResult(fallback_roadmap, "fallback", fallback_type, inferred_type, fallback_title, fallback_recap)
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -212,8 +220,12 @@ def generate_node_build(
     node_title: str,
     node_why: str,
     node_breakdown: str,
+    use_llm: bool = True,
 ) -> dict[str, Any]:
     fallback = _fallback_node_build(problem, problem_details, problem_type, node_title, node_why, node_breakdown)
+    if not use_llm:
+        return fallback
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return fallback

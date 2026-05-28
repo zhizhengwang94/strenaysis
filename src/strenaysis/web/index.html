@@ -25,8 +25,27 @@
       </div>
     </div>
 
+    <section class="workspace-card" aria-label="Local project folder">
+      <div class="workspace-card-head">
+        <span>Local project</span>
+        <span id="workspace-mode">Default</span>
+      </div>
+      <div class="workspace-path" id="workspace-path">Repository folder</div>
+      <div class="workspace-actions">
+        <button type="button" id="choose-workspace-btn">Choose folder</button>
+        <button type="button" id="clear-workspace-btn" hidden>Use repo</button>
+      </div>
+    </section>
+
     <!-- Sidebar variant: Step 1 (Workspace + Recent) -->
     <div id="side-step1">
+      <div style="margin-bottom: var(--s-6);">
+        <div class="side-label">Intro</div>
+        <nav class="side-nav">
+          <a href="#" data-nav="intro"><span class="side-ico">i</span> Mission &amp; vision <span class="badge">I</span></a>
+        </nav>
+      </div>
+
       <div style="margin-bottom: var(--s-6);">
         <div class="side-label">Workspace</div>
         <nav class="side-nav">
@@ -76,6 +95,51 @@
 
   <main class="main">
 
+    <!-- ============== View: Intro ============== -->
+    <section id="view-intro" class="view" hidden aria-label="Mission and vision">
+
+      <div class="topbar">
+        <span class="crumb">Intro</span>
+        <span class="sep">/</span>
+        <span class="crumb active">Mission &amp; vision</span>
+        <span class="spacer"></span>
+      </div>
+
+      <p class="eyebrow"><span class="dot"></span> Product purpose</p>
+      <h1 class="title">Strenaysis is a framing layer for data teams.</h1>
+      <p class="lede">
+        It starts before the query, dashboard, or model. The workspace helps teams agree on what they are trying to learn,
+        why it matters, and what evidence would make the answer decision-ready.
+      </p>
+
+      <section id="mission-vision" class="mission-vision mission-vision-page" aria-label="Mission and vision">
+        <article>
+          <p class="mission-vision-label">Mission</p>
+          <h2>Raise the floor on analytics framing before the work begins.</h2>
+          <p>
+            Strenaysis helps data teams turn ambiguous stakeholder asks into structured questions, evidence needs,
+            and decision-ready workplans before a query, dashboard, or model is built.
+          </p>
+        </article>
+        <article>
+          <p class="mission-vision-label">Vision</p>
+          <h2>Make analytical reasoning visible, reviewable, and reusable.</h2>
+          <p>
+            The workspace gives stakeholders, analysts, and leads a shared artifact for aligning on what matters,
+            what would change the decision, and what work should happen next.
+          </p>
+        </article>
+      </section>
+
+      <div class="intro-callout">
+        <p>
+          The product bet is simple: data teams create more leverage when they help the business see what it is actually deciding.
+        </p>
+        <button type="button" class="btn btn-primary" data-nav="home">Start a new problem</button>
+      </div>
+
+    </section>
+
     <!-- ============== View: Home (Step 1) ============== -->
     <section id="view-home" class="view" aria-label="New problem">
 
@@ -114,6 +178,10 @@
         <div class="composer-foot">
           <span class="counter" id="char-counter">Type a question to continue</span>
           <span class="spacer"></span>
+          <label class="llm-toggle" for="llm-mode-toggle">
+            <span>Use LLM</span>
+            <input type="checkbox" id="llm-mode-toggle" checked />
+          </label>
           <button type="button" class="btn btn-ghost" id="save-draft-btn">Save as draft</button>
           <button
             type="button"
