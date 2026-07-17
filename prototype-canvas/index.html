@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strenaysis Reasoning Canvas (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   Strenaysis reasoning canvas (standalone prototype)
+   Design tokens shared with the main app (web/styles.css).
+   No build step, no server, no network: mock LLM runs inline.
+   ============================================================ */
+:root{
+  --bg:oklch(98.5% 0.004 250); --surface:oklch(100% 0 0); --surface-2:oklch(96.5% 0.005 250);
+  --ink:oklch(20% 0.015 260); --ink-soft:oklch(36% 0.012 260); --muted:oklch(55% 0.01 260);
+  --faint:oklch(72% 0.008 260); --line:oklch(91% 0.008 260); --line-soft:oklch(95% 0.006 260);
+  --accent:oklch(48% 0.14 258); --accent-ink:oklch(38% 0.15 258); --accent-bg:oklch(96% 0.03 258);
+  --success:oklch(52% 0.11 160); --success-bg:oklch(96% 0.03 160);
+  --warning:oklch(62% 0.13 60); --warning-bg:oklch(96% 0.04 75);
+  --human:oklch(50% 0.13 300); --human-bg:oklch(96% 0.03 300);
+  --sans:"Geist",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --text-xs:.6875rem; --text-sm:.8125rem; --text-base:.9375rem; --text-lg:1.0625rem; --text-xl:1.25rem; --text-2xl:2rem;
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:28px; --s-7:40px; --s-8:56px;
+  --radius:10px; --radius-sm:6px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:var(--text-base);line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11";}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+::selection{background:var(--accent-bg);color:var(--accent-ink);}
+.mono{font-family:var(--mono);}
+.hidden{display:none !important;}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-sm);font-size:var(--text-sm);font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--ink);transition:.12s;}
+.btn:hover{border-color:var(--faint);}
+.btn-primary{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.btn-primary:hover{background:oklch(28% 0.02 260);}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-accent:hover{filter:brightness(1.08);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-sm{padding:5px 10px;font-size:var(--text-xs);}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--muted);}
+.btn-ghost:hover{background:var(--surface-2);color:var(--ink);}
+
+/* ---------- intake / interrogate (centered) ---------- */
+.stage{min-height:100vh;display:grid;place-items:center;padding:var(--s-7);}
+.stage-card{width:min(680px,100%);}
+.kicker{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--s-4);}
+.stage h1{font-size:var(--text-2xl);letter-spacing:-.02em;line-height:1.1;margin:0 0 var(--s-3);}
+.stage .lede{color:var(--ink-soft);font-size:var(--text-lg);margin:0 0 var(--s-6);max-width:52ch;}
+.field{width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:var(--s-4);font:inherit;color:var(--ink);resize:vertical;transition:.12s;}
+.field:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+textarea.field{min-height:96px;line-height:1.5;}
+.row{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap;}
+.spread{justify-content:space-between;}
+.mt-4{margin-top:var(--s-4);} .mt-6{margin-top:var(--s-6);} .mt-2{margin-top:var(--s-2);}
+
+/* model picker */
+.model-pick{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:var(--text-sm);background:var(--surface);}
+.model-pick select{border:none;background:none;font:inherit;color:var(--ink);font-weight:500;cursor:pointer;outline:none;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--success);}
+.dot.off{background:var(--faint);}
+
+/* interrogation questions */
+.q-block{border:1px solid var(--line);border-radius:var(--radius);padding:var(--s-4) var(--s-5);margin-bottom:var(--s-3);background:var(--surface);}
+.q-block label{display:block;font-weight:500;margin-bottom:2px;}
+.q-block .hint{color:var(--muted);font-size:var(--text-sm);margin-bottom:var(--s-3);}
+.q-block input{width:100%;border:none;border-bottom:1px solid var(--line);padding:8px 0;font:inherit;background:none;color:var(--ink);}
+.q-block input:focus{outline:none;border-color:var(--accent);}
+.thinking-note{display:flex;gap:10px;align-items:flex-start;background:var(--warning-bg);border:1px solid oklch(88% 0.05 75);border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);font-size:var(--text-sm);color:var(--ink-soft);margin-top:var(--s-5);}
+.fw-picker{display:flex;gap:6px;flex-wrap:wrap;}
+.fw-opt{padding:7px 13px;border:1px solid var(--line);border-radius:999px;font-size:var(--text-sm);color:var(--ink-soft);background:var(--surface);transition:.12s;}
+.fw-opt.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.fw-opt:hover:not(.on){border-color:var(--faint);}
+
+/* ---------- canvas app shell ---------- */
+.app{display:grid;grid-template-columns:236px 1fr 360px;grid-template-rows:minmax(0,1fr);height:100vh;}
+.app.no-panel{grid-template-columns:236px 1fr;}
+.side{border-right:1px solid var(--line);background:var(--surface);padding:var(--s-5);display:flex;flex-direction:column;gap:var(--s-5);overflow:auto;min-height:0;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-glyph{width:28px;height:28px;border-radius:7px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:600;font-size:var(--text-sm);letter-spacing:-.02em;}
+.brand-name{font-weight:600;letter-spacing:-.01em;}
+.brand-sub{font-size:var(--text-xs);color:var(--muted);}
+.side-label{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--s-2);}
+.q-recap{font-size:var(--text-sm);color:var(--ink-soft);line-height:1.45;background:var(--surface-2);border-radius:var(--radius-sm);padding:var(--s-3);}
+.ctx-item{font-size:var(--text-sm);padding:6px 0;border-bottom:1px solid var(--line-soft);}
+.ctx-item b{font-weight:500;color:var(--ink);} .ctx-item span{color:var(--muted);}
+
+/* main column */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg);}
+.topbar{display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4) var(--s-5);border-bottom:1px solid var(--line);background:var(--surface);}
+.topbar .title{font-weight:600;letter-spacing:-.01em;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface);}
+.seg button{padding:6px 14px;font-size:var(--text-sm);color:var(--muted);}
+.seg button.on{background:var(--ink);color:var(--bg);}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:var(--text-xs);border:1px solid var(--line);color:var(--ink-soft);}
+
+/* the tree canvas */
+.canvas{flex:1;overflow:auto;padding:var(--s-7) var(--s-6);}
+.tree{display:flex;flex-direction:column;gap:6px;max-width:820px;margin:0 auto;}
+.tier-label{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:var(--s-3) 0 4px 2px;}
+
+/* node card */
+.node{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:9px 13px;transition:.12s;cursor:pointer;}
+.node:hover{border-color:var(--faint);}
+.node.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+
+/* children group + continuous connectors */
+.node-group{display:flex;flex-direction:column;}
+.node-kids{position:relative;margin:5px 0 0 20px;padding-left:22px;display:flex;flex-direction:column;gap:5px;}
+.node-kids::before{content:"";position:absolute;left:0;top:-7px;bottom:0;width:1.5px;background:var(--line);}
+.node.child::before{content:"";position:absolute;left:-22px;top:50%;width:22px;height:1.5px;background:var(--line);}
+.node-kids > .node:last-of-type::after{content:"";position:absolute;left:-23px;top:calc(50% + 1px);bottom:-6px;width:3px;background:var(--bg);}
+.node.root{background:var(--ink);color:var(--bg);border-color:var(--ink);cursor:default;padding:var(--s-3) var(--s-4);border-radius:var(--radius);}
+.node.root .node-title{font-size:var(--text-lg);}
+.node.root:hover{border-color:var(--ink);}
+.node.root .chip{background:oklch(100% 0 0 / .12);color:oklch(100% 0 0 / .88);border-color:oklch(100% 0 0 / .22);}
+.node-head{display:flex;align-items:center;gap:8px;}
+.node-title{font-weight:500;letter-spacing:-.005em;flex:1;line-height:1.35;}
+.node-grip{width:12px;flex:none;text-align:center;color:var(--faint);font-size:var(--text-sm);line-height:1;cursor:grab;opacity:0;transition:opacity .12s;user-select:none;}
+.node:hover .node-grip{opacity:.55;}
+.node-grip:active{cursor:grabbing;}
+.node.dragging{opacity:.4;}
+.node.drop-before{box-shadow:0 -2px 0 0 var(--accent);}
+.node.drop-after{box-shadow:0 2px 0 0 var(--accent);}
+.node-meta{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;}
+
+/* chips + badges */
+.chip{font-size:var(--text-xs);padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;}
+.chip.phase-question{background:var(--surface-2);}
+.chip.phase-approach{background:var(--accent-bg);color:var(--accent-ink);border-color:transparent;}
+.chip.phase-executing{background:var(--accent);color:#fff;border-color:transparent;}
+.chip.phase-finding{background:var(--success-bg);color:var(--success);border-color:transparent;}
+.prov{font-size:var(--text-xs);padding:2px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.prov.ai{background:var(--surface-2);color:var(--muted);}
+.prov.edited{background:var(--accent-bg);color:var(--accent-ink);}
+.prov.human{background:var(--human-bg);color:var(--human);}
+.prov::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7;}
+.accepted-tick{color:var(--success);font-size:var(--text-sm);}
+.own{font-size:var(--text-xs);padding:2px 9px;border-radius:999px;white-space:nowrap;font-weight:var(--w-medium);}
+.own-yours{background:var(--human-bg);color:var(--human);}
+.own-draft{background:var(--surface-2);color:var(--muted);}
+.tier-hint{text-transform:none;letter-spacing:0;color:var(--faint);font-weight:var(--w-normal);}
+
+/* add-node affordance */
+.add-node{align-self:flex-start;border:1.5px dashed var(--line);border-radius:var(--radius-sm);padding:6px 11px;color:var(--muted);font-size:var(--text-sm);display:inline-flex;gap:6px;align-items:center;transition:.12s;}
+.add-node:hover{border-color:var(--accent);color:var(--accent-ink);}
+.add-node.child-add{margin:6px 0 0 42px;}
+.add-node.add-top{margin:10px 0 0 0;}
+
+/* ---------- right detail panel ---------- */
+.panel{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.panel-head{padding:var(--s-4) var(--s-5);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+.panel-head .side-label{margin:0;}
+.panel-body{padding:var(--s-5);overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:var(--s-5);}
+.panel-empty{color:var(--muted);font-size:var(--text-sm);padding:var(--s-7) var(--s-5);text-align:center;}
+.p-title{width:100%;border:none;font:inherit;font-size:var(--text-lg);font-weight:500;letter-spacing:-.01em;color:var(--ink);background:none;line-height:1.3;}
+.p-title:focus{outline:none;}
+.section-h{font-size:var(--text-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.rationale{width:100%;border:1px solid var(--line-soft);border-radius:var(--radius-sm);background:var(--surface-2);padding:12px var(--s-3);font:inherit;font-size:var(--text-sm);color:var(--ink-soft);line-height:1.6;resize:vertical;min-height:120px;transition:.12s;}
+/* node panel hierarchy */
+.panel-divider{height:1px;background:var(--line);margin:var(--s-2) 0;}
+.ai-rat{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);overflow:hidden;}
+.ai-rat > summary{list-style:none;cursor:pointer;padding:10px var(--s-3);display:flex;align-items:center;gap:8px;font-size:var(--text-sm);color:var(--ink-soft);}
+.ai-rat > summary::-webkit-details-marker{display:none;}
+.ai-rat > summary::before{content:"▸";color:var(--faint);font-size:var(--text-xs);transition:.12s;}
+.ai-rat[open] > summary::before{transform:rotate(90deg);}
+.ai-rat-t{font-weight:var(--w-medium);}
+.ai-rat-badge{margin-left:auto;font-size:var(--text-xs);color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:1px 8px;}
+.ai-rat-body{padding:0 var(--s-3) var(--s-3);border-top:1px solid var(--line-soft);}
+.ai-rat-body p{margin:var(--s-3) 0 0;font-size:var(--text-sm);color:var(--ink-soft);line-height:1.55;}
+.ai-rat-lbl{font-family:var(--mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:4px;}
+.ai-rat-note{color:var(--muted)!important;font-style:italic;font-size:var(--text-xs)!important;}
+.pt-block{}
+.pt-head{margin-bottom:var(--s-3);}
+.pt-title{display:block;font-size:var(--text-lg);font-weight:var(--w-semibold);letter-spacing:-.01em;color:var(--ink);}
+.pt-sub{display:block;font-size:var(--text-xs);color:var(--muted);margin-top:2px;}
+.exec-group-h{font-size:var(--text-xs);font-weight:var(--w-semibold);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:var(--s-3);}
+.exec-group{display:flex;flex-direction:column;gap:var(--s-3);}
+.rationale:focus{outline:none;background:var(--surface);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);color:var(--ink);}
+.phase-picker{display:flex;gap:6px;flex-wrap:wrap;}
+.phase-opt{padding:5px 10px;border:1px solid var(--line);border-radius:999px;font-size:var(--text-xs);color:var(--muted);}
+.phase-opt.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.tiny-note{margin:6px 0 0;font-size:var(--text-xs);color:var(--muted);line-height:1.5;}
+.section-h .hint-inline{font-weight:var(--w-normal);text-transform:none;letter-spacing:0;color:var(--warning);margin-left:6px;}
+.exec-stub{background:var(--accent-bg);border:1px solid oklch(90% 0.03 258);border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);font-size:var(--text-sm);color:var(--ink-soft);}
+.exec-head{display:flex;align-items:center;gap:8px;font-weight:var(--w-medium);color:var(--accent-ink);flex-wrap:wrap;}
+.exec-scope{font-weight:var(--w-normal);color:var(--muted);font-size:var(--text-xs);}
+/* agent picker (node panel Run by) */
+.agent-picker{display:flex;flex-direction:column;gap:6px;}
+.agent-pick-row{text-align:left;border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;background:var(--surface);transition:.12s;display:flex;flex-direction:column;gap:2px;}
+.agent-pick-row:hover{border-color:var(--faint);}
+.agent-pick-row.on{border-color:var(--accent);background:var(--accent-bg);}
+.agent-pick-name{font-size:var(--text-sm);font-weight:var(--w-medium);color:var(--ink);}
+.agent-pick-scope{font-size:var(--text-xs);color:var(--muted);}
+.agent-pick-connect{color:var(--accent-ink);border-style:dashed;text-align:center;font-size:var(--text-sm);}
+.agent-pick-connect .agent-pick-name{color:var(--accent-ink);}
+.exec-note{font-size:var(--text-xs);color:var(--muted);margin-top:8px;line-height:1.5;}
+.activity{font-family:var(--mono);font-size:var(--text-xs);color:var(--muted);margin-top:8px;line-height:1.5;display:flex;align-items:center;gap:6px;}
+.progress{height:6px;border-radius:999px;background:oklch(92% 0.02 258);overflow:hidden;margin-top:8px;}
+.progress > i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .4s;}
+.dot-run{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.4s ease-in-out infinite;flex:none;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+@media (prefers-reduced-motion: reduce){.dot-run{animation:none;}}
+.panel-foot{border-top:1px solid var(--line);padding:var(--s-4) var(--s-5);display:flex;gap:8px;flex-wrap:wrap;}
+
+/* status board */
+.board{display:grid;grid-template-columns:repeat(4,minmax(190px,1fr));gap:var(--s-4);align-items:start;}
+.col{display:flex;flex-direction:column;gap:var(--s-3);min-width:0;}
+.col-head{display:flex;align-items:center;gap:8px;padding-bottom:var(--s-1);border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);}
+.col-head .lbl{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.col-head .ct{font-size:var(--text-xs);color:var(--faint);margin-left:auto;}
+.col-empty{font-size:var(--text-xs);color:var(--faint);text-align:center;padding:var(--s-4) 0;}
+.bcard{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:var(--s-3);cursor:pointer;transition:.12s;}
+.bcard:hover{border-color:var(--faint);}
+.bcard.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+.bcard-parent{font-size:var(--text-xs);color:var(--faint);margin-bottom:4px;}
+.bcard-num{font-family:var(--mono);letter-spacing:.04em;}
+.bcard-title{font-size:var(--text-sm);font-weight:var(--w-medium);line-height:1.35;letter-spacing:-.005em;}
+.bcard-meta{display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap;}
+.bhint{font-size:var(--text-xs);color:var(--faint);margin-top:8px;}
+.bfind{font-size:var(--text-xs);color:var(--ink-soft);line-height:1.5;margin-top:8px;padding:8px;background:var(--success-bg);border-radius:var(--radius-sm);}
+.brun{margin-top:8px;}
+
+/* home / engagements */
+.home{min-height:100vh;max-width:1080px;margin:0 auto;padding:var(--s-8) var(--s-6);}
+.home-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s-8);}
+.home-body{display:grid;grid-template-columns:1fr;gap:var(--s-6);align-items:start;}
+@media(min-width:960px){.home-body{grid-template-columns:minmax(0,1.7fr) minmax(240px,1fr);gap:var(--s-7);}}
+.home-main{min-width:0;}
+.home-h2{font-size:var(--text-xl);font-weight:var(--w-semibold);letter-spacing:-.015em;margin:0 0 var(--s-4);display:flex;align-items:baseline;gap:10px;}
+.home-count{font-size:var(--text-base);color:var(--faint);font-weight:var(--w-normal);}
+.home-rail{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s-5);align-self:start;}
+.rail-h{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--s-2);}
+.tmpl-empty{font-size:var(--text-sm);color:var(--faint);line-height:1.55;padding:var(--s-4);border:1px dashed var(--line);border-radius:var(--radius-sm);background:var(--surface);}
+.home-head-actions{display:flex;align-items:center;gap:10px;}
+.agent-count-pill{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:10px;font-family:var(--mono);margin-left:4px;}
+/* connected agents */
+.ag-intro{margin-bottom:var(--s-6);}
+.ag-lede{color:var(--muted);font-size:var(--text-sm);line-height:1.6;max-width:64ch;margin-top:6px;}
+.ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--s-4);}
+.ag-card{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:var(--s-4);display:flex;flex-direction:column;gap:8px;}
+.ag-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ag-name{font-weight:var(--w-medium);letter-spacing:-.005em;}
+.ag-remove{font-size:var(--text-lg);line-height:1;color:var(--faint);padding:0 4px;border-radius:6px;}
+.ag-remove:hover{color:var(--warning);background:var(--surface-2);}
+.ag-provider{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+.ag-scope{display:flex;gap:5px;flex-wrap:wrap;}
+.ag-noscope{font-size:var(--text-xs);color:var(--faint);font-style:italic;}
+.ag-foot{font-size:var(--text-xs);color:var(--faint);margin-top:2px;}
+.eng-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--s-4);}
+.eng-card{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);transition:.14s;}
+.eng-card:hover{border-color:var(--faint);transform:translateY(-2px);box-shadow:0 8px 24px oklch(20% 0.02 260 / .06);}
+.eng-open{display:flex;flex-direction:column;gap:var(--s-2);padding:var(--s-4);cursor:pointer;}
+.eng-star{position:absolute;top:10px;right:10px;z-index:2;font-size:var(--text-lg);line-height:1;color:var(--faint);padding:2px 4px;border-radius:6px;transition:.12s;}
+.eng-star:hover{color:var(--ink);background:var(--surface-2);}
+.eng-star.on{color:var(--warning);}
+.eng-client{font-size:var(--text-xs);font-family:var(--mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase;}
+.eng-q{font-size:var(--text-base);font-weight:var(--w-medium);line-height:1.3;letter-spacing:-.01em;color:var(--ink);}
+.eng-pips{display:flex;gap:4px;margin-top:var(--s-1);min-height:8px;align-items:center;}
+.pip{width:22px;height:6px;border-radius:999px;background:var(--surface-2);}
+.pip-question{background:var(--line);}
+.pip-approach{background:var(--accent-bg);}
+.pip-executing{background:var(--accent);}
+.pip-finding{background:var(--success);}
+.eng-muted{font-size:var(--text-xs);color:var(--faint);}
+.eng-foot{display:flex;align-items:center;gap:8px;font-size:var(--text-xs);color:var(--muted);margin-top:var(--s-2);flex-wrap:wrap;}
+.eng-dot{color:var(--faint);}
+.eng-when{margin-left:auto;color:var(--faint);}
+.home-empty{border:1.5px dashed var(--line);border-radius:var(--radius);padding:var(--s-8);text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:var(--s-4);align-items:center;}
+.tmpl-note{font-size:var(--text-sm);color:var(--muted);line-height:1.55;margin:var(--s-3) 0 var(--s-4);max-width:44ch;}
+.tmpl-list{display:flex;flex-direction:column;gap:var(--s-2);}
+.tmpl-row{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);display:flex;flex-direction:column;gap:2px;transition:.12s;}
+.tmpl-row:hover{border-color:var(--accent);background:var(--accent-bg);}
+.tmpl-title{font-size:var(--text-sm);font-weight:var(--w-medium);line-height:1.3;}
+.tmpl-client{font-size:var(--text-xs);color:var(--muted);}
+.tmpl-cta{font-size:var(--text-xs);color:var(--accent-ink);margin-top:2px;}
+.tmpl-carry{font-size:var(--text-sm);color:var(--accent-ink);background:var(--accent-bg);border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);margin:0 0 var(--s-4);line-height:1.5;}
+/* sidebar engagement switcher */
+.eng-switch{display:flex;flex-direction:column;gap:var(--s-2);}
+.eng-home-link{text-align:left;font-size:var(--text-sm);color:var(--muted);padding:6px 8px;border-radius:var(--radius-sm);transition:.12s;}
+.eng-home-link:hover{background:var(--surface-2);color:var(--ink);}
+.eng-select{width:100%;border:1px solid var(--line);border-radius:var(--radius-sm);padding:7px 8px;font:inherit;font-size:var(--text-sm);color:var(--ink);background:var(--surface);cursor:pointer;}
+.eng-select:focus{outline:none;border-color:var(--accent);}
+
+/* ---------- deliverable view ---------- */
+.dv{min-height:100vh;background:var(--surface-2);}
+.dv-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:var(--s-3);padding:var(--s-4) var(--s-5);background:var(--surface);border-bottom:1px solid var(--line);}
+.dv-spacer{margin-left:auto;}
+.dv-toggle{display:inline-flex;align-items:center;gap:8px;font-size:var(--text-sm);color:var(--ink-soft);cursor:pointer;}
+.dv-toggle input{accent-color:var(--accent);width:15px;height:15px;}
+.dv-page{max-width:70ch;margin:var(--s-7) auto var(--s-8);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s-8);}
+.dv-kicker{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.dv-page h1{font-size:var(--text-2xl);letter-spacing:-.02em;line-height:1.12;margin:var(--s-2) 0 var(--s-3);}
+.dv-decision{color:var(--ink-soft);font-size:var(--text-lg);margin:0 0 var(--s-5);}
+.dv-caveat{font-size:var(--text-sm);color:var(--warning);margin:0 0 var(--s-5);}
+.dv-branch{padding:var(--s-6) 0;border-top:1px solid var(--line-soft);}
+.dv-branch h2{display:flex;gap:var(--s-3);align-items:baseline;font-size:var(--text-lg);letter-spacing:-.01em;margin:0 0 var(--s-3);}
+.dv-branch h2 .n{color:var(--faint);font-variant-numeric:tabular-nums;font-weight:var(--w-normal);}
+.dv-rat{margin:var(--s-3) 0;}
+.dv-rat .lbl{font-family:var(--mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:3px;}
+.dv-rat p{margin:0;color:var(--ink-soft);font-size:var(--text-sm);line-height:1.6;max-width:65ch;}
+.dv-sub{margin:var(--s-3) 0 0;padding-left:var(--s-5);color:var(--ink-soft);font-size:var(--text-sm);}
+.dv-sub li{margin:3px 0;}
+.dv-finding{margin-top:var(--s-4);padding:var(--s-4);background:var(--success-bg);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--ink-soft);line-height:1.55;}
+.dv-finding .lbl{display:block;color:var(--success);font-weight:var(--w-semibold);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.dv-by{font-size:var(--text-xs);color:var(--faint);margin-top:var(--s-3);}
+.draft-tag{font-size:var(--text-xs);color:var(--warning);background:var(--warning-bg);border-radius:999px;padding:1px 8px;vertical-align:middle;}
+.dv-foot{margin-top:var(--s-7);padding-top:var(--s-4);border-top:1px solid var(--line-soft);font-size:var(--text-xs);color:var(--faint);}
+.dv-empty{width:min(52ch,90%);margin:var(--s-9) auto;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:var(--s-4);align-items:center;}
+.dv-empty h1{font-size:var(--text-xl);color:var(--ink);margin:0;}
+.dv-empty p{margin:0;line-height:1.6;}
+@media print{
+  .dv-bar{display:none;}
+  .dv{background:#fff;}
+  .dv-page{margin:0;max-width:none;border:none;border-radius:0;padding:0;}
+  .dv-branch{break-inside:avoid;}
+  .draft-tag{display:none;}
+}
+.dv-bar .seg{margin:0;}
+
+/* communicate: client update */
+.cu-page{max-width:72ch;}
+.cu-draftbar{display:flex;align-items:center;justify-content:space-between;gap:var(--s-4);background:var(--accent-bg);border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);margin-bottom:var(--s-5);font-size:var(--text-sm);color:var(--accent-ink);}
+.cu-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+@media print{
+  .cu-draftbar,.cu-addrow,.cu-internal,.cu-internal-sec{display:none !important;}
+  .cu-page{border:none;box-shadow:none;max-width:none;}
+  .dv{background:#fff;}
+}
+/* client-facing read-only view */
+.cv-bar{background:var(--ink);border-color:var(--ink);}
+.cv-from{color:var(--bg);font-size:var(--text-sm);font-weight:var(--w-medium);}
+.cv-bar .btn{background:transparent;color:var(--bg);border-color:oklch(100% 0 0 / .28);}
+.cv-bar .btn:hover{border-color:oklch(100% 0 0 / .55);}
+.cv-branch h2{align-items:center;}
+.cv-status.done{background:var(--success-bg);color:var(--success);}
+.cv-status.prog{background:var(--accent-bg);color:var(--accent-ink);}
+.cv-status.plan{background:var(--surface-2);color:var(--muted);}
+.cv-react{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--line-soft);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.cv-react span{font-size:var(--text-sm);color:var(--muted);margin-right:auto;}
+
+/* Present: editable deck */
+.pz{min-height:100vh;display:flex;flex-direction:column;background:var(--surface-2);}
+.pz-title{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.pz-saved{font-size:var(--text-xs);color:var(--success);}
+.pz-stage-wrap{flex:1;display:flex;align-items:center;justify-content:center;gap:var(--s-4);padding:var(--s-6) var(--s-4);min-height:0;}
+.pz-nav{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:var(--text-xl);color:var(--ink);display:grid;place-items:center;flex:none;transition:.12s;}
+.pz-nav:hover:not(:disabled){border-color:var(--faint);}
+.pz-nav:disabled{opacity:.3;cursor:not-allowed;}
+.pz-stage{width:min(880px,100%);aspect-ratio:16/9;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 12px 40px oklch(20% 0.02 260 / .1);overflow:hidden;}
+.slide{width:100%;height:100%;display:flex;flex-direction:column;padding:clamp(24px,4vw,52px);}
+.slide-title{justify-content:center;gap:var(--s-4);}
+.slide-brand{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+.slide-h1{font-size:clamp(1.6rem,3.4vw,2.6rem);font-weight:var(--w-semibold);letter-spacing:-.02em;line-height:1.1;margin:0;color:var(--ink);}
+.slide-sub{font-size:clamp(0.95rem,1.6vw,1.25rem);color:var(--ink-soft);}
+.slide-eyebrow{font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:var(--s-3);}
+.slide-h2{font-size:clamp(1.25rem,2.4vw,1.9rem);font-weight:var(--w-semibold);letter-spacing:-.015em;line-height:1.15;margin:0 0 var(--s-5);color:var(--ink);}
+.slide-bullets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s-3);flex:1;}
+.slide-bullets li{display:flex;gap:12px;align-items:flex-start;}
+.slide-bullets li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px;flex:none;}
+.slide-bullet{font-size:clamp(0.95rem,1.5vw,1.2rem);line-height:1.5;color:var(--ink-soft);flex:1;}
+[contenteditable]{outline:none;border-radius:4px;transition:background .12s;}
+[contenteditable]:hover{background:var(--surface-2);}
+[contenteditable]:focus{background:var(--accent-bg);box-shadow:0 0 0 2px var(--accent-bg);}
+.slide-delb{opacity:0;border:none;background:none;color:var(--muted);font-size:var(--text-lg);line-height:1;cursor:pointer;padding:0 4px;}
+.slide-bullets li:hover .slide-delb{opacity:1;}
+.slide-delb:hover{color:var(--warning);}
+.slide-addb{align-self:flex-start;font-size:var(--text-xs);color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:4px 10px;margin-top:var(--s-3);}
+.slide-addb:hover{border-color:var(--accent);color:var(--accent-ink);}
+.slide-foot{font-family:var(--mono);font-size:var(--text-xs);color:var(--faint);margin-top:var(--s-4);}
+.pz-rail{display:flex;gap:var(--s-2);padding:var(--s-3) var(--s-4);overflow-x:auto;border-top:1px solid var(--line);background:var(--surface);}
+.pz-thumb{flex:none;width:150px;text-align:left;border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;background:var(--surface);display:flex;flex-direction:column;gap:3px;transition:.12s;}
+.pz-thumb:hover{border-color:var(--faint);}
+.pz-thumb.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-bg);}
+.pz-thumb-n{font-family:var(--mono);font-size:var(--text-xs);color:var(--faint);}
+.pz-thumb-t{font-size:var(--text-xs);color:var(--ink-soft);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pz-print{display:none;}
+@media print{
+  .pz-stage-wrap,.pz-rail,.dv-bar{display:none;}
+  .pz{background:#fff;}
+  .pz-print{display:block;}
+  .pz-print-slide{break-after:page;padding:0;}
+  .pz-print-slide .slide{height:auto;min-height:80vh;border:1px solid var(--line);border-radius:var(--radius);}
+  .slide-delb,.slide-addb{display:none;}
+}
+.cu-meta{font-size:var(--text-sm);color:var(--muted);margin:0 0 var(--s-5);}
+.cu-goal{font-size:var(--text-lg);color:var(--ink-soft);margin:0 0 var(--s-4);line-height:1.4;}
+.cu-goal b{color:var(--ink);font-weight:var(--w-medium);}
+.cu-progress{margin:0 0 var(--s-4);}
+.cu-progress-bar{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden;}
+.cu-progress-bar > i{display:block;height:100%;background:var(--success);border-radius:999px;transition:width .4s;}
+.cu-progress-txt{display:block;font-size:var(--text-sm);color:var(--muted);margin-top:6px;}
+.cu-headline{background:var(--surface-2);border-radius:var(--radius-sm);padding:var(--s-4) var(--s-5);margin-bottom:var(--s-6);}
+.cu-headline p{margin:0 0 var(--s-2);line-height:1.6;color:var(--ink);} .cu-headline p:last-child{margin:0;color:var(--ink-soft);font-size:var(--text-sm);}
+.cu-sec{margin-top:var(--s-6);}
+.cu-sec-h{font-size:var(--text-xs);font-weight:var(--w-semibold);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:var(--s-3);}
+.cu-branch{padding:var(--s-3) 0;border-top:1px solid var(--line-soft);}
+.cu-branch:first-of-type{border-top:none;}
+.cu-branch.cu-new{background:linear-gradient(90deg, var(--accent-bg), transparent 60%);border-radius:var(--radius-sm);padding-left:var(--s-3);}
+.cu-branch-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cu-branch-title{font-weight:var(--w-medium);}
+.cu-branch-meta{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.cu-tag{font-size:var(--text-xs);color:var(--accent-ink);background:var(--surface);border:1px solid var(--accent);border-radius:999px;padding:1px 8px;}
+.cu-finding{margin:6px 0 0;font-size:var(--text-sm);color:var(--ink-soft);line-height:1.55;}
+.cu-note{font-size:var(--text-sm);color:var(--muted);margin:0 0 var(--s-3);}
+.cu-req{display:flex;justify-content:space-between;gap:var(--s-3);padding:8px 0;border-top:1px solid var(--line-soft);font-size:var(--text-sm);}
+.cu-req-when{color:var(--faint);font-size:var(--text-xs);white-space:nowrap;}
+.cu-empty-row{font-size:var(--text-sm);color:var(--faint);padding:6px 0;}
+.cu-addrow{display:flex;gap:8px;margin-top:var(--s-3);}
+.cu-addrow input{flex:1;border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;font:inherit;font-size:var(--text-sm);background:var(--surface);}
+.cu-addrow input:focus{outline:none;border-color:var(--accent);}
+.cu-react{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line-soft);font-size:var(--text-sm);color:var(--ink-soft);}
+.cu-react-kind{font-size:var(--text-xs);padding:2px 8px;border-radius:999px;white-space:nowrap;}
+.cu-react-kind.aligned{background:var(--success-bg);color:var(--success);}
+.cu-react-kind.question{background:var(--warning-bg);color:var(--warning);}
+/* teammate brief */
+.tb-sec{margin-top:var(--s-6);}
+.tb-standing{font-size:var(--text-sm);color:var(--ink-soft);margin:0;line-height:1.6;}
+.tb-row{padding:var(--s-3) 0;border-top:1px solid var(--line-soft);}
+.tb-row:first-of-type{border-top:none;}
+.tb-row-title{font-weight:var(--w-medium);}
+.tb-why{margin:6px 0;font-size:var(--text-sm);color:var(--ink-soft);line-height:1.55;}
+.tb-why .lbl,.tb-open .tb-under{font-family:var(--mono);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+.tb-row-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.tb-has-finding{font-size:var(--text-xs);color:var(--success);}
+.tb-live{display:flex;justify-content:space-between;gap:var(--s-3);padding:8px 0;border-top:1px solid var(--line-soft);font-size:var(--text-sm);}
+.tb-owner{color:var(--muted);font-size:var(--text-xs);white-space:nowrap;}
+.tb-open{padding:6px 0;font-size:var(--text-sm);color:var(--ink-soft);}
+.tb-caveat{font-size:var(--text-sm);color:var(--ink-soft);background:var(--warning-bg);border-radius:var(--radius-sm);padding:var(--s-3) var(--s-4);margin:0;line-height:1.55;}
+
+/* coaching thread (the grilling) */
+.thread{display:flex;flex-direction:column;gap:var(--s-3);}
+.th-item{background:var(--surface-2);border-radius:var(--radius-sm);padding:var(--s-3);}
+.th-q{font-size:var(--text-sm);font-weight:var(--w-medium);color:var(--ink);line-height:1.45;}
+.th-a{font-size:var(--text-sm);color:var(--ink-soft);margin-top:6px;line-height:1.5;}
+.th-foot{margin-top:8px;}
+.th-type{font-size:var(--text-xs);padding:2px 8px;border-radius:999px;text-transform:capitalize;}
+.th-type.confirmed{background:var(--success-bg);color:var(--success);}
+.th-type.assumption{background:var(--warning-bg);color:oklch(48% 0.1 60);}
+.th-type.hypothesis{background:var(--accent-bg);color:var(--accent-ink);}
+.th-follow{margin-top:8px;font-size:var(--text-sm);color:var(--accent-ink);line-height:1.5;}
+.th-open{border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--s-3);}
+.th-open .th-q{margin-bottom:8px;}
+.th-hint{font-size:var(--text-xs);color:var(--muted);margin:8px 0;line-height:1.5;}
+.th-typepick{display:flex;gap:6px;flex-wrap:wrap;}
+.th-typebtn{font-size:var(--text-xs);padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--ink-soft);transition:.12s;}
+.th-typebtn.confirmed:hover{background:var(--success-bg);color:var(--success);border-color:transparent;}
+.th-typebtn.assumption:hover{background:var(--warning-bg);color:oklch(48% 0.1 60);border-color:transparent;}
+.th-typebtn.hypothesis:hover{background:var(--accent-bg);color:var(--accent-ink);border-color:transparent;}
+.th-done{font-size:var(--text-sm);color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding:var(--s-2) 0;}
+.th-ask{display:flex;align-items:center;gap:var(--s-3);}
+.th-ask-note{font-size:var(--text-xs);color:var(--faint);}
+.th-open-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.th-live{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:var(--text-xs);letter-spacing:.04em;color:var(--accent-ink);}
+.th-pause{font-size:var(--text-xs);color:var(--muted);padding:2px 8px;border-radius:999px;}
+.th-pause:hover{background:var(--surface-2);color:var(--ink);}
+.cu-confirmed{margin:8px 0 0;padding-left:18px;font-size:var(--text-sm);color:var(--ink-soft);line-height:1.5;}
+.cu-confirmed li{margin:2px 0;}
+.cu-internal{font-size:var(--text-xs);color:var(--muted);margin:6px 0 0;font-style:italic;}
+
+.toast{position:fixed;bottom:var(--s-6);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:var(--text-sm);opacity:0;transition:.2s;pointer-events:none;z-index:60;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   State
+   ============================================================ */
+const MODELS = [
+  {id:"opus", name:"Claude Opus 4.8", live:true},
+  {id:"gpt", name:"GPT-5.1", live:true},
+  {id:"gemini", name:"Gemini 3 Pro", live:true},
+  {id:"none", name:"No model (I'll author manually)", live:false},
+];
+const PHASES = [
+  {id:"question", label:"Open"},
+  {id:"approach", label:"Framed"},
+  {id:"executing", label:"Running"},
+  {id:"finding", label:"Answered"},
+];
+
+/* The 4 typed analysis frameworks, restored from the original Strenaysis.
+   A new engagement is seeded from the framework that best fits the question,
+   then the canvas stays fully flexible (edit / add / reorder / delete). */
+const NODE_WHY = {
+  "Objective":"Defines the business question precisely so the analysis solves the right problem.",
+  "Metric":"Defines success and guardrails so every later trade-off stays grounded.",
+  "Segmentation":"Shows where to cut the problem so the analysis is comparable and decision-useful.",
+  "Drivers":"Identifies the key levers and hypotheses that most likely explain the outcome.",
+  "Data":"Clarifies what evidence exists, what is missing, and what can credibly answer the question.",
+  "Model":"Chooses the analytical engine that best supports prediction, ranking, or prioritization.",
+  "Decision":"Translates the analysis into a concrete business action, threshold, or targeting rule.",
+  "Result":"Summarizes the expected or observed performance so the recommendation is evidence-backed.",
+  "Takeaway":"Packages the final message into the clearest recommendation, caveats, and next steps.",
+  "Hypotheses":"Frames the causal stories worth testing before jumping into intervention design.",
+  "Experiment Design":"Specifies how to estimate causal impact cleanly and credibly.",
+  "Constraints":"Makes the real-world limits explicit so the framework stays actionable.",
+  "Impact":"Sizes the business upside and trade-offs so action can be prioritized rationally.",
+};
+const FRAMEWORKS = {
+  predictive_modeling:      { label:"Predictive Modeling",       stages:["Objective","Metric","Drivers","Data","Model","Decision","Result","Takeaway"] },
+  descriptive_analysis:     { label:"Descriptive Analysis",      stages:["Objective","Metric","Segmentation","Drivers","Data","Result","Takeaway"] },
+  experiment_causal:        { label:"Experiment / Causal",       stages:["Objective","Metric","Hypotheses","Data","Experiment Design","Decision","Result","Takeaway"] },
+  operational_optimization: { label:"Operational Optimization",  stages:["Objective","Metric","Constraints","Drivers","Data","Decision","Impact","Takeaway"] },
+};
+const FRAMEWORK_ORDER = ["predictive_modeling","descriptive_analysis","experiment_causal","operational_optimization"];
+function classifyFramework(q, ctx){
+  const t = ((q||"") + " " + ((ctx&&ctx.decision)||"")).toLowerCase();
+  if(/\b(test|experiment|causal|a\/b|randomi|treatment|impact of|does .* cause|cannibali)\b/.test(t)) return "experiment_causal";
+  if(/\b(optimi|reduce|minimi|maximi|efficien|allocat|schedul|throughput|no-show|utili)\b/.test(t)) return "operational_optimization";
+  if(/\b(predict|forecast|churn|propensity|likelihood|score|classif|will .* happen)\b/.test(t)) return "predictive_modeling";
+  if(/\b(describe|understand|explore|profile|segment|what happened|why did|trend|drivers of)\b/.test(t)) return "descriptive_analysis";
+  return "predictive_modeling";
+}
+function proposeFromFramework(fwId, q, ctx){
+  const fw = FRAMEWORKS[fwId] || FRAMEWORKS.predictive_modeling;
+  const rootId = nid();
+  const nodes = {}; const order = [];
+  nodes[rootId] = mkNode(rootId, q, "question", "human", true, []);
+  fw.stages.forEach(stage=>{
+    const id = nid();
+    nodes[id] = mkNode(id, stage, "approach", "ai", false, [], { why: NODE_WHY[stage] || "", order:"", mece:"" });
+    order.push(id);
+  });
+  return { rootId, nodes, order };
+}
+
+const state = {
+  view: "home",            // home | intake | interrogate | canvas | deliverable
+  engagements: {},         // id -> engagement
+  engOrder: [],            // engagement ids, display order
+  activeId: null,          // active engagement
+  filter: "tree",          // tree (reasoning map) | board (status by phase)
+  dvIncludeDrafts: false,  // deliverable: show un-accepted (draft) branches
+  membrane: "client",      // communicate view: client | teammate
+  _templateFrom: null,     // when creating from an existing engagement
+  // Connected agents: global, reusable across every engagement, separate from
+  // the engagement's own reasoning model (which powers decomposition/pressure-test).
+  // This is the roster you dispatch NODE EXECUTION to, mirroring monday.com's
+  // "Bring Your Own Agent" (provider + auth + scope) and Notion's per-agent MCP tools.
+  connectedAgents: {},      // id -> {id, name, provider, scope:[connector,...], connectedAt}
+  agentOrder: [],
+  _connectDraft: null,      // in-progress connect-agent form state
+};
+
+const AGENT_PROVIDERS = [
+  {id:"anthropic", name:"Anthropic"},
+  {id:"openai", name:"OpenAI"},
+  {id:"google", name:"Google"},
+  {id:"bedrock", name:"Amazon Bedrock"},
+  {id:"azure", name:"Azure AI Foundry"},
+];
+const CONNECTOR_OPTIONS = ["BigQuery","Hex","Definite","Snowflake","Google Sheets"];
+let agentSeq = 0;
+function newAgentObj(over){
+  return Object.assign({ id:"ag"+(++agentSeq), name:"", provider:"anthropic", scope:[], connectedAt:Date.now() }, over||{});
+}
+function connectedAgentList(){ return state.agentOrder.map(id=>state.connectedAgents[id]); }
+
+// The active engagement holds all canvas state. Proxy the familiar fields
+// onto `state` so every render/mutation function keeps working unchanged.
+["question","model","ctx","nodes","order","rootId","selected","framework"].forEach(k=>{
+  Object.defineProperty(state, k, {
+    get(){ const e = state.engagements[state.activeId]; return e ? e[k] : undefined; },
+    set(v){ const e = state.engagements[state.activeId]; if(e){ e[k] = v; e.updatedAt = Date.now(); } },
+  });
+});
+
+let uid = 0;
+const nid = () => "n" + (++uid);
+let engSeq = 0;
+
+function newEngagementObj(over){
+  return Object.assign({
+    id: "e" + (++engSeq),
+    question: "", model: "opus", ctx: {client:"", decision:"", data:""},
+    framework: "predictive_modeling",
+    nodes: {}, order: [], rootId: null, selected: null,
+    published: null,        // { at, states:{nodeId:phase} } snapshot for the client-update diff
+    requests: [],           // scope asks that landed outside the tree
+    reactions: [],          // client reactions captured back onto the engagement
+    savedAsTemplate: false, // explicitly saved for reuse across clients
+    deck: null,             // Present deck (editable slides), lazily built from node state
+    createdAt: Date.now(), updatedAt: Date.now(),
+  }, over || {});
+}
+
+/* ============================================================
+   Mock "LLM": interrogation-aware MECE decomposition.
+   Interpolates the consultant's context so the tree feels
+   specific, not templated. The #1 risk we flagged.
+   ============================================================ */
+function proposeDecomposition(q, ctx){
+  const client = ctx.client?.trim() || "the client";
+  const decision = ctx.decision?.trim() || "the decision this analysis feeds";
+  const data = ctx.data?.trim() || "the available data";
+
+  const branches = [
+    {
+      title:`Demand & customer signal: is this driven by what customers actually do?`,
+      why:`Before ${client} commits resources, we isolate whether the demand is real. This line owns the behavioural evidence: cohorts, usage, willingness-to-pay.`,
+      order:`First, because it is the cheapest to falsify. If the demand signal isn't there, the economics and execution branches are moot, and we save ${client} weeks.`,
+      mece:`Mutually exclusive from the economics line: this measures whether customers want it, not whether it pays. Draws on ${data}.`,
+      children:[
+        {title:`Segment the movement: which cohorts move, which are flat?`, why:`Aggregate numbers hide the story. Splitting by cohort shows ${client} where the effect is real.`},
+        {title:`Willingness-to-pay / intent evidence`, why:`Separates stated interest from revealed behaviour.`},
+      ],
+    },
+    {
+      title:`Unit economics: does it pay for itself at scale?`,
+      why:`Even with strong demand, ${decision} only makes sense if the economics hold. This line owns cost-to-serve, margin, and payback.`,
+      order:`Second: only worth modelling once demand (line 1) is plausible. It depends on line 1's cohort split to weight the economics.`,
+      mece:`Exclusive from demand: this is the money question, not the want question. Together with line 1 it covers "should we?" before "can we?".`,
+      children:[
+        {title:`Cost-to-serve model`, why:`Ties ${data} to a per-unit cost so the margin is defensible.`},
+      ],
+    },
+    {
+      title:`Feasibility & execution risk: can the team actually deliver it?`,
+      why:`The "can we?" question: capability, dependencies, and what breaks. This line owns the operational and data-readiness risks.`,
+      order:`Third: it only matters once "should we?" (lines 1–2) looks positive. Ordered last so we don't over-invest in de-risking a bad idea.`,
+      mece:`Exhaustive check: lines 1–2 decide whether the idea is right; this decides whether ${client} can execute it. Together they close the loop for ${decision}.`,
+      children:[],
+    },
+  ];
+
+  const rootId = nid();
+  const nodes = {};
+  nodes[rootId] = mkNode(rootId, q, "question", "human", true, []);
+  const order = [];
+  branches.forEach(b=>{
+    const id = nid();
+    const childIds = (b.children||[]).map(c=>{
+      const cid = nid();
+      nodes[cid] = mkNode(cid, c.title, "question", "ai", false, [], {why:c.why, order:"", mece:""});
+      return cid;
+    });
+    nodes[id] = mkNode(id, b.title, "approach", "ai", false, childIds, {why:b.why, order:b.order, mece:b.mece});
+    order.push(id);
+  });
+  return {rootId, nodes, order};
+}
+
+function mkNode(id, title, phase, prov, accepted, children, rationale){
+  return {id, title, phase, prov, accepted, children:children||[],
+    rationale: rationale || {why:"", order:"", mece:""}, progress:0, finding:"",
+    thread: [], agentId: null};  // agentId: which connected agent (state.connectedAgents) runs this node, if any
+}
+
+/* The grilling: ADAPTIVE probing, one question at a time, chosen from the node,
+   the engagement context, and the consultant's LAST answer/tag (not a fixed queue).
+   Mock stand-in for the LLM's coaching loop. */
+const GRILL_NAME = "Pressure test";  // section label for the coaching thread (easy to swap)
+const GRILL_CAP = 6;            // auto-surface questions until this many are captured
+function shortTitle(t){ return (String(t).split(":")[0] || String(t)).trim().slice(0,52); }
+function shortData(e){ return ((e && e.ctx.data) || "the data").split(";")[0].trim().slice(0,40); }
+const GRILL = {
+  opening: [
+    (n,e)=>`What would have to be true for "${shortTitle(n.title)}" to be worth investigating at all?`,
+    (n,e)=>`What's your current best answer here, and how confident are you, honestly?`,
+  ],
+  afterAssumption: [
+    (n,e)=>`You flagged that as an assumption. What's the cheapest way to test it before you rely on it?`,
+    (n,e)=>`What would you have to see in ${shortData(e)} to stop believing that?`,
+  ],
+  afterHypothesis: [
+    (n,e)=>`Name the experiment that would confirm or kill that hypothesis.`,
+    (n,e)=>`If that hypothesis is wrong, what's the earliest signal you'd notice?`,
+  ],
+  afterConfirmed: [
+    (n,e)=>`Confirmed how? What's the source you'd defend to ${(e && e.ctx.client) || "the client"}?`,
+    (n,e)=>`Given that's solid, what does confirming it let you rule out?`,
+  ],
+  deep: [
+    (n,e)=>`What are you assuming about ${shortData(e)} that you haven't verified?`,
+    (n,e)=>`If this whole line turns out to be a dead end, what's the earliest signal you'd see?`,
+    (n,e)=>`Whose perspective on "${shortTitle(n.title)}" are you missing?`,
+  ],
+};
+function nextGrillQuestion(n, e){
+  const asked = new Set((n.thread||[]).map(x=>x.q));
+  let pool;
+  if(!n.thread.length){ pool = GRILL.opening; }
+  else {
+    const last = n.thread[n.thread.length-1];
+    pool = last.type==="assumption" ? GRILL.afterAssumption
+         : last.type==="hypothesis" ? GRILL.afterHypothesis
+         : GRILL.afterConfirmed;
+    if(n.thread.length>=2 && Math.random()<0.45) pool = GRILL.deep;   // occasionally zoom out
+  }
+  for(const tpl of pool){ const q = tpl(n,e); if(!asked.has(q)) return q; }
+  for(const tpl of GRILL.deep){ const q = tpl(n,e); if(!asked.has(q)) return q; }
+  return "What's the one thing about this you're least sure of?";
+}
+function grillFollowup(type){
+  if(type==="confirmed") return "Solid footing. What does confirming this let you rule out?";
+  if(type==="hypothesis") return "A hypothesis. Name the experiment that would confirm or kill it.";
+  return "That's an assumption, not a fact yet. What's the cheapest way to test it before you rely on it?";
+}
+function threadStats(n){
+  const t = n.thread || [];
+  return {
+    confirmed: t.filter(x=>x.type==="confirmed"),
+    assumption: t.filter(x=>x.type==="assumption"),
+    hypothesis: t.filter(x=>x.type==="hypothesis"),
+  };
+}
+
+/* ============================================================
+   Render
+   ============================================================ */
+const root = document.getElementById("root");
+
+// Preserve scroll across re-renders. The tree/board (.canvas) should never jump;
+// the node panel (.panel-body) keeps its scroll while the same node stays selected,
+// and resets to top when a different node is selected.
+const scrollMem = { canvas:0, panel:0, panelNode:null };
+function bindScroll(){
+  const c = document.querySelector('.canvas');
+  if(c){ c.scrollTop = scrollMem.canvas; c.onscroll = ()=>{ scrollMem.canvas = c.scrollTop; }; }
+  const pb = document.querySelector('.panel-body');
+  if(pb){
+    if(scrollMem.panelNode !== state.selected){ scrollMem.panel = 0; scrollMem.panelNode = state.selected; }
+    pb.scrollTop = scrollMem.panel;
+    pb.onscroll = ()=>{ scrollMem.panel = pb.scrollTop; };
+  }
+}
+function resetScrollMem(){ scrollMem.canvas = 0; scrollMem.panel = 0; scrollMem.panelNode = null; }
+
+function render(){
+  if(state.view === "home") return renderHome();
+  if(state.view === "intake") return renderIntake();
+  if(state.view === "interrogate") return renderInterrogate();
+  if(state.view === "present") return renderPresent();
+  if(state.view === "communicate") return renderCommunicate();
+  if(state.view === "clientview") return renderClientView();
+  if(state.view === "agents") return renderAgents();
+  if(state.view === "connect-agent") return renderConnectAgent();
+  return renderCanvas();
+}
+
+/* ============================================================
+   Engagements: home, lifecycle, templates
+   ============================================================ */
+function engStats(e){
+  const total = e.order.length;
+  const accepted = e.order.filter(id=>e.nodes[id].accepted).length;
+  const mix = {question:0, approach:0, executing:0, finding:0};
+  e.order.forEach(id=>{ mix[e.nodes[id].phase]++; e.nodes[id].children.forEach(cid=>{ /* branches only in mix */ }); });
+  return {total, accepted, mix};
+}
+function relTime(ts){
+  const d = Date.now()-ts, m=Math.round(d/60000), h=Math.round(d/3600000), day=Math.round(d/86400000);
+  if(m<1) return "just now"; if(m<60) return m+"m ago"; if(h<24) return h+"h ago"; return day+"d ago";
+}
+function startEngagement(fromId){
+  const src = fromId ? state.engagements[fromId] : null;
+  const e = newEngagementObj(src ? {question:src.question, model:src.model, ctx:{...src.ctx}} : {});
+  state.engagements[e.id] = e;
+  state.engOrder.unshift(e.id);
+  state.activeId = e.id;
+  state._templateFrom = fromId || null;
+  state.view = "intake";
+  render();
+}
+function cancelDraftEngagement(){
+  // if the in-progress engagement has no tree yet, discard it
+  const e = state.engagements[state.activeId];
+  if(e && e.order.length===0){ delete state.engagements[e.id]; state.engOrder = state.engOrder.filter(id=>id!==e.id); }
+  state.activeId = null; state._templateFrom = null; state.view = "home"; render();
+}
+function openEngagement(id){ state.activeId = id; state.view = "canvas"; resetScrollMem(); render(); }
+function goHome(){ state.activeId = null; state.view = "home"; render(); }
+
+// Clone an existing engagement's structure into the active one, reset so the
+// consultant must re-accept every branch for the new client.
+function cloneTreeInto(t, s){
+  const nodes = {};
+  const rootId = nid();
+  nodes[rootId] = mkNode(rootId, t.question || s.question, "question", "human", true, []);
+  const order = [];
+  s.order.forEach(bid=>{
+    const b = s.nodes[bid];
+    const childIds = b.children.map(cid=>{
+      const c = s.nodes[cid]; const ncid = nid();
+      nodes[ncid] = mkNode(ncid, c.title, "question", "ai", false, [], {...c.rationale});
+      return ncid;
+    });
+    const nbid = nid();
+    nodes[nbid] = mkNode(nbid, b.title, "approach", "ai", false, childIds, {...b.rationale});
+    order.push(nbid);
+  });
+  t.nodes = nodes; t.order = order; t.rootId = rootId; t.selected = order[0];
+}
+
+function renderHome(){
+  const cards = state.engOrder.map(id=>{
+    const e = state.engagements[id]; const s = engStats(e);
+    const m = MODELS.find(x=>x.id===e.model);
+    const pips = e.order.map(bid=>`<span class="pip pip-${e.nodes[bid].phase}" title="${PHASES.find(p=>p.id===e.nodes[bid].phase).label}"></span>`).join("");
+    return `<div class="eng-card" data-id="${id}">
+      <button class="eng-star ${e.savedAsTemplate?"on":""}" data-star="${id}" title="${e.savedAsTemplate?"Saved as template (click to remove)":"Save as template"}">${e.savedAsTemplate?"★":"☆"}</button>
+      <div class="eng-open" data-open="${id}">
+        <div class="eng-client">${esc(e.ctx.client || "Untitled client")}</div>
+        <div class="eng-q">${esc(e.question || "Untitled question")}</div>
+        <div class="eng-pips">${pips || `<span class="eng-muted">no nodes yet</span>`}</div>
+        <div class="eng-foot">
+          ${s.total ? `<span class="own ${s.accepted===s.total?"own-yours":"own-draft"}">${s.accepted}/${s.total} yours</span>` : ""}
+          <span class="eng-dot">·</span><span>${m ? esc(m.id==="none" ? "Manual (no model)" : m.name) : ""}</span>
+          <span class="eng-when">${relTime(e.updatedAt)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const tmplIds = state.engOrder.filter(id=>state.engagements[id].savedAsTemplate && state.engagements[id].order.length>0);
+  const templates = tmplIds.map(id=>{
+    const e = state.engagements[id];
+    return `<button class="tmpl-row" data-tmpl="${id}">
+      <span class="tmpl-title">${esc(e.question || "Untitled")}</span>
+      <span class="tmpl-client">${esc(e.ctx.client||"")}</span>
+      <span class="tmpl-cta">Reuse structure →</span>
+    </button>`;
+  }).join("");
+
+  root.innerHTML = `
+    <div class="home">
+      <header class="home-head">
+        <div class="brand"><div class="brand-glyph">S</div><div><div class="brand-name">Strenaysis</div><div class="brand-sub">Reasoning canvas</div></div></div>
+        <div class="home-head-actions">
+          <button class="btn btn-sm" id="to-agents">⚙ Agents <span class="agent-count-pill">${state.agentOrder.length}</span></button>
+          <button class="btn btn-primary" id="new-eng">+ New engagement</button>
+        </div>
+      </header>
+      <div class="home-body">
+        <div class="home-main">
+          <h2 class="home-h2">Active engagements <span class="home-count">${state.engOrder.length}</span></h2>
+          ${state.engOrder.length ? `<div class="eng-grid">${cards}</div>`
+            : `<div class="home-empty"><p>No engagements yet.</p><button class="btn btn-accent" id="new-eng-2">Start your first engagement</button></div>`}
+        </div>
+        <aside class="home-rail">
+          <div class="rail-h">Templates</div>
+          <p class="tmpl-note">Save an engagement as a template with the <b>☆</b> on its card, then start new client work from it. The tree carries over and you re-accept each node.</p>
+          ${templates ? `<div class="tmpl-list">${templates}</div>`
+            : `<div class="tmpl-empty">No templates yet. Tap <b>☆</b> on any engagement to save its structure for reuse.</div>`}
+        </aside>
+      </div>
+    </div>`;
+
+  const nw = document.getElementById("new-eng"); if(nw) nw.onclick = ()=>startEngagement(null);
+  const nw2 = document.getElementById("new-eng-2"); if(nw2) nw2.onclick = ()=>startEngagement(null);
+  document.getElementById("to-agents").onclick = ()=>{ state.view="agents"; render(); };
+  root.querySelectorAll("[data-open]").forEach(el=> el.onclick = ()=>openEngagement(el.dataset.open));
+  root.querySelectorAll("[data-tmpl]").forEach(el=> el.onclick = ()=>startEngagement(el.dataset.tmpl));
+  root.querySelectorAll("[data-star]").forEach(el=> el.onclick = (ev)=>{
+    ev.stopPropagation();
+    const en = state.engagements[el.dataset.star]; en.savedAsTemplate = !en.savedAsTemplate;
+    toast(en.savedAsTemplate ? "Saved as template" : "Removed from templates");
+    renderHome();
+  });
+}
+
+/* ============================================================
+   Connected agents: global roster, reusable across every
+   engagement. Separate from the engagement's reasoning model.
+   Mirrors monday.com "Bring Your Own Agent" (provider + auth +
+   named agent) and Notion Custom Agents (per-agent tool scope).
+   ============================================================ */
+function agentUsageCount(id){
+  let n = 0;
+  Object.values(state.engagements).forEach(e=> Object.values(e.nodes||{}).forEach(nd=>{ if(nd.agentId===id) n++; }));
+  return n;
+}
+function agentCardHtml(a){
+  const uses = agentUsageCount(a.id);
+  return `<div class="ag-card">
+    <div class="ag-card-top">
+      <div class="ag-name">${esc(a.name)}</div>
+      <button class="ag-remove" data-remove-agent="${a.id}" title="Disconnect">×</button>
+    </div>
+    <div class="ag-provider">${esc((AGENT_PROVIDERS.find(p=>p.id===a.provider)||{}).name || a.provider)}</div>
+    <div class="ag-scope">${a.scope.length ? a.scope.map(s=>`<span class="chip">${esc(s)}</span>`).join("") : `<span class="ag-noscope">no data access configured</span>`}</div>
+    <div class="ag-foot">Connected ${relTime(a.connectedAt)}${uses?` · running on ${uses} node${uses===1?"":"s"}`:""}</div>
+  </div>`;
+}
+function renderAgents(){
+  const list = connectedAgentList();
+  root.innerHTML = `
+    <div class="home">
+      <header class="home-head">
+        <button class="btn btn-sm" id="ag-back">← Home</button>
+        <button class="btn btn-primary" id="ag-connect">+ Connect an agent</button>
+      </header>
+      <div class="ag-intro">
+        <h2 class="home-h2">Connected agents</h2>
+        <p class="ag-lede">Agents you dispatch node execution to. Connect once, use across every engagement. Each agent is scoped to the data and tools it's allowed to touch, so a node only reaches what its agent is connected to.</p>
+      </div>
+      ${list.length ? `<div class="ag-grid">${list.map(agentCardHtml).join("")}</div>`
+        : `<div class="home-empty"><p>No agents connected yet. Nodes set to "Agent" execution have nothing to dispatch to until you connect one.</p><button class="btn btn-accent" id="ag-connect-2">Connect your first agent</button></div>`}
+    </div>`;
+  document.getElementById("ag-back").onclick = ()=>{ state.view="home"; render(); };
+  const c1=document.getElementById("ag-connect"); if(c1) c1.onclick = ()=>{ state._connectDraft=null; state.view="connect-agent"; render(); };
+  const c2=document.getElementById("ag-connect-2"); if(c2) c2.onclick = ()=>{ state._connectDraft=null; state.view="connect-agent"; render(); };
+  root.querySelectorAll("[data-remove-agent]").forEach(el=> el.onclick = ()=>{
+    const id = el.dataset.removeAgent;
+    const uses = agentUsageCount(id);
+    if(uses && !confirm(`${uses} node${uses===1?" runs":"s run"} on this agent. Disconnect anyway?`)) return;
+    delete state.connectedAgents[id]; state.agentOrder = state.agentOrder.filter(x=>x!==id);
+    toast("Agent disconnected"); renderAgents();
+  });
+}
+
+function renderConnectAgent(){
+  const d = state._connectDraft || (state._connectDraft = { provider:"anthropic", name:"", key:"", scope:[] });
+  root.innerHTML = `
+    <div class="stage"><div class="stage-card">
+      <button class="btn btn-ghost btn-sm" id="ca-back" style="margin-bottom:var(--s-5)">← Agents</button>
+      <div class="kicker">Connect an agent</div>
+      <h1>Bring your own agent.</h1>
+      <p class="lede">Authenticate a provider, then scope what this agent can touch. It becomes reusable across every engagement.</p>
+
+      <div class="q-block">
+        <label>Provider</label>
+        <div class="hint">Who hosts this agent.</div>
+        <div class="fw-picker" id="ca-provider">
+          ${AGENT_PROVIDERS.map(p=>`<button class="fw-opt ${d.provider===p.id?"on":""}" data-p="${p.id}">${p.name}</button>`).join("")}
+        </div>
+      </div>
+      <div class="q-block">
+        <label>Name this agent</label>
+        <div class="hint">How it'll show up in the "Run by" picker on every node.</div>
+        <input id="ca-name" value="${esc(d.name)}" placeholder="e.g. Research Agent" />
+      </div>
+      <div class="q-block">
+        <label>API key</label>
+        <div class="hint">Prototype: nothing is sent anywhere. In production this authenticates the connection, like monday's Bring Your Own Agent flow.</div>
+        <input id="ca-key" type="password" value="${esc(d.key)}" placeholder="sk-…" />
+      </div>
+      <div class="q-block">
+        <label>Data & tool scope</label>
+        <div class="hint">What this agent is allowed to reach. A node dispatched to this agent can only touch what's checked here.</div>
+        <div class="fw-picker" id="ca-scope">
+          ${CONNECTOR_OPTIONS.map(s=>`<button class="fw-opt ${d.scope.includes(s)?"on":""}" data-s="${s}">${s}</button>`).join("")}
+        </div>
+      </div>
+      <div class="row spread mt-6">
+        <button class="btn btn-ghost" id="ca-cancel">Cancel</button>
+        <button class="btn btn-accent" id="ca-save">Connect agent →</button>
+      </div>
+    </div></div>`;
+  document.getElementById("ca-back").onclick = ()=>{ state.view="agents"; render(); };
+  document.getElementById("ca-cancel").onclick = ()=>{ state._connectDraft=null; state.view="agents"; render(); };
+  document.getElementById("ca-provider").querySelectorAll(".fw-opt").forEach(b=> b.onclick=()=>{ d.provider=b.dataset.p; renderConnectAgent(); });
+  document.getElementById("ca-scope").querySelectorAll(".fw-opt").forEach(b=> b.onclick=()=>{
+    const s=b.dataset.s; const i=d.scope.indexOf(s);
+    if(i>=0) d.scope.splice(i,1); else d.scope.push(s);
+    renderConnectAgent();
+  });
+  document.getElementById("ca-name").oninput = e=>{ d.name = e.target.value; };
+  document.getElementById("ca-key").oninput = e=>{ d.key = e.target.value; };
+  document.getElementById("ca-save").onclick = ()=>{
+    const name = document.getElementById("ca-name").value.trim();
+    if(!name) return toast("Name the agent first");
+    if(!document.getElementById("ca-key").value.trim()) return toast("Enter an API key to authenticate (any text works here)");
+    const a = newAgentObj({ name, provider: d.provider, scope: d.scope.slice() });
+    state.connectedAgents[a.id] = a; state.agentOrder.unshift(a.id);
+    state._connectDraft = null;
+    toast(`${name} connected`);
+    state.view = "agents"; render();
+  };
+}
+
+function renderIntake(){
+  const m = MODELS.find(x=>x.id===state.model);
+  const tmpl = state._templateFrom ? state.engagements[state._templateFrom] : null;
+  root.innerHTML = `
+    <div class="stage"><div class="stage-card">
+      <button class="btn btn-ghost btn-sm" id="home" style="margin-bottom:var(--s-5)">← Engagements</button>
+      <div class="kicker">${tmpl ? "New engagement · from a reused structure" : "Strenaysis · reasoning canvas"}</div>
+      <h1>What's the grand question?</h1>
+      <p class="lede">The messy, high-stakes one your client actually hired you for. We'll structure it before we touch any data.</p>
+      ${tmpl ? `<p class="tmpl-carry">Carrying over the structure from <b>${esc(tmpl.question)}</b>. You'll set the new client next, then re-accept each node.</p>` : ``}
+      <textarea class="field" id="q" placeholder="e.g. Should Northwind expand into the SMB segment next year?">${esc(state.question)}</textarea>
+      <div class="row spread mt-4">
+        <div class="model-pick">
+          <span class="dot ${m.live?"":"off"}"></span>
+          <select id="model">${MODELS.map(x=>`<option value="${x.id}" ${x.id===state.model?"selected":""}>${x.name}</option>`).join("")}</select>
+        </div>
+        <button class="btn btn-primary" id="go">Structure this →</button>
+      </div>
+      <p class="mono mt-6" style="color:var(--faint);font-size:var(--text-xs);">Prototype · mock model · nothing leaves this page</p>
+    </div></div>`;
+  document.getElementById("home").onclick = ()=>cancelDraftEngagement();
+  document.getElementById("model").onchange = e=>state.model = e.target.value;
+  document.getElementById("go").onclick = ()=>{
+    const v = document.getElementById("q").value.trim();
+    if(!v) return toast("Type the question first");
+    state.question = v;
+    if(!state._templateFrom) state.framework = classifyFramework(v, state.ctx);
+    state.view = "interrogate"; render();
+  };
+}
+
+function renderInterrogate(){
+  const noModel = state.model === "none";
+  root.innerHTML = `
+    <div class="stage"><div class="stage-card">
+      <div class="kicker">Before we decompose</div>
+      <h1>Three questions first.</h1>
+      <p class="lede">${noModel
+        ? "You're authoring manually. These frame the canvas you're about to build."
+        : "Ground the question and pick the framework. The canvas starts specific to <b>your</b> engagement, then it's yours to shape."}</p>
+      <div class="q-block">
+        <label>Who is the client / decision-maker?</label>
+        <div class="hint">Whose call is this, and who are you presenting to?</div>
+        <input id="c-client" value="${esc(state.ctx.client)}" placeholder="e.g. Northwind's VP of Growth + my supervisor" />
+      </div>
+      <div class="q-block">
+        <label>What decision does this analysis feed?</label>
+        <div class="hint">The concrete choice on the other side of your work.</div>
+        <input id="c-decision" value="${esc(state.ctx.decision)}" placeholder="e.g. Whether to fund an SMB go-to-market in FY26" />
+      </div>
+      <div class="q-block">
+        <label>What data actually exists?</label>
+        <div class="hint">What you can really touch, not what you wish you had.</div>
+        <input id="c-data" value="${esc(state.ctx.data)}" placeholder="e.g. 3 yrs CRM + billing; no product telemetry" />
+      </div>
+      ${state._templateFrom ? `` : `
+      <div class="q-block">
+        <label>Analysis framework</label>
+        <div class="hint">We'll seed the canvas with this framework's stages, then it's fully editable. Change it if the fit is wrong.</div>
+        <div class="fw-picker" id="fw-picker">
+          ${FRAMEWORK_ORDER.map(fid=>`<button class="fw-opt ${state.framework===fid?"on":""}" data-fw="${fid}">${FRAMEWORKS[fid].label}</button>`).join("")}
+        </div>
+      </div>`}
+      <div class="thinking-note">
+        <span>◔</span>
+        <span>This step is deliberate. Framing well here is where the engagement is won. The canvas won't let you dispatch work until the reasoning behind it is yours.</span>
+      </div>
+      <div class="row spread mt-6">
+        <button class="btn btn-ghost" id="back">← Question</button>
+        <button class="btn btn-accent" id="propose">${state._templateFrom ? "Reuse the structure →" : "Build the framework →"}</button>
+      </div>
+    </div></div>`;
+  document.getElementById("back").onclick = ()=>{state.view="intake";render();};
+  const fwp = document.getElementById("fw-picker");
+  if(fwp) fwp.querySelectorAll(".fw-opt").forEach(b=> b.onclick=()=>{ state.framework = b.dataset.fw; renderInterrogate(); });
+  document.getElementById("propose").onclick = ()=>{
+    state.ctx = {
+      client: document.getElementById("c-client").value,
+      decision: document.getElementById("c-decision").value,
+      data: document.getElementById("c-data").value,
+    };
+    if(state._templateFrom){
+      // reuse an existing structure, reset for re-acceptance under the new client
+      cloneTreeInto(state.engagements[state.activeId], state.engagements[state._templateFrom]);
+      state._templateFrom = null;
+      toast("Structure reused. Re-accept each node for this client");
+    } else {
+      const {rootId, nodes, order} = proposeFromFramework(state.framework, state.question, state.ctx);
+      state.rootId = rootId; state.nodes = nodes; state.order = order;
+      state.selected = order[0];
+      toast(`Seeded from ${FRAMEWORKS[state.framework].label}`);
+    }
+    state.view = "canvas"; render();
+  };
+}
+
+function renderCanvas(){
+  const m = MODELS.find(x=>x.id===state.model);
+  const hasPanel = !!state.selected;
+  root.innerHTML = `
+    <div class="app ${hasPanel?"":"no-panel"}">
+      <aside class="side">
+        <div class="brand"><div class="brand-glyph">S</div><div><div class="brand-name">Strenaysis</div><div class="brand-sub">Reasoning canvas</div></div></div>
+        <div class="eng-switch">
+          <button class="eng-home-link" id="to-home">⌂ All engagements</button>
+          ${state.engOrder.length>1 ? `<select id="eng-select" class="eng-select">${state.engOrder.map(id=>`<option value="${id}" ${id===state.activeId?"selected":""}>${esc((state.engagements[id].ctx.client||"Untitled")+" · "+(state.engagements[id].question||"").slice(0,28))}</option>`).join("")}</select>` : ``}
+        </div>
+        <div>
+          <div class="side-label">The question</div>
+          <div class="q-recap">${esc(state.question)}</div>
+        </div>
+        <div>
+          <div class="side-label">Engagement context</div>
+          ${ctxItem("Client", state.ctx.client)}
+          ${ctxItem("Decision", state.ctx.decision)}
+          ${ctxItem("Data", state.ctx.data)}
+        </div>
+        <div style="margin-top:auto;">
+          <div class="side-label">Progress</div>
+          <div style="font-size:var(--text-sm);color:var(--ink-soft);">${acceptedCount()} of ${branchCount()} nodes accepted</div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="topbar">
+          <span class="title">${esc(state.question)}</span>
+          <div class="seg" id="filter">
+            <button data-f="tree" class="${state.filter==="tree"?"on":""}">Tree</button>
+            <button data-f="board" class="${state.filter==="board"?"on":""}">Board</button>
+          </div>
+          <span class="pill"><span class="dot ${m.live?"":"off"}"></span>${m.name}</span>
+          <button class="btn btn-sm" id="communicate">Communicate ↗</button>
+          <button class="btn btn-sm" id="present">Present ↗</button>
+        </div>
+        <div class="canvas" id="canvas-area"></div>
+      </div>
+
+      ${hasPanel ? `<aside class="panel" id="panel"></aside>` : ""}
+    </div>`;
+
+  // filter
+  document.querySelectorAll("#filter button").forEach(b=>b.onclick=()=>{state.filter=b.dataset.f;render();});
+  document.getElementById("present").onclick = ()=>{state.view="present";render();};
+  document.getElementById("communicate").onclick = ()=>{state.view="communicate";render();};
+  document.getElementById("to-home").onclick = goHome;
+  const es = document.getElementById("eng-select"); if(es) es.onchange = e=>{ state.activeId = e.target.value; render(); };
+  renderMain();
+  if(hasPanel) renderPanel();
+  bindScroll();
+}
+
+function renderMain(){
+  const area = document.getElementById("canvas-area");
+  if(!area) return;
+  if(state.filter === "board"){ renderBoard(area); }
+  else { area.innerHTML = `<div class="tree" id="tree"></div>`; renderTree(); }
+  bindScroll();
+}
+
+function ctxItem(label, val){
+  if(!val || !val.trim()) return "";
+  return `<div class="ctx-item"><b>${esc(label)}:</b> <span>${esc(val)}</span></div>`;
+}
+
+function renderTree(){
+  const t = document.getElementById("tree");
+  const root = state.nodes[state.rootId];
+  let html = nodeCard(root, "root");
+  html += `<div class="tier-label">Nodes <span class="tier-hint">· drag to reorder</span></div>`;
+  state.order.forEach(id=>{
+    const n = state.nodes[id];
+    html += `<div class="node-group">`;
+    html += nodeCard(n, "", "root");
+    if(n.children.length){
+      html += `<div class="node-kids">`;
+      n.children.forEach(cid=> html += nodeCard(state.nodes[cid], "child", id));
+      html += `</div>`;
+    }
+    html += `<button class="add-node child-add" data-parent="${id}">＋ add sub-question</button>`;
+    html += `</div>`;
+  });
+  html += `<button class="add-node add-top" data-parent="root">＋ add a top-level node</button>`;
+  t.innerHTML = html;
+
+  t.querySelectorAll(".node").forEach(el=>{
+    if(el.dataset.id === state.rootId) return;
+    el.onclick = ()=>{state.selected = el.dataset.id; render();};
+  });
+  t.querySelectorAll(".add-node").forEach(el=>{
+    el.onclick = ()=>addNode(el.dataset.parent);
+  });
+
+  // drag to reorder (within the same parent list)
+  t.querySelectorAll('.node[draggable="true"]').forEach(el=>{
+    el.addEventListener("dragstart", ev=>{
+      dragId = el.dataset.id; dragParent = el.dataset.parent;
+      el.classList.add("dragging"); ev.dataTransfer.effectAllowed = "move";
+      try{ ev.dataTransfer.setData("text/plain", dragId); }catch(e){}
+    });
+    el.addEventListener("dragend", ()=>{
+      el.classList.remove("dragging");
+      t.querySelectorAll(".drop-before,.drop-after").forEach(x=>x.classList.remove("drop-before","drop-after"));
+      dragId = null;
+    });
+    el.addEventListener("dragover", ev=>{
+      if(!dragId || el.dataset.id===dragId || el.dataset.parent!==dragParent) return;
+      ev.preventDefault();
+      const r = el.getBoundingClientRect();
+      dropBefore = ev.clientY < r.top + r.height/2;
+      el.classList.toggle("drop-before", dropBefore);
+      el.classList.toggle("drop-after", !dropBefore);
+    });
+    el.addEventListener("dragleave", ()=> el.classList.remove("drop-before","drop-after"));
+    el.addEventListener("drop", ev=>{
+      if(!dragId || el.dataset.id===dragId || el.dataset.parent!==dragParent) return;
+      ev.preventDefault();
+      el.classList.remove("drop-before","drop-after");
+      moveNode(dragParent, dragId, el.dataset.id, dropBefore);
+    });
+  });
+}
+
+let dragId = null, dragParent = null, dropBefore = true;
+function moveNode(parent, id, targetId, before){
+  const list = parent==="root" ? state.order : (state.nodes[parent] ? state.nodes[parent].children : null);
+  if(!list) return;
+  const from = list.indexOf(id); if(from<0) return;
+  list.splice(from, 1);
+  let to = list.indexOf(targetId);
+  if(to<0){ list.splice(from, 0, id); return; }
+  if(!before) to += 1;
+  list.splice(to, 0, id);
+  const e = state.engagements[state.activeId]; if(e) e.updatedAt = Date.now();
+  toast("Reordered");
+  render();
+}
+
+// Ownership, consolidated: one badge instead of provenance + accepted tick.
+// Granular provenance (proposed / edited / authored) lives in the node panel.
+function ownerChip(n){
+  return n.accepted ? `<span class="own own-yours">Yours</span>` : `<span class="own own-draft">AI draft</span>`;
+}
+function nodeCard(n, cls, parent){
+  const sel = n.id===state.selected ? "sel" : "";
+  const phase = PHASES.find(p=>p.id===n.phase);
+  const drag = cls==="root" ? "" : `draggable="true" data-parent="${parent}"`;
+  const grip = cls==="root" ? "" : `<span class="node-grip" title="Drag to reorder">⠿</span>`;
+  let meta = "";
+  if(cls==="root"){
+    meta = `<div class="node-meta"><span class="own own-yours">Grand question</span></div>`;
+  } else {
+    meta = `<div class="node-meta">
+      <span class="chip phase-${n.phase}">${phase.label}</span>
+      ${ownerChip(n)}
+    </div>`;
+  }
+  return `<div class="node ${cls} ${sel}" data-id="${n.id}" ${drag}>
+    <div class="node-head">${grip}<div class="node-title">${esc(n.title)}</div></div>
+    ${meta}
+  </div>`;
+}
+
+/* ---------- board view: nodes regrouped by phase (status board) ---------- */
+function boardItems(){
+  const items = [];
+  state.order.forEach((id,i)=>{
+    items.push({n:state.nodes[id], parent:null, num:i+1});
+    state.nodes[id].children.forEach(cid => items.push({n:state.nodes[cid], parent:state.nodes[id], num:i+1}));
+  });
+  return items;
+}
+function renderBoard(area){
+  const items = boardItems();
+  area.innerHTML = `<div class="board">${PHASES.map(ph=>{
+    const inCol = items.filter(it => it.n.phase===ph.id);
+    return `<div class="col">
+      <div class="col-head"><span class="lbl">${ph.label}</span><span class="ct">${inCol.length}</span></div>
+      ${inCol.length ? inCol.map(bcard).join("") : `<div class="col-empty">·</div>`}
+    </div>`;
+  }).join("")}</div>`;
+  area.querySelectorAll(".bcard").forEach(el=> el.onclick = ()=>{ state.selected = el.dataset.id; render(); });
+}
+function bcard(it){
+  const n = it.n;
+  const sel = n.id===state.selected ? "sel" : "";
+  const agent = n.agentId ? state.connectedAgents[n.agentId] : null;
+  let foot = "";
+  if(n.phase==="executing"){
+    foot = agent
+      ? `<div class="brun"><div class="progress"><i style="width:${n.progress}%"></i></div><div class="activity">${esc(agent.name)}: ${esc(agentActivity(n))}</div></div>`
+      : `<div class="activity"><span class="dot-run"></span> in progress · you</div>`;
+  } else if(n.phase==="finding" && n.finding){
+    foot = `<div class="bfind">${esc(n.finding.slice(0,96))}${n.finding.length>96?"…":""}</div>`;
+  } else if(n.phase!=="finding"){
+    foot = `<div class="bhint">${n.accepted ? "ready to run" : "accept to run"}</div>`;
+  }
+  return `<div class="bcard ${sel}" data-id="${n.id}">
+    ${it.parent ? `<div class="bcard-parent">↳ ${esc(it.parent.title.slice(0,30))}${it.parent.title.length>30?"…":""}</div>` : `<div class="bcard-parent bcard-num">Node ${it.num}</div>`}
+    <div class="bcard-title">${esc(n.title)}</div>
+    <div class="bcard-meta">${ownerChip(n)}</div>
+    ${foot}
+  </div>`;
+}
+function agentActivity(n){
+  const steps = ["reading engagement context", "querying data source", "running the analysis", "drafting the finding"];
+  const i = Math.min(steps.length-1, Math.floor(n.progress/25));
+  return `${steps[i]}… · ${i+1} tool call${i?"s":""}`;
+}
+
+function provLabel(p){ return p==="ai"?"AI proposed":p==="edited"?"AI · you edited":"You authored"; }
+
+/* ---------- detail panel ---------- */
+function renderPanel(){
+  const p = document.getElementById("panel");
+  const n = state.nodes[state.selected];
+  if(!n){ p.innerHTML = `<div class="panel-empty">Select a node to see its reasoning.</div>`; return; }
+  const isRoot = n.id === state.rootId;
+
+  // active sparring: a question surfaces on its own (adaptive), unless paused or capped
+  if(!isRoot && !n.openQ && !n.grillPaused && n.thread.length < GRILL_CAP){
+    n.openQ = nextGrillQuestion(n, state.engagements[state.activeId]);
+  }
+  // Execution is derived from WHICH connected agent (if any) is assigned to this
+  // node. No agent assigned = manual, even if agents exist elsewhere. This is
+  // the fix for "unclear how this connects to external agents": a node can only
+  // run as "Agent" by pointing at a specific, named, connected agent.
+  const assignedAgent = n.agentId ? state.connectedAgents[n.agentId] : null;
+  if(n.agentId && !assignedAgent) n.agentId = null; // agent was disconnected since assignment
+  n.executor = assignedAgent ? "agent" : "manual";
+  const executor = n.executor;
+  const runLabel = executor === "agent" ? `Dispatch to ${assignedAgent.name} ▷` : "Start (you run this) ▷";
+  const showFinding = n.phase==="finding" || (n.phase==="executing" && executor==="manual");
+
+  let footerHtml = "";
+  if(!isRoot){
+    const del = `<button class="btn btn-ghost btn-sm" id="del" style="margin-left:auto">Delete</button>`;
+    if(!n.accepted){
+      footerHtml = `<button class="btn btn-accent btn-sm" id="accept">Accept as mine</button>
+        <button class="btn btn-sm" id="dispatch" disabled title="Accept the reasoning first">${runLabel}</button>${del}`;
+    } else if(n.phase==="executing" && executor==="manual"){
+      footerHtml = `<span class="prov human" style="align-self:center">In progress · you</span>
+        <button class="btn btn-accent btn-sm" id="markdone">Mark answered ✓</button>${del}`;
+    } else if(n.phase==="executing"){
+      footerHtml = `<span class="prov human" style="align-self:center">Agent running…</span>${del}`;
+    } else if(n.phase==="finding"){
+      footerHtml = `<span class="prov human" style="align-self:center">✓ answered</span>${del}`;
+    } else {
+      footerHtml = `<span class="prov human" style="align-self:center">✓ accepted as yours</span>
+        <button class="btn btn-sm" id="dispatch">${runLabel}</button>${del}`;
+    }
+  }
+
+  p.innerHTML = `
+    <div class="panel-head"><div class="side-label">${isRoot?"Grand question":"Pressure-test & own this node"}</div>
+      <span class="prov ${n.prov}" style="margin-left:auto">${provLabel(n.prov)}</span>
+    </div>
+    <div class="panel-body">
+      <input class="p-title" id="p-title" value="${esc(n.title)}"/>
+      ${isRoot ? `<p style="color:var(--muted);font-size:var(--text-sm);margin:0">This is the question you own. Everything below decomposes it.</p>` : `
+      ${(n.rationale.why || n.rationale.order || n.rationale.mece) ? `
+      <details class="ai-rat">
+        <summary><span class="ai-rat-t">Why the AI put this here</span><span class="ai-rat-badge">reference</span></summary>
+        <div class="ai-rat-body">
+          ${n.rationale.why?`<p>${esc(n.rationale.why)}</p>`:""}
+          ${n.rationale.order?`<p><span class="ai-rat-lbl">Sequence</span> ${esc(n.rationale.order)}</p>`:""}
+          ${n.rationale.mece?`<p><span class="ai-rat-lbl">MECE · set-level</span> ${esc(n.rationale.mece)}</p>`:""}
+          <p class="ai-rat-note">The AI's proposal. Pressure-test it below; don't just take it.</p>
+        </div>
+      </details>` : ``}
+
+      <div class="panel-divider"></div>
+      ${threadSection(n)}
+
+      ${n.accepted ? `
+      <div class="panel-divider"></div>
+      <div class="exec-group">
+        <div class="exec-group-h">Execution</div>
+        <div class="section-h">Run by</div>
+        <div class="agent-picker" id="agent-picker">
+          ${connectedAgentList().map(a=>`<button class="agent-pick-row ${n.agentId===a.id?"on":""}" data-agent="${a.id}">
+              <span class="agent-pick-name">${esc(a.name)}</span>
+              <span class="agent-pick-scope">${a.scope.length?esc(a.scope.join(", ")):"no data access configured"}</span>
+            </button>`).join("")}
+          <button class="agent-pick-row ${!n.agentId?"on":""}" data-agent="">
+            <span class="agent-pick-name">Manual (you)</span>
+            <span class="agent-pick-scope">An interview, a judgment call, or data an agent can't reach</span>
+          </button>
+          <button class="agent-pick-row agent-pick-connect" id="agent-pick-connect"><span class="agent-pick-name">+ Connect a new agent</span></button>
+        </div>
+        ${!connectedAgentList().length ? `<p class="tiny-note">No agents connected yet. Every node runs manually until you connect one, from your global roster (Home → Agents), reusable across every engagement.</p>` : ``}
+        ${n.phase==="executing" && executor==="agent" ? execStub(n, assignedAgent) : ""}
+        ${showFinding ? findingBlock(n, executor) : ""}
+      </div>` : ``}
+      `}
+    </div>
+    ${isRoot ? "" : `<div class="panel-foot">${footerHtml}</div>`}
+  `;
+
+  // title edit
+  const pt = document.getElementById("p-title");
+  pt.oninput = ()=>{ n.title = pt.value; if(!isRoot) markEdited(n); };
+  pt.onblur = ()=>renderCanvasLite();
+
+  bindScroll();
+  if(isRoot) return;
+
+  // executor (agent vs manual)
+  const apk = document.getElementById("agent-picker");
+  if(apk) apk.querySelectorAll(".agent-pick-row[data-agent]").forEach(b=> b.onclick=()=>{
+    n.agentId = b.dataset.agent || null;
+    n.executor = n.agentId ? "agent" : "manual";
+    renderPanel(); renderMain();
+  });
+  const apc = document.getElementById("agent-pick-connect");
+  if(apc) apc.onclick = ()=>{ state._connectDraft=null; state.view="connect-agent"; render(); };
+  // accept
+  const acc = document.getElementById("accept");
+  if(acc) acc.onclick = ()=>{ n.accepted = true; n.prov = "human"; toast("Accepted. Now authored by you"); render(); };
+  // dispatch / start. agent streams a stub; manual just moves to in-progress
+  const dz = document.getElementById("dispatch");
+  if(dz) dz.onclick = ()=>{
+    if(!n.accepted) return;
+    setPhase(n, "executing");
+    if(n.executor === "agent") runStub(n);
+  };
+  // mark answered (manual)
+  const md = document.getElementById("markdone");
+  if(md) md.onclick = ()=>{ if(!n.finding || !n.finding.trim()){ toast("Record the finding first"); return; } setPhase(n, "finding"); };
+  // finding edits (manual authoring)
+  const fnd = document.getElementById("finding");
+  if(fnd) fnd.oninput = ()=>{ n.finding = fnd.value; };
+  // sparring: pause / resume / keep going
+  const pauseBtn = document.getElementById("th-pause");
+  if(pauseBtn) pauseBtn.onclick = ()=>{ n.grillPaused = true; n.openQ = null; renderPanel(); };
+  const resumeBtn = document.getElementById("th-resume");
+  if(resumeBtn) resumeBtn.onclick = ()=>{ n.grillPaused = false; renderPanel(); };
+  const moreBtn = document.getElementById("th-more");
+  if(moreBtn) moreBtn.onclick = ()=>{ n.openQ = nextGrillQuestion(n, state.engagements[state.activeId]); renderPanel(); };
+  // answering + tagging commits the entry; the next question auto-surfaces (active grilling)
+  p.querySelectorAll("#th-typepick .th-typebtn").forEach(b=> b.onclick=()=>{
+    const ta = document.getElementById("th-answer");
+    const a = (ta.value||"").trim();
+    if(!a) return toast("Answer before tagging it");
+    const type = b.dataset.t;
+    n.thread.push({ q: n.openQ, a, type, followup: grillFollowup(type) });
+    n.openQ = n.thread.length < GRILL_CAP ? nextGrillQuestion(n, state.engagements[state.activeId]) : null;
+    markEdited(n);
+    toast(type==="confirmed" ? "Captured. Eligible for the client update" : "Captured. Held internal until confirmed");
+    renderPanel();
+  });
+  // delete
+  document.getElementById("del").onclick = ()=>deleteNode(n.id);
+}
+
+function execStub(n, agent){
+  const name = agent ? agent.name : "agent";
+  const scope = agent && agent.scope.length ? agent.scope.join(", ") : null;
+  return `<div class="exec-stub">
+    <div class="exec-head"><span class="dot-run"></span> Running on ${esc(name)}${scope?` <span class="exec-scope">· ${esc(scope)}</span>`:""}</div>
+    <div class="progress"><i style="width:${n.progress}%"></i></div>
+    <div class="activity">${esc(agentActivity(n))}</div>
+    <div class="exec-note">Mock stream. Real agent activity (tool calls, artifacts, tokens, cost) and interrupt/approve controls land here.</div>
+  </div>`;
+}
+function threadSection(n){
+  const items = n.thread.map(t=>`
+    <div class="th-item">
+      <div class="th-q">${esc(t.q)}</div>
+      <div class="th-a">${esc(t.a)}</div>
+      <div class="th-foot"><span class="th-type ${t.type}">${t.type}</span></div>
+      ${t.followup?`<div class="th-follow">↳ ${esc(t.followup)}</div>`:""}
+    </div>`).join("");
+  let open;
+  if(n.openQ){
+    open = `
+    <div class="th-open">
+      <div class="th-open-top"><span class="th-live"><span class="dot-run"></span> ${esc(GRILL_NAME.toLowerCase())} · your turn</span><button class="th-pause" id="th-pause">Pause</button></div>
+      <div class="th-q">${esc(n.openQ)}</div>
+      <textarea class="rationale" id="th-answer" placeholder="Answer, think out loud…"></textarea>
+      <div class="th-hint">Tag how solid this is. Assumptions &amp; hypotheses stay internal; only confirmed can reach the client.</div>
+      <div class="th-typepick" id="th-typepick">
+        <button class="th-typebtn confirmed" data-t="confirmed">✓ Confirmed</button>
+        <button class="th-typebtn assumption" data-t="assumption">~ Assumption</button>
+        <button class="th-typebtn hypothesis" data-t="hypothesis">? Hypothesis</button>
+      </div>
+    </div>`;
+  } else if(n.grillPaused){
+    open = `<div class="th-ask"><button class="btn btn-sm" id="th-resume">▷ Resume ${esc(GRILL_NAME.toLowerCase())}</button><span class="th-ask-note">${n.thread.length} captured · paused</span></div>`;
+  } else {
+    open = `<div class="th-done"><div>You've pushed this hard. ${n.thread.length} captured.</div><button class="btn btn-ghost btn-sm" id="th-more">Push further</button></div>`;
+  }
+  return `<div class="pt-block">
+    <div class="pt-head"><span class="pt-title">${esc(GRILL_NAME)}</span><span class="pt-sub">stress-test your thinking; this is the reasoning you keep</span></div>
+    <div class="thread">${items}${open}</div>
+  </div>`;
+}
+function findingBlock(n, executor){
+  const ph = executor === "manual"
+    ? "Record what you found. This is your analysis, in your words. It feeds back to answer or reframe the question."
+    : "What this node concluded. It feeds back to answer or reframe the question.";
+  return `<div>
+    <div class="section-h">Finding${executor==="manual"?`<span class="hint-inline" style="color:var(--muted)">your analysis</span>`:""}</div>
+    <textarea class="rationale" id="finding" placeholder="${ph}">${esc(n.finding||"")}</textarea>
+  </div>`;
+}
+
+/* ---------- Present: the final deliverable as an editable DECK ---------- */
+function buildDeck(e){
+  const accepted = e.order.map(id=>e.nodes[id]).filter(b=>b.accepted);
+  const slides = [{ kind:"title", title: e.question || "Untitled", subtitle: [e.ctx.client, e.ctx.decision].filter(Boolean).join("   ·   ") }];
+  accepted.forEach((b,i)=>{
+    const s = threadStats(b);
+    const bullets = [];
+    if(b.finding) bullets.push(b.finding);
+    s.confirmed.forEach(c=> bullets.push(c.a));
+    if(!bullets.length) bullets.push("Add the key point for this line of analysis.");
+    slides.push({ kind:"content", eyebrow:"Finding "+(i+1), title: b.title, bullets });
+  });
+  slides.push({ kind:"close", eyebrow:"Recommendation", title:"What we recommend", bullets:["State the recommendation.","State the immediate next step."] });
+  return { slides, current:0, savedAt: Date.now() };
+}
+function slideHtml(s, idx, print){
+  const ce = print ? "" : `contenteditable="true" spellcheck="false"`;
+  if(s.kind==="title"){
+    return `<div class="slide slide-title">
+      <div class="slide-brand">Strenaysis</div>
+      <h1 class="slide-h1" ${ce} data-edit="title">${esc(s.title||"")}</h1>
+      <div class="slide-sub" ${ce} data-edit="subtitle">${esc(s.subtitle||"")}</div>
+    </div>`;
+  }
+  const bullets = (s.bullets||[]).map((b,i)=>`<li>
+    <span class="slide-bullet" ${ce} data-edit="bullet:${i}">${esc(b)}</span>
+    ${print?"":`<button class="slide-delb" data-delbullet="${i}" title="Remove point">×</button>`}
+  </li>`).join("");
+  return `<div class="slide slide-content ${s.kind==="close"?"slide-close":""}">
+    <div class="slide-eyebrow">${esc(s.eyebrow||"")}</div>
+    <h2 class="slide-h2" ${ce} data-edit="title">${esc(s.title||"")}</h2>
+    <ul class="slide-bullets">${bullets}</ul>
+    ${print?"":`<button class="slide-addb" id="pz-add-bullet">+ point</button>`}
+    <div class="slide-foot">Strenaysis · ${idx+1}</div>
+  </div>`;
+}
+function renderPresent(){
+  const e = state.engagements[state.activeId];
+  if(!e.deck) e.deck = buildDeck(e);
+  const deck = e.deck;
+  deck.current = Math.max(0, Math.min(deck.current, deck.slides.length-1));
+  const cur = deck.slides[deck.current];
+
+  root.innerHTML = `
+    <div class="pz">
+      <div class="dv-bar">
+        <button class="btn btn-sm" id="pz-back">← Back to canvas</button>
+        <span class="pz-title">Present · deck</span>
+        <span class="dv-spacer"></span>
+        <span class="pz-saved" id="pz-saved">All changes saved</span>
+        <button class="btn btn-sm" id="pz-rebuild">Rebuild from canvas</button>
+        <button class="btn btn-primary btn-sm" id="pz-export">Export ↧ PDF</button>
+      </div>
+      <div class="pz-stage-wrap">
+        <button class="pz-nav" id="pz-prev" ${deck.current===0?"disabled":""}>‹</button>
+        <div class="pz-stage">${slideHtml(cur, deck.current)}</div>
+        <button class="pz-nav" id="pz-next" ${deck.current>=deck.slides.length-1?"disabled":""}>›</button>
+      </div>
+      <div class="pz-rail">
+        ${deck.slides.map((s,i)=>`<button class="pz-thumb ${i===deck.current?"on":""}" data-slide="${i}"><span class="pz-thumb-n">${i+1}</span><span class="pz-thumb-t">${esc((s.title||"Untitled").slice(0,42))}</span></button>`).join("")}
+      </div>
+      <div class="pz-print">${deck.slides.map((s,i)=>`<div class="pz-print-slide">${slideHtml(s,i,true)}</div>`).join("")}</div>
+    </div>`;
+
+  document.getElementById("pz-back").onclick = ()=>{ state.view="canvas"; render(); };
+  document.getElementById("pz-prev").onclick = ()=>{ if(deck.current>0){ deck.current--; renderPresent(); } };
+  document.getElementById("pz-next").onclick = ()=>{ if(deck.current<deck.slides.length-1){ deck.current++; renderPresent(); } };
+  document.getElementById("pz-export").onclick = ()=>window.print();
+  document.getElementById("pz-rebuild").onclick = ()=>{ e.deck = buildDeck(e); renderPresent(); toast("Deck rebuilt from the canvas. Edits reset"); };
+  root.querySelectorAll("[data-slide]").forEach(el=> el.onclick = ()=>{ deck.current = +el.dataset.slide; renderPresent(); });
+  root.querySelectorAll(".pz-stage [contenteditable][data-edit]").forEach(el=>{
+    el.oninput = ()=>{
+      const path = el.dataset.edit;
+      if(path==="title") cur.title = el.textContent;
+      else if(path==="subtitle") cur.subtitle = el.textContent;
+      else if(path.startsWith("bullet:")) cur.bullets[+path.split(":")[1]] = el.textContent;
+      deck.savedAt = Date.now();
+      const sv = document.getElementById("pz-saved"); if(sv) sv.textContent = "Saved just now";
+    };
+  });
+  const addB = document.getElementById("pz-add-bullet");
+  if(addB) addB.onclick = ()=>{ cur.bullets.push("New point"); renderPresent(); };
+  root.querySelectorAll("[data-delbullet]").forEach(el=> el.onclick = ()=>{ cur.bullets.splice(+el.dataset.delbullet,1); renderPresent(); });
+}
+
+/* ============================================================
+   Communicate: membranes over the same node graph
+   ============================================================ */
+// One switcher across all outward-facing membranes, shown in both the
+// Communicate and Deliverable bars so the model reads as one coherent set.
+function membraneSwitcherHtml(active){
+  const tabs = [["client","Client update"],["teammate","Teammate brief"]];
+  return `<div class="seg" id="membrane">${tabs.map(([k,l])=>`<button data-mb="${k}" class="${active===k?"on":""}">${l}</button>`).join("")}</div>`;
+}
+function wireMembraneSwitcher(){
+  document.querySelectorAll("#membrane button").forEach(b=> b.onclick=()=>{
+    state.view="communicate"; state.membrane=b.dataset.mb; render();
+  });
+}
+
+function renderCommunicate(){
+  root.innerHTML = `
+    <div class="dv">
+      <div class="dv-bar">
+        <button class="btn btn-sm" id="cm-back">← Back to canvas</button>
+        ${membraneSwitcherHtml(state.membrane)}
+        <span class="dv-spacer"></span>
+      </div>
+      <div id="cm-body"></div>
+    </div>`;
+  document.getElementById("cm-back").onclick = ()=>{ state.view="canvas"; render(); };
+  wireMembraneSwitcher();
+  renderMembrane();
+}
+
+function renderMembrane(){
+  const body = document.getElementById("cm-body");
+  const e = state.engagements[state.activeId];
+  body.innerHTML = state.membrane === "client" ? clientUpdateHtml(e) : teammateBriefHtml(e);
+  wireMembrane(e);
+}
+
+// --- Client update: auto-drafted from node deltas, provenance floor = accepted ---
+function clientUpdateHtml(e){
+  const pub = e.published;
+  const visible = e.order.map(id=>e.nodes[id]).filter(b=>b.accepted); // provenance floor
+  const hiddenDrafts = e.order.length - visible.length;
+  const isNew = (b)=> !pub || pub.states[b.id] !== b.phase;
+
+  const answered = visible.filter(b=>b.phase==="finding");
+  const running  = visible.filter(b=>b.phase==="executing");
+  const opened   = visible.filter(b=>b.phase==="question" || b.phase==="approach");
+  const changed  = visible.filter(isNew);
+
+  const headline = composeHeadline(e, answered, running, opened, changed, pub);
+  const total = visible.length;
+  const pct = total ? Math.round(answered.length/total*100) : 0;
+
+  // showPhase: the section header already states the phase for "resolved" and
+  // "underway" groups (every card in them shares one phase), so repeating it as
+  // a chip is pure duplication. "Still to do" mixes Open + Framed, so the chip
+  // there carries real information and stays.
+  const branchLine = (b, showPhase)=>{
+    const s = threadStats(b);
+    const held = s.assumption.length + s.hypothesis.length;
+    const meta = showPhase || isNew(b)
+      ? `<div class="cu-branch-meta">${showPhase?`<span class="chip phase-${b.phase}">${clientPhase(b.phase)}</span>`:""}${isNew(b)?`<span class="cu-tag">new</span>`:""}</div>`
+      : "";
+    return `<div class="cu-branch ${isNew(b)?"cu-new":""}">
+      <div class="cu-branch-title">${esc(b.title)}</div>
+      ${meta}
+      ${b.finding?`<p class="cu-finding">${esc(b.finding)}</p>`:""}
+      ${s.confirmed.length?`<ul class="cu-confirmed">${s.confirmed.map(c=>`<li>${esc(c.a)}</li>`).join("")}</ul>`:""}
+      ${held?`<p class="cu-internal">${held} point${held>1?"s":""} still being validated; held back until confirmed.</p>`:""}
+    </div>`;
+  };
+
+  return `
+    <div class="dv-page cu-page">
+      <div class="cu-draftbar">
+        <div><span class="dot-run" style="background:var(--accent)"></span> <b>Always current.</b> Composed from your canvas. Send it through your own channel.</div>
+        <div class="cu-actions">
+          <button class="btn btn-accent btn-sm" id="cu-email">Copy as email</button>
+          <button class="btn btn-sm" id="cu-pdf">Export PDF</button>
+          ${pub?`<button class="btn btn-sm" id="cu-viewclient">Preview client view ↗</button>`:``}
+        </div>
+      </div>
+      <div class="dv-kicker">Progress update${e.ctx.client?` · for ${esc(e.ctx.client)}`:""}</div>
+      <h1>${esc(e.question)}</h1>
+      ${e.ctx.decision?`<p class="cu-goal">Toward your decision: <b>${esc(e.ctx.decision)}</b></p>`:""}
+      <div class="cu-progress"><div class="cu-progress-bar"><i style="width:${pct}%"></i></div><span class="cu-progress-txt">${answered.length} of ${total} lines resolved · ${pct}% toward a recommendation</span></div>
+      <p class="cu-meta">${pub?`Last shared ${relTime(pub.at)} · ${changed.length} update${changed.length===1?"":"s"} since`:"Not yet shared with the client"}</p>
+
+      <div class="cu-headline">${headline}</div>
+
+      ${answered.length?`<div class="cu-sec"><div class="cu-sec-h">What we've resolved</div>${answered.map(b=>branchLine(b,false)).join("")}</div>`:""}
+      ${running.length?`<div class="cu-sec"><div class="cu-sec-h">Underway</div>${running.map(b=>branchLine(b,false)).join("")}</div>`:""}
+      ${opened.length?`<div class="cu-sec"><div class="cu-sec-h">Still to do</div>${opened.map(b=>branchLine(b,true)).join("")}</div>`:""}
+
+      <div class="cu-sec">
+        <div class="cu-sec-h">Requests outside current scope</div>
+        <p class="cu-note">New asks land here, visible and negotiable, so they don't silently expand the work.</p>
+        ${e.requests.length?e.requests.map((r,i)=>`<div class="cu-req"><span>${esc(r.text)}</span><span class="cu-req-when">${relTime(r.at)}</span></div>`).join(""):`<div class="cu-empty-row">No out-of-scope requests logged.</div>`}
+        <div class="cu-addrow"><input id="cu-req-input" placeholder="Log a new client ask…" /><button class="btn btn-sm" id="cu-req-add">Add</button></div>
+      </div>
+
+      ${e.reactions.length?`<div class="cu-sec cu-internal-sec"><div class="cu-sec-h">Client reactions captured</div>${e.reactions.map(r=>`<div class="cu-react"><span class="cu-react-kind ${r.kind}">${r.kind==="aligned"?"✓ aligned":"? question"}</span><span>${esc(r.note||"")}</span><span class="cu-req-when">${relTime(r.at)}</span></div>`).join("")}</div>`:""}
+
+      <footer class="dv-foot">${hiddenDrafts>0?`${hiddenDrafts} draft node${hiddenDrafts===1?"":"s"} hidden; only reasoning you've accepted is shown to the client.`:"Only accepted reasoning is shown to the client."}</footer>
+    </div>`;
+}
+
+function clientPhase(phase){
+  return { question:"Planned", approach:"Planned", executing:"In progress", finding:"Complete" }[phase] || phase;
+}
+function composeHeadline(e, answered, running, opened, changed, pub){
+  const total = answered.length + running.length + opened.length;
+  const goal = e.ctx.decision ? `your decision on “${esc(e.ctx.decision)}”` : "your question";
+  let lead;
+  if(!total) lead = `We're framing the analysis behind ${goal}.`;
+  else if(answered.length===total) lead = `The analysis behind ${goal} is complete. Here's what we found.`;
+  else lead = `Here's what we now know toward ${goal}, and what's still open.`;
+  const finding = answered.find(b=>b.finding);
+  const secondary = finding ? `Latest finding: ${esc(finding.finding)}`
+    : (pub ? `${changed.length} update${changed.length===1?"":"s"} since you last saw this.` : "");
+  return `<p>${lead}</p>${secondary?`<p>${secondary}</p>`:""}`;
+}
+
+// --- Teammate brief: the why, fast ---
+function teammateBriefHtml(e){
+  const branches = e.order.map(id=>e.nodes[id]);
+  const decided = branches.filter(b=>b.accepted);
+  const live = branches.filter(b=>b.accepted && (b.phase==="executing"));
+  const openQs = [];
+  branches.forEach(b=> b.children.forEach(cid=>{ const c=e.nodes[cid]; if(c.phase==="question") openQs.push({c, parent:b}); }));
+  const modelName = (MODELS.find(m=>m.id===e.model)||{}).name || "";
+
+  const decisionRow = (b)=>{
+    const s = threadStats(b);
+    const bAgent = b.agentId ? state.connectedAgents[b.agentId] : null;
+    const epi = [];
+    if(s.confirmed.length) epi.push(`${s.confirmed.length} confirmed`);
+    if(s.assumption.length) epi.push(`${s.assumption.length} assumption${s.assumption.length>1?"s":""}`);
+    if(s.hypothesis.length) epi.push(`${s.hypothesis.length} hypothes${s.hypothesis.length>1?"es":"is"}`);
+    return `<div class="tb-row">
+      <div class="tb-row-title">${esc(b.title)}</div>
+      ${b.rationale.why?`<p class="tb-why"><span class="lbl">why</span> ${esc(b.rationale.why)}</p>`:""}
+      <div class="tb-row-meta"><span class="chip phase-${b.phase}">${PHASES.find(p=>p.id===b.phase).label}</span>
+        <span class="chip">${bAgent?esc(bAgent.name):"manual"}</span>
+        ${epi.length?`<span class="chip">${epi.join(" · ")}</span>`:""}
+        ${b.finding?`<span class="tb-has-finding">finding recorded</span>`:""}</div>
+    </div>`;
+  };
+  const openAssumptions = [];
+  branches.forEach(b=> (b.thread||[]).forEach(t=>{ if(t.type!=="confirmed") openAssumptions.push({t, b}); }));
+
+  return `
+    <div class="dv-page">
+      <div class="dv-kicker">Teammate brief · get up to speed in minutes, not a week</div>
+      <h1>${esc(e.question)}</h1>
+      <p class="dv-decision">${esc(e.ctx.client||"")}${e.ctx.decision?` · feeds: ${esc(e.ctx.decision)}`:""}</p>
+
+      <div class="tb-sec"><div class="cu-sec-h">Where it stands</div>
+        <p class="tb-standing">${decided.length} of ${branches.length} nodes owned · ${live.length} running · ${openQs.length} open question${openQs.length===1?"":"s"}. Reasoning model: ${esc(e.model==="none"?"none (manual)":modelName)}.</p>
+      </div>
+
+      <div class="tb-sec"><div class="cu-sec-h">Decisions & why</div>
+        ${decided.length?decided.map(decisionRow).join(""):`<div class="cu-empty-row">Nothing accepted yet; this engagement is still being framed.</div>`}
+      </div>
+
+      <div class="tb-sec"><div class="cu-sec-h">Live now: who owns what</div>
+        ${live.length?live.map(b=>{const bAgent=b.agentId?state.connectedAgents[b.agentId]:null; return `<div class="tb-live"><span>${esc(b.title)}</span><span class="tb-owner">${bAgent?esc(bAgent.name):"you (manual)"}</span></div>`;}).join(""):`<div class="cu-empty-row">Nothing running right now.</div>`}
+      </div>
+
+      <div class="tb-sec"><div class="cu-sec-h">Open questions</div>
+        ${openQs.length?openQs.map(o=>`<div class="tb-open">${esc(o.c.title)} <span class="tb-under">under ${esc(o.parent.title.slice(0,40))}</span></div>`).join(""):`<div class="cu-empty-row">No open sub-questions.</div>`}
+      </div>
+
+      <div class="tb-sec"><div class="cu-sec-h">Assumptions in play</div>
+        ${openAssumptions.length?openAssumptions.map(o=>`<div class="tb-open"><span class="th-type ${o.t.type}">${o.t.type}</span> ${esc(o.t.a)} <span class="tb-under">· ${esc(o.b.title.slice(0,36))}</span></div>`).join(""):`<div class="cu-empty-row">No open assumptions recorded.</div>`}
+      </div>
+
+      <div class="tb-sec"><div class="cu-sec-h">Landmines & data caveats</div>
+        <p class="tb-caveat">${e.ctx.data?esc(e.ctx.data):"No data constraints recorded."}</p>
+      </div>
+    </div>`;
+}
+
+function buildClientSnapshot(e){
+  const visible = e.order.map(id=>e.nodes[id]).filter(b=>b.accepted);
+  return {
+    question: e.question, client: e.ctx.client, decision: e.ctx.decision, at: Date.now(),
+    branches: visible.map(b=>{ const s=threadStats(b); return {
+      title:b.title, phase:b.phase, finding:b.finding,
+      confirmed:s.confirmed.map(c=>c.a), held:s.assumption.length+s.hypothesis.length }; }),
+    requests: e.requests.map(r=>({text:r.text})),
+  };
+}
+function markShared(e){
+  const states = {}; e.order.forEach(id=>states[id]=e.nodes[id].phase);
+  e.published = { at: Date.now(), states, snapshot: buildClientSnapshot(e) };
+}
+function copyText(txt){
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).catch(()=>fallbackCopy(txt)); return; }
+  fallbackCopy(txt);
+}
+function fallbackCopy(txt){
+  try{ const ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.top="-2000px"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); }catch(e){}
+}
+function composeEmailText(e){
+  const visible = e.order.map(id=>e.nodes[id]).filter(b=>b.accepted);
+  const answered = visible.filter(b=>b.phase==="finding");
+  const running  = visible.filter(b=>b.phase==="executing");
+  const open     = visible.filter(b=>b.phase==="question"||b.phase==="approach");
+  const total = visible.length, pct = total? Math.round(answered.length/total*100):0;
+  const name = (e.ctx.client||"").split(/[,+/]/)[0].trim();
+  const L = [];
+  L.push(`Subject: Progress update on ${e.question}`, "");
+  L.push(`Hi${name?` ${name}`:" there"},`, "");
+  L.push(`A quick update on ${e.ctx.decision? `your decision on ${e.ctx.decision}` : `"${e.question}"`}. We're about ${pct}% of the way to a recommendation (${answered.length} of ${total} lines of analysis resolved).`, "");
+  if(answered.length){
+    L.push("What we've resolved:");
+    answered.forEach(b=>{ const s=threadStats(b); L.push(`  • ${b.finding || (s.confirmed[0]&&s.confirmed[0].a) || b.title}`); });
+    L.push("");
+  }
+  if(running.length||open.length){
+    L.push("Underway / still to do:");
+    running.concat(open).forEach(b=> L.push(`  • ${b.title}`));
+    L.push("");
+  }
+  if(e.requests.length){
+    L.push("New requests outside current scope (happy to discuss timing + impact):");
+    e.requests.forEach(r=> L.push(`  • ${r.text}`));
+    L.push("");
+  }
+  L.push("Happy to walk through any of this.", "", "Best,", "[your name]");
+  return L.join("\n");
+}
+function wireMembrane(e){
+  const em = document.getElementById("cu-email");
+  if(em) em.onclick = ()=>{ copyText(composeEmailText(e)); markShared(e); toast("Email copied. Paste into your client email"); renderMembrane(); };
+  const pdf = document.getElementById("cu-pdf");
+  if(pdf) pdf.onclick = ()=>{ window.print(); };
+  const vc = document.getElementById("cu-viewclient");
+  if(vc) vc.onclick = ()=>{ state.view="clientview"; render(); };
+  const addBtn = document.getElementById("cu-req-add");
+  if(addBtn) addBtn.onclick = ()=>{
+    const inp = document.getElementById("cu-req-input"); const v = inp.value.trim();
+    if(!v) return toast("Type the request first");
+    e.requests.unshift({text:v, at:Date.now()}); renderMembrane();
+  };
+}
+
+// The read-only, client-facing view of a PUBLISHED update (not the live draft).
+// Dark bar signals you've stepped out of the working tool into what the client sees.
+function renderClientView(){
+  const e = state.engagements[state.activeId];
+  const snap = e.published && e.published.snapshot;
+  root.innerHTML = `
+    <div class="dv cv">
+      <div class="dv-bar cv-bar">
+        <div class="cv-from">Shared with you via Strenaysis${snap&&snap.client?` · ${esc(snap.client)}`:""}</div>
+        <span class="dv-spacer"></span>
+        <button class="btn btn-sm" id="cv-exit">Exit client view</button>
+      </div>
+      ${snap ? clientReadonlyHtml(snap) : `<div class="dv-empty"><h1>Nothing shared yet</h1><p>Publish an update to generate the client's view.</p></div>`}
+    </div>`;
+  document.getElementById("cv-exit").onclick = ()=>{ state.view="communicate"; state.membrane="client"; render(); };
+  root.querySelectorAll("[data-react]").forEach(b=> b.onclick=()=>{
+    const kind = b.dataset.react;
+    e.reactions.unshift({ kind, note: kind==="aligned" ? "Looks aligned." : "Flagged a question here.", at: Date.now() });
+    toast(kind==="aligned" ? "Marked aligned. Captured back to the consultant" : "Question flagged. Captured back to the consultant");
+    render();
+  });
+}
+function clientReadonlyHtml(snap){
+  const label = { question:"Planned", approach:"Planned", executing:"In progress", finding:"Complete" };
+  const cls = { question:"plan", approach:"plan", executing:"prog", finding:"done" };
+  const branch = (b)=>`<section class="dv-branch cv-branch">
+    <h2><span class="chip cv-status ${cls[b.phase]||"plan"}">${label[b.phase]||b.phase}</span> <span>${esc(b.title)}</span></h2>
+    ${b.finding?`<p class="cu-finding">${esc(b.finding)}</p>`:""}
+    ${b.confirmed.length?`<ul class="cu-confirmed">${b.confirmed.map(c=>`<li>${esc(c)}</li>`).join("")}</ul>`:""}
+    ${b.held?`<p class="cu-internal">${b.held} point${b.held>1?"s":""} still being validated.</p>`:""}
+  </section>`;
+  return `<article class="dv-page">
+    <div class="dv-kicker">Project update · ${relTime(snap.at)}</div>
+    <h1>${esc(snap.question)}</h1>
+    ${snap.decision?`<p class="dv-decision">${esc(snap.decision)}</p>`:""}
+    ${snap.branches.map(branch).join("")}
+    ${snap.requests.length?`<div class="cu-sec"><div class="cu-sec-h">Requests outside current scope</div>${snap.requests.map(r=>`<div class="cu-req"><span>${esc(r.text)}</span></div>`).join("")}</div>`:""}
+    <div class="cv-react"><span>Does this look right to you?</span>
+      <button class="btn btn-sm" data-react="aligned">✓ Looks aligned</button>
+      <button class="btn btn-sm" data-react="question">? I have a question</button></div>
+    <footer class="dv-foot">You're viewing the published update, not the consultant's working draft.</footer>
+  </article>`;
+}
+
+/* ============================================================
+   Mutations
+   ============================================================ */
+function markEdited(n){
+  if(n.prov === "ai"){ n.prov = "edited"; }
+  // update just the provenance badge live without full re-render (keeps focus)
+  const badge = document.querySelector(".panel-head .prov");
+  if(badge){ badge.className = "prov "+n.prov; badge.style.marginLeft="auto"; badge.textContent = provLabel(n.prov); }
+}
+function setPhase(n, ph){
+  if((ph==="executing"||ph==="finding") && !n.accepted){ toast("Accept the reasoning before executing"); return; }
+  n.phase = ph;
+  render();
+}
+function runStub(n){
+  n.progress = 0;
+  toast("Agent working (simulated)");
+  const iv = setInterval(()=>{
+    n.progress = Math.min(100, n.progress + 20);
+    if(state.view==="canvas"){
+      if(state.filter==="board") renderMain();
+      if(state.selected===n.id && n.phase==="executing"){
+        const bar = document.querySelector(".exec-stub .progress > i"); if(bar) bar.style.width = n.progress+"%";
+        const act = document.querySelector(".exec-stub .activity"); if(act) act.textContent = agentActivity(n);
+      }
+    }
+    if(n.progress>=100){
+      clearInterval(iv);
+      n.phase = "finding";
+      n.finding = `Simulated finding for this branch. In the full product this is the agent's real output; it feeds back to answer or reframe the question.`;
+      if(state.view==="canvas"){ if(state.selected===n.id) renderPanel(); renderMain(); }
+      toast("Finding ready");
+    }
+  }, 550);
+}
+function addNode(parent){
+  const isTop = parent === "root";
+  const id = nid();
+  const node = mkNode(id, isTop?"New node (name it)":"New sub-question", isTop?"approach":"question", "human", false, [], {why:"",order:"",mece:""});
+  state.nodes[id] = node;
+  if(isTop) state.order.push(id);
+  else state.nodes[parent].children.push(id);
+  state.selected = id;
+  render();
+}
+function deleteNode(id){
+  const topIdx = state.order.indexOf(id);
+  if(topIdx>=0){
+    state.nodes[id].children.forEach(c=>delete state.nodes[c]);
+    state.order.splice(topIdx,1);
+  } else {
+    state.order.forEach(pid=>{
+      const ci = state.nodes[pid].children.indexOf(id);
+      if(ci>=0) state.nodes[pid].children.splice(ci,1);
+    });
+  }
+  delete state.nodes[id];
+  state.selected = state.order[0] || null;
+  render();
+}
+function acceptedCount(){ return state.order.filter(id=>state.nodes[id].accepted).length; }
+function branchCount(){ return state.order.length; }
+
+/* light re-render of canvas tree only (title/rationale changed) */
+function renderCanvasLite(){ renderMain(); }
+
+/* ============================================================
+   Utils
+   ============================================================ */
+function esc(s){ return (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+let toastT;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove("show"), 1900);
+}
+
+/* ---------- seed sample engagements so home is alive ---------- */
+function seedAgent(over){
+  const a = newAgentObj(over);
+  state.connectedAgents[a.id] = a; state.agentOrder.push(a.id);
+  return a;
+}
+const seedResearchAgent = seedAgent({ name:"Research Agent", provider:"anthropic", scope:["BigQuery","Hex"], connectedAt: Date.now()-1000*60*60*24*9 });
+const seedSqlAgent = seedAgent({ name:"SQL Agent", provider:"openai", scope:["Snowflake"], connectedAt: Date.now()-1000*60*60*24*3 });
+
+function seedEngagement({client, question, model, ctx, mutate}){
+  const e = newEngagementObj({question, model, ctx});
+  const res = proposeDecomposition(question, ctx);
+  e.rootId = res.rootId; e.nodes = res.nodes; e.order = res.order; e.selected = res.order[0];
+  if(mutate) mutate(e);
+  state.engagements[e.id] = e; state.engOrder.push(e.id);
+  return e;
+}
+seedEngagement({
+  model:"opus",
+  question:"Should Northwind expand into the SMB segment next year?",
+  ctx:{client:"Northwind's VP of Growth", decision:"Whether to fund an SMB go-to-market in FY26", data:"3 yrs CRM + billing; no product telemetry"},
+  mutate:(e)=>{
+    const [b0,b1,b2]=e.order.map(id=>e.nodes[id]);
+    b0.accepted=true; b0.prov="human"; b0.phase="finding"; b0.agentId=seedResearchAgent.id; b0.executor="agent";
+    b0.finding="Demand is concentrated: 2 of 5 CRM cohorts drive 80% of SMB intent; the rest are flat. Points to a targeted motion.";
+    b0.thread=[
+      {q:"What would have to be true for this to be worth investigating at all?", a:"SMB buyers behave as a distinct segment, not just small mid-market, checked against 3 yrs of CRM.", type:"confirmed", followup:grillFollowup("confirmed")},
+      {q:"What's your current best answer, and how confident are you, honestly?", a:"~70% confident demand is durable; the cohort concentration still surprises me and could be seasonal.", type:"assumption", followup:grillFollowup("assumption")},
+    ];
+    b1.accepted=true; b1.prov="human"; b1.phase="executing"; b1.agentId=seedSqlAgent.id; b1.executor="agent"; b1.progress=60;
+    b2.accepted=true; b2.prov="edited"; b2.executor="manual";
+    e.updatedAt = Date.now()-1000*60*8;
+    // last week everything was still just framed, so the diff shows this cycle's movement
+    e.savedAsTemplate = true;
+    e.published = { at: Date.now()-1000*60*60*24*6, states:{ [b0.id]:"approach", [b1.id]:"approach", [b2.id]:"approach" } };
+    e.requests = [{text:"While you're in the data, can you also size the enterprise upsell?", at: Date.now()-1000*60*60*20}];
+    e.reactions = [{nodeId:b0.id, kind:"aligned", note:"Cohort focus matches what sales is seeing.", at: Date.now()-1000*60*60*2}];
+  },
+});
+seedEngagement({
+  model:"gpt",
+  question:"How do we cut patient no-show rates in outpatient clinics?",
+  ctx:{client:"Meridian Health's Ops Director", decision:"Which interventions to pilot in Q3", data:"18 months of scheduling + reminder logs"},
+  mutate:(e)=>{ const b0=e.nodes[e.order[0]]; b0.accepted=true; b0.prov="edited"; e.updatedAt = Date.now()-1000*60*60*5; },
+});
+seedEngagement({
+  model:"none",
+  question:"Is our new pricing tier cannibalising the flagship plan?",
+  ctx:{client:"Volta Retail's CFO", decision:"Whether to keep, reprice, or retire the mid-tier", data:"billing + plan-change events, 24 months"},
+  mutate:(e)=>{ e.updatedAt = Date.now()-1000*60*60*26; },
+});
+
+render();
+</script>
+</body>
+</html>
